@@ -7,6 +7,7 @@ import typing
 
 import httpx
 import typing_extensions
+from pydantic import BaseModel, ConfigDict, Field
 
 from .queries import GraphqlQuery
 
@@ -14,6 +15,65 @@ logger = logging.getLogger(__name__)
 
 if typing.TYPE_CHECKING:
     from .api import HelixClient
+
+
+class HelixEntityBase(BaseModel):
+    """
+    Base pydantic model for entities returned by ``HelixEntityManager``.
+
+    GraphQL emits camelCase keys (``idmcShortName``); we accept those via
+    ``alias_generator`` while still letting Python code construct entities with
+    snake_case kwargs.
+    """
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        alias_generator=lambda field_name: "".join(
+            part if i == 0 else part.title() for i, part in enumerate(field_name.split("_"))
+        ),
+    )
+
+
+class HelixOrganizationCountryEntity(HelixEntityBase):
+    id: int
+    idmc_short_name: str
+
+
+class HelixOrganizationEntity(HelixEntityBase):
+    id: int
+    name: str
+    countries: typing.List[HelixOrganizationCountryEntity] = Field(default_factory=list)
+
+
+class HelixCountryEntity(HelixEntityBase):
+    id: int
+    name: str
+    iso2: typing.Optional[str] = None
+    iso3: typing.Optional[str] = None
+    idmc_short_name: typing.Optional[str] = None
+
+
+class HelixViolenceSubTypeEntity(HelixEntityBase):
+    id: int
+    name: str
+
+
+class HelixDisasterSubTypeEntity(HelixEntityBase):
+    id: int
+    name: str
+
+
+class HelixOtherSubTypeEntity(HelixEntityBase):
+    id: int
+    name: str
+
+
+class HelixFigureTagEntity(HelixEntityBase):
+    id: int
+    name: str
+
+
+EntityT = typing.TypeVar("EntityT", bound=HelixEntityBase)
 
 
 class HelixEntityManagerFetcher:
@@ -68,27 +128,40 @@ class HelixEntityManagerFetcher:
         return self._fetch_all()
 
 
-class HelixEntityManager:
+class HelixEntityManager(typing.Generic[EntityT]):
     fetch_manager: type[HelixEntityManagerFetcher]
+    entity_cls: type[EntityT]
 
     def __init__(self, helix_client: HelixClient):
         self.helix_client = helix_client
 
         self._fetch_manager = self.fetch_manager(helix_client)
 
-        self._entities = list(self._fetch_manager.fetch())
-        self._entities_map = {obj["name"].lower(): obj["id"] for obj in self._entities}
-        self._entities_ids_set = {str(obj["id"]) for obj in self._entities}
+        self._entities: typing.List[EntityT] = [self.entity_cls.model_validate(raw) for raw in self._fetch_manager.fetch()]
+        self._entities_by_id: typing.Dict[int, EntityT] = {e.id: e for e in self._entities}
+        self._entities_map: typing.Dict[str, EntityT] = {self._search_key(e): e for e in self._entities}
 
-    def search(self, name: str) -> int | None:
+    @staticmethod
+    def _normalize(value: str) -> str:
+        return value.lower().strip()
+
+    def _search_key(self, entity: EntityT) -> str:
+        name = getattr(entity, "name", None)
+        if name is None:
+            raise AttributeError(f"{type(entity).__name__} has no 'name' attribute for default search")
+        return self._normalize(name)
+
+    def search(self, name: str) -> typing.Optional[EntityT]:
         # TODO: Maybe use rapidfuzz??
-        return self._entities_map.get(name.lower().strip(" "))
+        return self._entities_map.get(self._normalize(name))
 
-    def validate_id_exists(self, _id: int | None) -> int | None:
+    def validate_id_exists(self, _id: typing.Optional[int]) -> EntityT:
         if _id is None:
             raise ValueError(f"id for {type(self).__name__} is None (Required)")
-        if str(_id) not in self._entities_ids_set:
+        entity = self._entities_by_id.get(int(_id))
+        if entity is None:
             raise ValueError(f"Invalid id={_id} for {type(self).__name__}")
+        return entity
 
 
 class HelixEntityLazyManagerFetcher:
@@ -149,7 +222,35 @@ class HelixEntityLazyManager:
         return pk
 
 
-class HelixOrganization(HelixEntityManager):
+def _normalize_org_key(value: str) -> str:
+    """
+    Canonicalize the lookup key for organization labels.
+
+    Matches the format the helix-client renders in the dropdown:
+    ``{name} - {idmc_short_name_1, idmc_short_name_2, ...}``. We lowercase,
+    expand bare commas to ``", "`` so ``A,B`` and ``A, B`` collapse to the
+    same key, and squash any run of whitespace.
+    """
+    value = value.lower().replace(",", ", ")
+    return " ".join(value.split())
+
+
+class HelixOrganization(HelixEntityManager[HelixOrganizationEntity]):
+    """
+    Match an organization by its dropdown label (``{name} - {countries}``)
+    with a deliberate asymmetric ambiguity policy:
+
+      - **Label** ambiguity (same name AND same country list) → pick the
+        highest-id row and warn. These are server-side dupes that are
+        interchangeable for the caller's purposes.
+      - **Bare-name** ambiguity (same name but different country lists) →
+        return ``None`` and warn. The caller's input is underspecified;
+        forcing them to pass the full label avoids silently picking a
+        cross-country row.
+    """
+
+    entity_cls = HelixOrganizationEntity
+
     class Fetcher(HelixEntityManagerFetcher):
         helix_model_name = "Organization/Source"
 
@@ -168,8 +269,72 @@ class HelixOrganization(HelixEntityManager):
 
     fetch_manager = Fetcher
 
+    def __init__(self, helix_client: HelixClient):
+        super().__init__(helix_client)
+        self._label_index: typing.Dict[str, typing.List[HelixOrganizationEntity]] = {}
+        self._bare_name_index: typing.Dict[str, typing.List[HelixOrganizationEntity]] = {}
+        for entity in self._entities:
+            self._label_index.setdefault(self._label_key(entity), []).append(entity)
+            self._bare_name_index.setdefault(_normalize_org_key(entity.name), []).append(entity)
+        for key, hits in self._label_index.items():
+            if len(hits) > 1:
+                logger.warning(
+                    "duplicate organization label %r ids=%s",
+                    key,
+                    [h.id for h in hits],
+                )
 
-class HelixCountry(HelixEntityManager):
+    @staticmethod
+    def _label_key(entity: HelixOrganizationEntity) -> str:
+        countries = ", ".join(c.idmc_short_name for c in entity.countries)
+        label = f"{entity.name} - {countries}" if countries else entity.name
+        return _normalize_org_key(label)
+
+    @typing_extensions.override
+    def search(self, name: str) -> typing.Optional[HelixOrganizationEntity]:
+        key = _normalize_org_key(name)
+        hits = self._label_index.get(key)
+        if hits:
+            if len(hits) == 1:
+                return hits[0]
+            # Same label = same name AND same countries → server-side dupes.
+            # Pick the highest-id row (best-effort recovery).
+            chosen = max(hits, key=lambda e: e.id)
+            logger.warning(
+                "ambiguous label %r — picked latest id=%d from candidates=%s",
+                key,
+                chosen.id,
+                [e.id for e in hits],
+            )
+            return chosen
+        hits = self._bare_name_index.get(key)
+        if hits:
+            if len(hits) == 1:
+                return hits[0]
+            distinct_labels = {self._label_key(h) for h in hits}
+            if len(distinct_labels) == 1:
+                # All candidates share the same label (same countries) — they
+                # are interchangeable just like a label-level dupe.
+                chosen = max(hits, key=lambda e: e.id)
+                logger.warning(
+                    "ambiguous bare name %r — all candidates share label; picked latest id=%d from %s",
+                    key,
+                    chosen.id,
+                    [e.id for e in hits],
+                )
+                return chosen
+            logger.warning(
+                "ambiguous bare name %r — candidates=%s; pass full label to disambiguate",
+                key,
+                [e.id for e in hits],
+            )
+            return None
+        return None
+
+
+class HelixCountry(HelixEntityManager[HelixCountryEntity]):
+    entity_cls = HelixCountryEntity
+
     class Fetcher(HelixEntityManagerFetcher):
         helix_model_name = "Country"
 
@@ -190,27 +355,22 @@ class HelixCountry(HelixEntityManager):
 
     def __init__(self, helix_client: HelixClient):
         super().__init__(helix_client)
-        self._iso3_map = {obj["iso3"].upper(): obj["id"] for obj in self._entities if obj.get("iso3")}
-        self._iso2_by_id = {obj["id"]: obj["iso2"] for obj in self._entities if obj.get("iso2")}
+        self._iso3_map: typing.Dict[str, HelixCountryEntity] = {e.iso3.upper(): e for e in self._entities if e.iso3}
         # idmc_short_name is the export's preferred display name; helix Country.name
         # is the formal name and often diverges (e.g. "Syrian Arab Republic" vs "Syria").
-        for obj in self._entities:
-            short = obj.get("idmcShortName")
-            if short:
-                self._entities_map.setdefault(short.lower().strip(), obj["id"])
+        for entity in self._entities:
+            if entity.idmc_short_name:
+                self._entities_map.setdefault(self._normalize(entity.idmc_short_name), entity)
 
-    def search_by_iso3(self, iso3: str | None) -> int | None:
+    def search_by_iso3(self, iso3: typing.Optional[str]) -> typing.Optional[HelixCountryEntity]:
         if not iso3:
             return None
         return self._iso3_map.get(iso3.upper().strip())
 
-    def iso2_by_id(self, country_id: int | None) -> str | None:
-        if country_id is None:
-            return None
-        return self._iso2_by_id.get(country_id)
 
+class HelixViolenceSubType(HelixEntityManager[HelixViolenceSubTypeEntity]):
+    entity_cls = HelixViolenceSubTypeEntity
 
-class HelixViolenceSubType(HelixEntityManager):
     class Fetcher(HelixEntityManagerFetcher):
         helix_model_name = "ViolenceSubType"
 
@@ -226,7 +386,9 @@ class HelixViolenceSubType(HelixEntityManager):
     fetch_manager = Fetcher
 
 
-class HelixDisasterSubType(HelixEntityManager):
+class HelixDisasterSubType(HelixEntityManager[HelixDisasterSubTypeEntity]):
+    entity_cls = HelixDisasterSubTypeEntity
+
     class Fetcher(HelixEntityManagerFetcher):
         helix_model_name = "DisasterSubType"
 
@@ -241,7 +403,9 @@ class HelixDisasterSubType(HelixEntityManager):
     fetch_manager = Fetcher
 
 
-class HelixOtherSubType(HelixEntityManager):
+class HelixOtherSubType(HelixEntityManager[HelixOtherSubTypeEntity]):
+    entity_cls = HelixOtherSubTypeEntity
+
     class Fetcher(HelixEntityManagerFetcher):
         helix_model_name = "OtherSubType"
 
@@ -296,7 +460,9 @@ class HelixUser(HelixEntityLazyManager):
         return self.search(email)
 
 
-class HelixFigureTag(HelixEntityManager):
+class HelixFigureTag(HelixEntityManager[HelixFigureTagEntity]):
+    entity_cls = HelixFigureTagEntity
+
     class Fetcher(HelixEntityManagerFetcher):
         helix_model_name = "FigureTag"
 

@@ -142,11 +142,14 @@ def parse_main_trigger(context: ImportContext, cause: CRISIS_TYPE, main_trigger)
     other_sub_type_id = None
 
     if cause == CRISIS_TYPE.CONFLICT:
-        violence_sub_type_id = context.helix_client.violence_sub_type_manager.search(main_trigger)
+        violence_sub_type = context.helix_client.violence_sub_type_manager.search(main_trigger)
+        violence_sub_type_id = violence_sub_type.id if violence_sub_type else None
     elif cause == CRISIS_TYPE.DISASTER:
-        disaster_sub_type_id = context.helix_client.disaster_sub_type_manager.search(main_trigger)
+        disaster_sub_type = context.helix_client.disaster_sub_type_manager.search(main_trigger)
+        disaster_sub_type_id = disaster_sub_type.id if disaster_sub_type else None
     elif cause == CRISIS_TYPE.OTHER:
-        other_sub_type_id = context.helix_client.other_sub_type_manager.search(main_trigger)
+        other_sub_type = context.helix_client.other_sub_type_manager.search(main_trigger)
+        other_sub_type_id = other_sub_type.id if other_sub_type else None
     else:
         typing_extensions.assert_never(cause)
 
@@ -167,9 +170,9 @@ def import_entry(hulk_handler: HulkDataHandler, context: ImportContext):
     ]:
         publishers_id = []
         for publisher in entry_data["publishers"].split(","):
-            publisher_id = context.helix_client.organization_manager.search(publisher)
-            if publisher_id:
-                publishers_id.append(publisher_id)
+            publisher_entity = context.helix_client.organization_manager.search(publisher)
+            if publisher_entity:
+                publishers_id.append(publisher_entity.id)
                 continue
             # TODO: Do we treat this as error
             logger.warning("Organization not found for <%s>", publisher)
@@ -248,9 +251,9 @@ def import_events(hulk_handler: HulkDataHandler, context: ImportContext):
 
             countries_id = []
             for country in event_data["countries"].split(","):
-                country_id = context.helix_client.country_manager.search(country)
-                if country_id:
-                    countries_id.append(country_id)
+                country_entity = context.helix_client.country_manager.search(country)
+                if country_entity:
+                    countries_id.append(country_entity.id)
                     continue
                 # TODO: Treat this as error?
                 logger.warning("Country not found for <%s>", country)
@@ -332,8 +335,8 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
             main_trigger_metadata = parse_main_trigger(context, figure_cause, figure_data["main_trigger_figure"])
 
             country_raw = figure_data["country"]
-            country_id = context.helix_client.country_manager.search(country_raw)
-            if country_id is None:
+            country_entity = context.helix_client.country_manager.search(country_raw)
+            if country_entity is None:
                 hulk_handler.handle_import_error_raw(
                     HulkFigureImport,
                     {
@@ -342,7 +345,7 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
                     },
                 )
                 continue
-            country_iso2 = context.helix_client.country_manager.iso2_by_id(country_id)
+            country_iso2 = country_entity.iso2
             if country_iso2 is None:
                 hulk_handler.handle_import_error_raw(
                     HulkFigureImport,
@@ -356,11 +359,9 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
             organizations_raw = json.loads(figure_data["sources"])
             organizations_id = []
             for organization_raw in organizations_raw:
-                organization_id = context.helix_client.organization_manager.search(
-                    organization_raw.replace("- Peru", "")  # TODO: Fix this in dataset
-                )
-                if organization_id:
-                    organizations_id.append(organization_id)
+                organization_entity = context.helix_client.organization_manager.search(organization_raw)
+                if organization_entity:
+                    organizations_id.append(organization_entity.id)
                     continue
                 # TODO: Treat this as error?
                 logger.warning("Organization not found for <%s>", organization_raw)
@@ -368,9 +369,9 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
             figure_tags_raw = json.loads(figure_data["tags"])
             figure_tags_id = []
             for figure_tag_raw in figure_tags_raw:
-                figure_tag_id = context.helix_client.figure_tag_manager.search(figure_tag_raw)
-                if figure_tag_id:
-                    figure_tags_id.append(figure_tag_id)
+                figure_tag_entity = context.helix_client.figure_tag_manager.search(figure_tag_raw)
+                if figure_tag_entity:
+                    figure_tags_id.append(figure_tag_entity.id)
                     continue
                 # TODO: Treat this as error?
                 logger.warning("FigureTag not found for <%s>", figure_tag_raw)
@@ -416,7 +417,7 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
                     quantifier=figure_data["quantifier"],
                     unit=figure_data["unit"],
                     figure_role=figure_data["figure_role"],
-                    country_id=country_id,
+                    country_id=country_entity.id,
                     start_date=figure_data["start_date"],
                     start_date_accuracy=figure_data["start_date_accuracy"],
                     end_date=figure_data["end_date"],
