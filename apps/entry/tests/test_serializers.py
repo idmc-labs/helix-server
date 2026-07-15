@@ -1,5 +1,5 @@
 from copy import copy
-from datetime import timedelta
+from datetime import date, timedelta
 from uuid import uuid4
 
 from django.test import RequestFactory
@@ -254,6 +254,30 @@ class TestEntrySerializer(HelixTestCase):
             ],
         )
         serializer = EntryUpdateSerializer(instance=entry, data=data, context={"request": self.request}, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_publish_date_more_than_10_years_in_future_rejected(self):
+        future = (date.today() + timedelta(days=365 * 11)).strftime("%Y-%m-%d")
+        self.data["publish_date"] = future
+        serializer = EntryCreateSerializer(data=self.data, context={"request": self.request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("publish_date", serializer.errors)
+
+    def test_publish_date_within_10_years_accepted(self):
+        # boundary: ~9 years in the future is allowed.
+        near_future = (date.today() + timedelta(days=365 * 9)).strftime("%Y-%m-%d")
+        self.data["publish_date"] = near_future
+        serializer = EntryCreateSerializer(data=self.data, context={"request": self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_legacy_future_publish_date_row_editable_on_other_fields(self):
+        # decision #1: the future-date check fires only when publish_date
+        # is in the payload, so a legacy row with an out-of-bounds publish_date
+        # can still be updated on unrelated fields.
+        far_future = date.today() + timedelta(days=365 * 20)
+        entry = EntryFactory.create(url="http://abc.com", publish_date=far_future)
+        data = {"source_methodology": "method"}
+        serializer = EntryCreateSerializer(instance=entry, data=data, context={"request": self.request}, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_idmc_analysis_should_be_non_required_field(self):

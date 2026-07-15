@@ -166,11 +166,17 @@ class AttachmentSerializer(MetaInformationSerializerMixin, serializers.ModelSeri
 
 
 class SourcePreviewSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
+    # When True, always create a fresh SourcePreview instead of reusing a recent
+    # in-progress one for the same url/user. Used by the hulk bulk path so that each
+    # imported row gets its own entity (the hulk relation is OneToOne on entity_id).
+    skip_recent_reuse = serializers.BooleanField(default=False, write_only=True)
+
     class Meta:
         model = SourcePreview
         fields = "__all__"
 
     def create(self, validated_data):
+        skip_recent_reuse = validated_data.pop("skip_recent_reuse", False)
         filter_params = dict(
             url=validated_data["url"],
             created_by=self.context["request"].user,
@@ -178,11 +184,12 @@ class SourcePreviewSerializer(MetaInformationSerializerMixin, serializers.ModelS
             created_at__gte=timezone.now() - timedelta(seconds=PDF_TASK_TIMEOUT),
         )
 
-        if existing_preview := SourcePreview.objects.filter(**filter_params).first():
+        if not skip_recent_reuse and (existing_preview := SourcePreview.objects.filter(**filter_params).first()):
             return existing_preview
         return SourcePreview.get_pdf(validated_data)
 
     def update(self, instance, validated_data):
+        validated_data.pop("skip_recent_reuse", None)
         return SourcePreview.get_pdf(validated_data, instance=instance)
 
 
