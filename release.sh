@@ -1,9 +1,11 @@
 #!/bin/bash
 
-export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export SCRIPT_DIR
 
 function release_custom_hook {
     msg="# managed by release.sh"
+    # shellcheck disable=SC2154
     sed -E -i "s/^version = .* $msg$/version = \"${version_tag#v}\"  $msg/" "./pyproject.toml"
     uv sync --all-groups --all-extras
     git add ./pyproject.toml ./uv.lock
@@ -18,4 +20,5 @@ export DEFAULT_BRANCH=develop
 export GIT_CLIFF__REMOTE__GITHUB__OWNER=idmc-labs
 export GIT_CLIFF__REMOTE__GITHUB__REPO=helix-server
 
-$SCRIPT_DIR/fugit/scripts/release.sh
+# Forward the argument - used for pre-fill version
+"$SCRIPT_DIR/fugit/scripts/release.sh" "${@:-}"
