@@ -6,7 +6,11 @@ via ``generate_for_graphql_mutation``.
 
 from __future__ import annotations
 
+import datetime
 from uuid import UUID
+
+from pydantic import ValidationError
+from pyhelix import models as pyhelix_models
 
 from apps.hulk.bulk.models import HulkEventImport, HulkEventImportEventCode
 from utils.factories import (
@@ -112,3 +116,164 @@ class TestHulkEventImportEventCodes(HelixGraphQLTestCase):
         )
         event = HulkEventImport(**row)
         self.assertIsInstance(event.event_codes[0], HulkEventImportEventCode)
+
+    def test_end_date_before_start_date_rejected(self):
+        """A row whose ``end_date`` precedes ``start_date`` must be rejected —
+        mirroring the figure/event serializer start<=end constraint."""
+        row = self._event_row(
+            start_date="2024-01-31",
+            end_date="2024-01-01",
+        )
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("The start date must be earlier than end date.", str(cm.exception))
+
+    def test_end_date_equal_start_date_allowed(self):
+        """A single-day event (``start_date == end_date``) stays valid."""
+        row = self._event_row(
+            start_date="2024-01-01",
+            end_date="2024-01-01",
+        )
+        HulkEventImport(**row)
+
+    def test_start_date_beyond_10_years_rejected(self):
+        """``start_date`` more than 10 years in the future must be rejected."""
+        far_future = datetime.date.today().replace(year=datetime.date.today().year + 11)
+        row = self._event_row(
+            start_date=far_future.isoformat(),
+            end_date=far_future.isoformat(),
+        )
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("start_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+
+    def test_end_date_beyond_10_years_rejected(self):
+        """``end_date`` more than 10 years in the future must be rejected."""
+        far_future = datetime.date.today().replace(year=datetime.date.today().year + 11)
+        row = self._event_row(
+            start_date="2024-01-01",
+            end_date=far_future.isoformat(),
+        )
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("end_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+
+    def test_dates_within_10_years_allowed(self):
+        """A future date within the 10-year window stays valid."""
+        near_future = datetime.date.today().replace(year=datetime.date.today().year + 5)
+        row = self._event_row(
+            start_date=near_future.isoformat(),
+            end_date=near_future.isoformat(),
+        )
+        HulkEventImport(**row)
+
+    def test_very_old_dates_allowed(self):
+        """Very old dates (e.g. 1900) are intentional and must still import."""
+        row = self._event_row(
+            start_date="1900-01-01",
+            end_date="1900-12-31",
+        )
+        HulkEventImport(**row)
+
+
+class TestHulkEnumValidationFieldNames(HelixGraphQLTestCase):
+    """An invalid enum value must be reported against the field actually at
+    fault — not the hardcoded ``event_type`` label the shared parser used to
+    emit regardless of which field was wrong."""
+
+    def _event_row(self, **overrides) -> dict:
+        country = CountryFactory.create()
+        violence_sub_type = ViolenceSubTypeFactory.create()
+        row = {
+            "uuid": "11111111-1111-1111-1111-111111111111",
+            "event_name": "Test event",
+            "event_cause": "CONFLICT",
+            "violence_sub_type_id": violence_sub_type.id,
+            "disaster_sub_type_id": None,
+            "other_sub_type_id": None,
+            "start_date": "2024-01-01",
+            "start_date_accuracy": "DAY",
+            "end_date": "2024-01-31",
+            "end_date_accuracy": "DAY",
+            "event_narrative": "narrative",
+            "countries_id": [country.id],
+            "event_codes": [],
+        }
+        row.update(overrides)
+        return row
+
+    def test_invalid_event_cause_reports_event_cause(self):
+        row = self._event_row(event_cause="NOT_A_CAUSE")
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("Invalid event_cause 'NOT_A_CAUSE'", str(cm.exception))
+
+    def test_invalid_start_date_accuracy_reports_start_date_accuracy(self):
+        row = self._event_row(start_date_accuracy="BAD_ACCURACY")
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        message = str(cm.exception)
+        self.assertIn("Invalid start_date_accuracy 'BAD_ACCURACY'", message)
+        self.assertNotIn("Invalid event_type", message)
+
+    def test_invalid_end_date_accuracy_reports_end_date_accuracy(self):
+        row = self._event_row(end_date_accuracy="BAD_ACCURACY")
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("Invalid end_date_accuracy 'BAD_ACCURACY'", str(cm.exception))
+
+    def test_invalid_nested_event_code_type_reports_event_code_type(self):
+        """The nested ``event_codes[].event_code_type`` list model must also
+        report its real field name rather than ``event_type``."""
+        country = CountryFactory.create()
+        row = self._event_row(
+            event_codes=[
+                {
+                    "uuid": "22222222-2222-2222-2222-222222222222",
+                    "country_id": country.id,
+                    "event_code": "GLD-001",
+                    "event_code_type": "INVALID_CODE_TYPE",
+                }
+            ]
+        )
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        message = str(cm.exception)
+        self.assertIn("Invalid event_code_type 'INVALID_CODE_TYPE'", message)
+        self.assertNotIn("Invalid event_type", message)
+
+
+class TestHulkEntryImportPublishDate(HelixGraphQLTestCase):
+    """``publish_date`` must not be more than 10 years in the future.
+
+    Validation lives on the pyhelix parent model, so we exercise it directly to
+    avoid the DB-backed attachment/source-preview lookups on the app subclass."""
+
+    def _entry_row(self, **overrides) -> dict:
+        row = {
+            "uuid": "55555555-5555-5555-5555-555555555555",
+            "hulk_import_type": "DOCUMENT",
+            "attachment_uuid": "66666666-6666-6666-6666-666666666666",
+            "entry_title": "Test entry",
+            "publish_date": "2024-01-01",
+            "is_confidential": False,
+            "publishers_id": [1],
+        }
+        row.update(overrides)
+        return row
+
+    def test_publish_date_beyond_10_years_rejected(self):
+        far_future = datetime.date.today().replace(year=datetime.date.today().year + 11)
+        row = self._entry_row(publish_date=far_future.isoformat())
+        with self.assertRaises(ValidationError) as cm:
+            pyhelix_models.HulkEntryImport(**row)
+        self.assertIn("publish_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+
+    def test_publish_date_within_10_years_allowed(self):
+        near_future = datetime.date.today().replace(year=datetime.date.today().year + 5)
+        row = self._entry_row(publish_date=near_future.isoformat())
+        pyhelix_models.HulkEntryImport(**row)
+
+    def test_publish_date_very_old_allowed(self):
+        row = self._entry_row(publish_date="1900-01-01")
+        pyhelix_models.HulkEntryImport(**row)

@@ -3895,6 +3895,7 @@ type SignOffReport {
 }
 
 input SourcePreviewInputType {
+  skipRecentReuse: Boolean
   versionId: String
   url: String!
   token: String

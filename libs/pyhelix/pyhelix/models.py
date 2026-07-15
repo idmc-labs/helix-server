@@ -18,6 +18,7 @@ from .constants import (
     FIGURE_FLOW_LIST,
     FIGURE_STOCK_LIST,
     FIGURE_UNIT,
+    MAX_FUTURE_YEARS,
 )
 from .enums import (
     HulkDataTypeEnum,
@@ -41,6 +42,18 @@ from .types import (
 )
 
 AttachmentForChoicesType = typing_extensions.Annotated[ATTACHMENT_FOR_CHOICES, enum_parser(ATTACHMENT_FOR_CHOICES)]
+
+# MAX_FUTURE_YEARS is generated into .constants from utils.validations (the
+# Django-side single source of truth) by ./manage.py update_pyhelix_constants.
+
+
+def _max_allowed_future_date() -> datetime.date:
+    today = datetime.date.today()
+    try:
+        return today.replace(year=today.year + MAX_FUTURE_YEARS)
+    except ValueError:
+        # Feb 29 -> Feb 28 on a non-leap target year
+        return today.replace(year=today.year + MAX_FUTURE_YEARS, day=28)
 
 
 # TODO: Support partial data input for optional fields
@@ -110,6 +123,12 @@ class HulkEntryImport(HulkBaseModel):
     """
 
     @model_validator(mode="after")
+    def _validate_publish_date(self):
+        if self.publish_date and self.publish_date > _max_allowed_future_date():
+            raise ValueError(f"publish_date: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
+        return self
+
+    @model_validator(mode="after")
     def parse_import_data(self):
         if self.hulk_import_type == HulkEntryImportTypeEnum.DOCUMENT:
             if self.attachment_uuid is None:
@@ -165,7 +184,7 @@ class HulkEventImport(HulkBaseModel):
     def parse_event_cause(cls, data: dict):
         helix_client = get_active_helix_client()
         raw_event_type = data.get("event_cause") or ""
-        event_type = validate_and_parse_enum(CRISIS_TYPE, raw_event_type, is_required=True)
+        event_type = validate_and_parse_enum(CRISIS_TYPE, raw_event_type, is_required=True, field_name="event_cause")
         data["event_type"] = event_type.name
 
         if event_type == CRISIS_TYPE.CONFLICT:
@@ -178,6 +197,17 @@ class HulkEventImport(HulkBaseModel):
             typing_extensions.assert_never(event_type)
 
         return data
+
+    @model_validator(mode="after")
+    def _validate_dates(self):
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError("The start date must be earlier than end date.")
+        max_future_date = _max_allowed_future_date()
+        if self.start_date and self.start_date > max_future_date:
+            raise ValueError(f"start_date: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
+        if self.end_date and self.end_date > max_future_date:
+            raise ValueError(f"end_date: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
+        return self
 
 
 class HulkFigureImportLocation(BaseModel):
@@ -285,7 +315,7 @@ class HulkFigureImport(HulkBaseModel):
             return data
         helix_client = get_active_helix_client()
         raw_figure_cause = data.get("figure_cause") or ""
-        figure_cause = validate_and_parse_enum(CRISIS_TYPE, raw_figure_cause, is_required=True)
+        figure_cause = validate_and_parse_enum(CRISIS_TYPE, raw_figure_cause, is_required=True, field_name="figure_cause")
 
         if figure_cause == CRISIS_TYPE.CONFLICT:
             helix_client.violence_sub_type_manager.validate_id_exists(data.get("violence_sub_type_id"))

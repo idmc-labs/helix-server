@@ -4,7 +4,7 @@ import json
 import typing
 from enum import Enum
 
-from pydantic import BeforeValidator
+from pydantic import BeforeValidator, ValidationInfo
 
 EnumT = typing.TypeVar("EnumT", bound=Enum)
 
@@ -42,6 +42,7 @@ def validate_and_parse_enum(
     enum_cls: typing.Type[EnumT],
     value: str | EnumT,
     is_required: typing.Literal[False],
+    field_name: str = ...,
 ) -> EnumT | None: ...
 @typing.overload
 def validate_and_parse_enum(
@@ -53,18 +54,20 @@ def validate_and_parse_enum(
     enum_cls: typing.Type[EnumT],
     value: str | EnumT,
     is_required: typing.Literal[True],
+    field_name: str = ...,
 ) -> EnumT: ...
 # TODO: Cache this
 def validate_and_parse_enum(
     enum_cls: typing.Type[EnumT],
     value: str | EnumT,
     is_required: bool = False,
+    field_name: str = "value",
 ) -> EnumT | None:
     if isinstance(value, str):
         _value = get_enum_from_string(enum_cls, value)
         if is_required and _value is None:
             raise ValueError(
-                f"Invalid event_type '{value}'. Expected one of {[e.value for e in enum_cls]} "
+                f"Invalid {field_name} '{value}'. Expected one of {[e.value for e in enum_cls]} "
                 f"or {[e.name for e in enum_cls]}"
             )
         return _value
@@ -72,7 +75,7 @@ def validate_and_parse_enum(
 
 
 def enum_parser(enum: typing.Type[EnumT], *, required: bool = True):
-    def _parse(v):
-        return validate_and_parse_enum(enum, v, is_required=required)
+    def _parse(v, info: ValidationInfo):
+        return validate_and_parse_enum(enum, v, is_required=required, field_name=info.field_name or "value")
 
     return BeforeValidator(_parse)
