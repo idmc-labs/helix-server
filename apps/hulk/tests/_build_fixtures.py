@@ -350,11 +350,11 @@ EXPECTED_OUTCOMES = {
         EVENT_UUIDS["conflict"]: {"outcome": "success", "message": "Created"},
         EVENT_UUIDS["disaster"]: {"outcome": "success", "message": "Created"},
         EVENT_UUIDS["other"]: {"outcome": "success", "message": "Created"},
-        # Blank event_narrative → helix serializer rejects → GraphQL post-error.
+        # Blank event_narrative → pyhelix field_validator rejects pre-flight.
         EVENT_UUIDS["blank_narrative"]: {
             "outcome": "failure",
-            "error_key": "post-errors",
-            "error_match": "This field may not be blank",
+            "error_key": "pre-errors",
+            "error_match": "event_narrative must not be blank",
         },
     },
     "figures": {

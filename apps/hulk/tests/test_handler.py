@@ -427,16 +427,16 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
     def test_handle_post_error_recorded(self):
         """When the GraphQL client returns errors, the row lands in failure_* with post-errors.
 
-        Uses the message string declared in
-        ``EXPECTED_OUTCOMES[events][blank_narrative].error_match`` so the test
-        stays aligned with the fixture's documented expectation.
+        Only events that pass pyhelix pre-validation actually invoke
+        ``createEvent`` — the ``blank_narrative`` row is caught client-side
+        and lands as a pre-error. The mock here covers the post-error path
+        for every other event using a real helix-only rule (``event_codes``
+        max length of 50, enforced by ``EventSerializer._validate_event_codes``
+        and not pre-checked by pyhelix).
         """
         bulk = self._make_bulk_import_with_inputs()
 
-        # The actual helix serializer message for empty `event_narrative` is the
-        # one declared in EXPECTED_OUTCOMES. Mock the GraphQL post-error to
-        # match it so the assertion below can validate fidelity.
-        expected_match = EXPECTED_OUTCOMES["events"][EVENT_UUIDS["blank_narrative"]]["error_match"]
+        expected_match = "More than 50 event codes are not allowed"
 
         def _gql_response(query, variables):
             if "createEvent" in query:
@@ -444,7 +444,7 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
                     {
                         "createEvent": {
                             "ok": False,
-                            "errors": [{"field": "eventNarrative", "messages": f"{expected_match}."}],
+                            "errors": [{"field": "eventCodes", "messages": expected_match}],
                             "result": None,
                         }
                     },
@@ -462,11 +462,17 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
 
         bulk.refresh_from_db()
         failure_events = _jsonl_rows(_failure_file(bulk, "events"))
-        # All four events fail under the patched eventNarrative=blank response.
+        # Every fixture event lands in failure: the pre-rejected ones with
+        # pre-errors, every attempted one with post-errors.
         self.assertEqual({r["uuid"] for r in failure_events}, set(EVENT_UUIDS.values()))
-        for row in failure_events:
+
+        attempted_uuids = set(EVENT_UUIDS.values()) - PYDANTIC_ONLY_FAILURE_UUIDS["events"]
+        self.assertGreater(len(attempted_uuids), 0)
+        rows_by_uuid = {r["uuid"]: r for r in failure_events}
+        for u in attempted_uuids:
+            row = rows_by_uuid[u]
             self.assertIn("post-errors", row["error"])
-            self.assertEqual(row["error"]["post-errors"][0]["field"], "eventNarrative")
+            self.assertEqual(row["error"]["post-errors"][0]["field"], "eventCodes")
             self.assertIn(expected_match, row["error"]["post-errors"][0]["messages"])
 
     def test_handle_figure_post_error_for_bad_country_iso2_mismatch(self):
