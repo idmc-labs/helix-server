@@ -329,6 +329,36 @@ def update_public_figure_analysis():
 
     # FIXME: add a cleanup function
 
+    # The PFA values come from the GIDD report's own figure set, aggregated once
+    # per year grouped by country, rather than from each PFA report's own
+    # filterset. A PFA total is defined by year, country, cause and category, and
+    # the aggregate pins cause and category itself -- reading the cause off the
+    # event, so a figure whose own cause disagrees with its event's type is
+    # counted here and was not before. Any further filter on a PFA report is
+    # invalid data, which `check_is_pfa_visible_in_gidd` rejects.
+    # TODO: sum the already-generated GIDD tables instead of re-aggregating entry_figure.
+    # gidd_displacementdata already holds the per-country-per-year conflict/disaster stock and
+    # flow totals this loop recomputes, so PFA could read them and drop the per-report scan.
+    # TODO: nothing validates `figure_cause` against `event.event_type` on write.
+    pfa_aggregate_keys = (
+        "total_stock_conflict",
+        "total_stock_disaster",
+        "total_flow_conflict",
+        "total_flow_disaster",
+    )
+    totals_by_year_country = {}
+    gidd_reports = (
+        Report.objects.filter(is_gidd_report=True).order_by("gidd_report_year", "-id").distinct("gidd_report_year")
+    )
+    for gidd_report in gidd_reports:
+        aggregates = {
+            key: aggregate
+            for key, aggregate in gidd_report.TOTAL_FIGURE_DISAGGREGATIONS.items()
+            if key in pfa_aggregate_keys
+        }
+        for row in gidd_report.report_figures.values("country_id").order_by().annotate(**aggregates):
+            totals_by_year_country[(gidd_report.gidd_report_year, row["country_id"])] = row
+
     # `prefetch_related` batches the one-country-per-report reads that were an
     # extra query per report.
     for report in visible_pfa_reports_qs.prefetch_related("filter_figure_countries"):
@@ -338,18 +368,19 @@ def update_public_figure_analysis():
         # PFA always have either conflict or disaster cause
         figure_cause = report.filter_figure_crisis_types[0]
 
-        # Each PFA report needs exactly ONE of the four conditional sums —
-        # aggregating all of them quadrupled the per-report scan work.
+        # Each PFA report needs exactly ONE of the four conditional sums
         aggregate_key = _get_aggregate_key(figure_category, figure_cause)
-        figures_total = None
-        if aggregate_key is not None:
-            figures_total = report.report_figures.aggregate(
-                _total=report.TOTAL_FIGURE_DISAGGREGATIONS[aggregate_key],
-            )["_total"]
 
         # There must be exactly one country if is_pfa_visible_in_gidd is enabled.
         # This is validated in serializer
-        iso3 = report.filter_figure_countries.all()[0].iso3
+        country = report.filter_figure_countries.all()[0]
+        iso3 = country.iso3
+
+        figures_total = None
+        if aggregate_key is not None:
+            year_country_totals = totals_by_year_country.get((report.filter_figure_end_before.year, country.id))
+            if year_country_totals is not None:
+                figures_total = year_country_totals[aggregate_key]
 
         data.append(
             PublicFigureAnalysis(
