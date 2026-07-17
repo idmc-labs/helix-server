@@ -11,6 +11,7 @@ from apps.contrib.commons import DATE_ACCURACY
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.crisis.models import Crisis
 from apps.entry.models import Entry, Figure
+from utils.fields import UnbleachedTextField
 
 
 class Conflict(models.Model):
@@ -97,9 +98,9 @@ class Disaster(models.Model):
 
     # Dates
     start_date = models.DateField(blank=True, null=True)
-    start_date_accuracy = models.TextField(blank=True, null=True)
+    start_date_accuracy = UnbleachedTextField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
-    end_date_accuracy = models.TextField(blank=True, null=True)
+    end_date_accuracy = UnbleachedTextField(blank=True, null=True)
 
     hazard_category = models.ForeignKey(
         "event.DisasterCategory", verbose_name=_("Hazard Category"), related_name="disasters", on_delete=models.PROTECT
@@ -253,9 +254,9 @@ class DisasterLegacy(models.Model):
 
     # Dates
     start_date = models.DateField(blank=True, null=True)
-    start_date_accuracy = models.TextField(blank=True, null=True)
+    start_date_accuracy = UnbleachedTextField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
-    end_date_accuracy = models.TextField(blank=True, null=True)
+    end_date_accuracy = UnbleachedTextField(blank=True, null=True)
 
     hazard_category = models.ForeignKey(
         "event.DisasterCategory",
@@ -337,7 +338,7 @@ class PublicFigureAnalysis(models.Model):
     year = models.IntegerField(verbose_name=_("Year"))
     figures = models.IntegerField(verbose_name=_("Figures"), null=True)
     figures_rounded = models.IntegerField(verbose_name=_("Figures rounded"), null=True)
-    description = models.TextField(verbose_name=_("Description"), null=True)
+    description = UnbleachedTextField(verbose_name=_("Description"), null=True)
     report = models.ForeignKey(
         "report.Report", verbose_name=_("Report"), null=True, related_name="+", on_delete=models.SET_NULL
     )
@@ -589,12 +590,12 @@ class GiddFigure(MetaInformationAbstractModel):
         verbose_name=_("Include in IDU"),
         null=True,
     )
-    excerpt_idu = models.TextField(verbose_name=_("Excerpt for IDU"), blank=True, null=True)
+    excerpt_idu = UnbleachedTextField(verbose_name=_("Excerpt for IDU"), blank=True, null=True)
     is_confidential = models.BooleanField(
         verbose_name=_("Confidential Source"),
         default=False,
     )
-    source_excerpt = models.TextField(verbose_name=_("Excerpt from Source"), blank=True, null=True)
+    source_excerpt = UnbleachedTextField(verbose_name=_("Excerpt from Source"), blank=True, null=True)
     sources = ArrayField(
         models.CharField(verbose_name=_("Sources"), max_length=256),
         default=list,
@@ -647,7 +648,7 @@ class GiddFigure(MetaInformationAbstractModel):
         ),
         default=list,
     )
-    calculation_logic = models.TextField(verbose_name=_("Analysis and Calculation Logic"), blank=True, null=True)
+    calculation_logic = UnbleachedTextField(verbose_name=_("Analysis and Calculation Logic"), blank=True, null=True)
     tags = ArrayField(
         models.CharField(verbose_name=_("Tags"), max_length=256),
         default=list,
