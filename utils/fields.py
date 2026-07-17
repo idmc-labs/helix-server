@@ -54,4 +54,16 @@ class BleachedTextField(TextField):
         return value
 
 
+class UnbleachedTextField(TextField):
+    """Opts out of the global TextField bleach monkeypatch below.
+
+    For columns that only ever receive values copied from already-bleached
+    fields: bleach output is a fixed point of itself, so re-cleaning on copy
+    buys nothing. Rows written before bleach-on-write existed are therefore
+    copied verbatim rather than cleaned."""
+
+    def get_db_prep_value(self, *args, **kwargs):
+        return django.db.models.Field.get_db_prep_value(self, *args, **kwargs)
+
+
 django.db.models.TextField.get_db_prep_value = BleachedTextField.get_db_prep_value
