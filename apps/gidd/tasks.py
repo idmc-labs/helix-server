@@ -226,19 +226,19 @@ def update_public_figure_analysis():
     # NOTE:- There must be exaclty one country
     data = []
 
-    def _get_figures(figure_category, figure_cause, report_country_aggregation):
+    def _get_aggregate_key(figure_category, figure_cause):
         if figure_category == Figure.FIGURE_CATEGORY_TYPES.IDPS and figure_cause == Crisis.CRISIS_TYPE.CONFLICT:
-            return report_country_aggregation["total_stock_conflict"]
+            return "total_stock_conflict"
         elif figure_category == Figure.FIGURE_CATEGORY_TYPES.IDPS and figure_cause == Crisis.CRISIS_TYPE.DISASTER:
-            return report_country_aggregation["total_stock_disaster"]
+            return "total_stock_disaster"
         elif (
             figure_category == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT and figure_cause == Crisis.CRISIS_TYPE.CONFLICT
         ):
-            return report_country_aggregation["total_flow_conflict"]
+            return "total_flow_conflict"
         elif (
             figure_category == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT and figure_cause == Crisis.CRISIS_TYPE.DISASTER
         ):
-            return report_country_aggregation["total_flow_disaster"]
+            return "total_flow_disaster"
 
     # FIXME: only update the gidd_published_date when the report is stale
     # FIXME: gidd_published_date update looks redundant
@@ -259,20 +259,27 @@ def update_public_figure_analysis():
 
     # FIXME: add a cleanup function
 
-    for report in visible_pfa_reports_qs:
-        report_country_aggregation = report.report_figures.aggregate(
-            **report.TOTAL_FIGURE_DISAGGREGATIONS,
-        )
-
-        # There must be exactly one country if is_pfa_visible_in_gidd is enabled.
-        # This is validated in serializer
-        iso3 = report.filter_figure_countries.first().iso3
-
+    # `prefetch_related` batches the one-country-per-report reads that were an
+    # extra query per report.
+    for report in visible_pfa_reports_qs.prefetch_related("filter_figure_countries"):
         # PFA always have either IDPS or ND categories
         figure_category = report.filter_figure_categories[0]
 
         # PFA always have either conflict or disaster cause
         figure_cause = report.filter_figure_crisis_types[0]
+
+        # Each PFA report needs exactly ONE of the four conditional sums —
+        # aggregating all of them quadrupled the per-report scan work.
+        aggregate_key = _get_aggregate_key(figure_category, figure_cause)
+        figures_total = None
+        if aggregate_key is not None:
+            figures_total = report.report_figures.aggregate(
+                _total=report.TOTAL_FIGURE_DISAGGREGATIONS[aggregate_key],
+            )["_total"]
+
+        # There must be exactly one country if is_pfa_visible_in_gidd is enabled.
+        # This is validated in serializer
+        iso3 = report.filter_figure_countries.all()[0].iso3
 
         data.append(
             PublicFigureAnalysis(
@@ -280,10 +287,8 @@ def update_public_figure_analysis():
                 figure_cause=figure_cause,
                 figure_category=figure_category,
                 year=report.filter_figure_end_before.year,
-                figures=_get_figures(figure_category, figure_cause, report_country_aggregation),
-                figures_rounded=round_and_remove_zero(
-                    _get_figures(figure_category, figure_cause, report_country_aggregation)
-                ),
+                figures=figures_total,
+                figures_rounded=round_and_remove_zero(figures_total),
                 description=report.public_figure_analysis,
                 report=report,
                 report_raw_id=report.id,
@@ -378,9 +383,10 @@ def update_idps_sadd_estimates_country_names():
     country_name_map = {
         country["id"]: country["idmc_short_name"] for country in Country.objects.values("id", "idmc_short_name")
     }
-    for obj in IdpsSaddEstimate.objects.all():
+    estimates = list(IdpsSaddEstimate.objects.all())
+    for obj in estimates:
         obj.country_name = country_name_map.get(obj.country_id)
-        obj.save()
+    IdpsSaddEstimate.objects.bulk_update(estimates, ["country_name"], batch_size=2000)
 
 
 def update_gidd_event_and_gidd_figure_data():
