@@ -196,7 +196,12 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertIsNone(content["data"]["createEvent"]["errors"], content)
         self.assertEqual(content["data"]["createEvent"]["result"]["name"], self.input["name"])
         self.assertIsNotNone(content["data"]["createEvent"]["result"]["eventCodes"], content)
-        self.assertEqual(content["data"]["createEvent"]["result"]["eventCodes"][0]["eventCode"], "NEP-2021-XXX")
+        # Order-insensitive: the list loader returns child-pk order, and which
+        # code gets the lower pk is a serializer implementation detail.
+        self.assertIn(
+            "NEP-2021-XXX",
+            [code["eventCode"] for code in content["data"]["createEvent"]["result"]["eventCodes"]],
+        )
 
     def test_valid_event_creation_with_other_sub_type(self) -> None:
         self.input["eventType"] = "DISASTER"

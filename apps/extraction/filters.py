@@ -655,7 +655,13 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
             if "geolocations" in self.ordering_fields:
                 cte = With(
                     Figure.objects.values("id").annotate(
-                        geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR)
+                        geolocations=StringAgg(
+                            "geo_locations__display_name",
+                            EXTERNAL_ARRAY_SEPARATOR,
+                            # Explicit inner order: otherwise the sort key is
+                            # assembled in plan-dependent order.
+                            ordering="geo_locations__display_name",
+                        )
                     )
                 )
                 queryset = (

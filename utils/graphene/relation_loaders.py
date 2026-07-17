@@ -51,7 +51,9 @@ class ReverseFKListLoader(DataLoader):
 
     def batch_load_fn(self, keys):
         fk_id_attr = "%s_id" % self.fk_name
-        qs = self.child_model.objects.filter(**{"%s__in" % self.fk_name: keys})
+        # pk order: unordered children come back in plan-dependent order, which
+        # breaks cross-deployment response comparison.
+        qs = self.child_model.objects.filter(**{"%s__in" % self.fk_name: keys}).order_by("pk")
         grouped = defaultdict(list)
         for obj in qs:
             grouped[getattr(obj, fk_id_attr)].append(obj)
@@ -69,7 +71,13 @@ class M2MListLoader(DataLoader):
 
     def batch_load_fn(self, keys):
         src_id_attr = "%s_id" % self.source_fk
-        qs = self.through.objects.filter(**{"%s__in" % src_id_attr: keys}).select_related(self.target_fk)
+        # Target-pk order (not through-pk): deterministic and matches what an
+        # ordered related manager would return.
+        qs = (
+            self.through.objects.filter(**{"%s__in" % src_id_attr: keys})
+            .select_related(self.target_fk)
+            .order_by("%s_id" % self.target_fk)
+        )
         grouped = defaultdict(list)
         for row in qs:
             grouped[getattr(row, src_id_attr)].append(getattr(row, self.target_fk))
