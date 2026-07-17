@@ -44,6 +44,13 @@ class CrisisType(DjangoObjectType):
     event_count = graphene.Field(graphene.Int)
     review_count = graphene.Field(CrisisReviewCountType)
 
+    def resolve_countries(root, info, **kwargs):
+        # Deterministic country order (pk) — see EventType.resolve_countries.
+        cache = getattr(root, "_prefetched_objects_cache", None) or {}
+        if "countries" in cache:
+            return sorted(cache["countries"], key=lambda country: country.pk)
+        return root.countries.order_by("pk")
+
     def resolve_total_stock_idp_figures(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Crisis.IDP_FIGURES_ANNOTATE, NULL)

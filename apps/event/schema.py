@@ -229,6 +229,15 @@ class EventType(DjangoObjectType):
     def resolve_event_codes(root, info, **kwargs):
         return info.context.event_code_loader.load(root.id)
 
+    def resolve_countries(root, info, **kwargs):
+        # Deterministic country order (pk): the default M2M resolver returns
+        # plan-dependent order, which breaks cross-deployment response
+        # comparison. Sort the prefetch cache in python to avoid an N+1.
+        cache = getattr(root, "_prefetched_objects_cache", None) or {}
+        if "countries" in cache:
+            return sorted(cache["countries"], key=lambda country: country.pk)
+        return root.countries.order_by("pk")
+
     def resolve_entry_count(root, info, **kwargs):
         return info.context.event_entry_count_dataloader.load(root.id)
 

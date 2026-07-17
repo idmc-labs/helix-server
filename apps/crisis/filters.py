@@ -87,7 +87,10 @@ class CrisisFilter(MultiWordSearchFilterSet):
                     reference_date=reference_date,
                 ),
                 **Crisis.annotate_review_figures_count(),
-                event_count=Count("events"),
+                # distinct: the other annotations join-multiply rows, inflating a
+                # bare Count — ordering then disagrees with the dataloader-resolved
+                # eventCount field values.
+                event_count=Count("events", distinct=True),
             )
             .prefetch_related("events")
             .distinct()

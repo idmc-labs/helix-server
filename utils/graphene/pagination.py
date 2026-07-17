@@ -45,17 +45,13 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
             mod_ordering.append(F(o).asc(nulls_last=True))
             explicit_fields.add(o)
 
-    # Append a deterministic pk tiebreaker ONLY when ordering by an annotation (e.g. an
-    # aggregate/count field such as total_stock_idp_figures). That is exactly where ties are
-    # common (many entities share a 0/NULL count) and where pagination was non-deterministic,
-    # and the annotation has no single-column index to defeat — so the tiebreaker is both
-    # needed and free there. For ordering by a real indexed column (created_at, idmc_short_name)
-    # appending `id` would defeat the index for the LIMIT and measurably regress figure-filtered
-    # lists (e.g. country.ff.multi / event.ff.report: +40ms@p10), while ties on those columns are
-    # rare — so we leave them as-is (the pre-existing behaviour).
+    # Append a deterministic pk tiebreaker to EVERY explicit ordering (unless the
+    # client already orders by pk): ties on the sort key otherwise come back in
+    # plan-dependent order, which makes cross-deployment response comparison
+    # impossible. NOTE: on indexed single-column sorts this can defeat the index
+    # for the LIMIT (~+40ms on some figure-filtered lists).
     pk_name = qs.model._meta.pk.name
-    annotated_fields = set(getattr(qs.query, "annotations", None) or {})
-    if explicit_fields & annotated_fields and pk_name not in explicit_fields and "pk" not in explicit_fields:
+    if pk_name not in explicit_fields and "pk" not in explicit_fields:
         mod_ordering.append(F(pk_name).desc())
 
     return qs.distinct().order_by(*mod_ordering)
