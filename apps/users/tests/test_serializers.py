@@ -70,6 +70,19 @@ class TestUserSerializer(HelixTestCase):
         serializer = UserSerializer(instance=self.reviewer, data=self.data, context=context, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_blank_names_are_rejected(self):
+        self.request.user = self.reviewer
+        context = dict(request=self.request)
+        serializer = UserSerializer(
+            instance=self.reviewer,
+            data=dict(first_name="", last_name=""),
+            context=context,
+            partial=True,
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("first_name", serializer.errors)
+        self.assertIn("last_name", serializer.errors)
+
 
 class TestAdminPortfolioSerializer(HelixTestCase):
     def setUp(self):
