@@ -2999,7 +2999,7 @@ input OrganizationCreateInputType {
   deletedOn: DateTime
   name: String!
   shortName: String
-  category: ORGANIZATION_CATEGORY
+  category: ORGANIZATION_CATEGORY!
   methodology: String!
   organizationKind: ID
   parent: ID

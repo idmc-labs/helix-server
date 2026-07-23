@@ -28,6 +28,7 @@ class TestCreateOrganization(HelixGraphQLTestCase):
             "name": "Title1",
             "shortName": "ABC",
             "methodology": "Methodology1",
+            "category": "NATIONAL",
         }
 
     def test_valid_organization_creation(self) -> None:
