@@ -69,7 +69,12 @@ class TestDirectorsOfficeRole(HelixGraphQLTestCase):
             }
         }"""
 
-        self.input = {"name": "Test Report", "isPublic": True}
+        self.input = {
+            "name": "Test Report",
+            "isPublic": True,
+            "filterFigureStartAfter": "2020-01-01",
+            "filterFigureEndBefore": "2020-12-31",
+        }
 
     def test_directors_office_user_can_create_update_delete_report(self):
         self.force_login(self.directors_office_user)
