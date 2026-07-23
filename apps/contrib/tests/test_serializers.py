@@ -180,3 +180,16 @@ class TestSourcePreviewSerializer(HelixTestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
         self.assertNotIn("skip_recent_reuse", serializer.data)
+
+
+class TestBulkApiOperationFigureEventPayloadSerializer(HelixTestCase):
+    def test_by_figures_is_bounded(self):
+        from apps.contrib.bulk_operations.serializers import BulkApiOperationFigureEventPayloadSerializer
+        from apps.contrib.models import BulkApiOperation
+
+        over_limit = BulkApiOperation.QUERYSET_COUNT_THRESHOLD + 1
+        data = {"by_figures": [{"figure": 1, "event": 1} for _ in range(over_limit)]}
+        serializer = BulkApiOperationFigureEventPayloadSerializer(data=data)
+        # rejected on list length before any per-item db lookup
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("by_figures", serializer.errors)

@@ -26,6 +26,7 @@ from utils.factories import (
     FigureFactory,
     FigureLocationFactory,
 )
+from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
@@ -346,7 +347,7 @@ class TestBulkOperation(HelixGraphQLTestCase):
         assert figure_qs.filter(role=Figure.ROLE.TRIANGULATION).count() == 2
         assert figure_qs.filter(role=Figure.ROLE.RECOMMENDED).count() == 2
 
-        # Try 4 - Without permission
+        # Try 4 - Without permission: a guest cannot even trigger the operation
         self.force_login(self.guest)
         variables = _generate_payload(
             Figure.ROLE.RECOMMENDED,
@@ -356,9 +357,10 @@ class TestBulkOperation(HelixGraphQLTestCase):
         )
         with self.captureOnCommitCallbacks(execute=True):
             response = self.query(self.Mutation, variables=variables)
-        self.assertResponseNoErrors(response)
-        content = response.json()["data"]["triggerBulkOperation"]
-        _basic_check(variables, content, [], [])
+        content = response.json()
+        self.assertIsNone(content["data"]["triggerBulkOperation"])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content["errors"][0]["message"])
+        # nothing changed
         assert figure_qs.filter(role=Figure.ROLE.TRIANGULATION).count() == 2
         assert figure_qs.filter(role=Figure.ROLE.RECOMMENDED).count() == 2
         self.force_login(self.editor)
