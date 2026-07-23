@@ -29,7 +29,7 @@ class ContactSerializer(serializers.ModelSerializer, MetaInformationSerializerMi
         model = Contact
         fields = "__all__"
         extra_kwargs = {
-            "countries_of_operation": {"required": True},
+            "countries_of_operation": {"required": True, "allow_empty": False},
         }
 
 
