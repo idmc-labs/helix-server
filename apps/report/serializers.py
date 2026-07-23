@@ -146,16 +146,15 @@ class ReportSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
         return errors
 
     def validate_figure_crisis_type(self, attrs):
-        filter_figure_crisis_types = (
+        crisis_types = (
             attrs.get("filter_figure_crisis_types", self.instance and self.instance.filter_figure_crisis_types) or []
         )
-        if filter_figure_crisis_types in [Crisis.CRISIS_TYPE.OTHER]:
+        # NOTE: list may hold enum instances or raw values depending on the path
+        crisis_type_values = {getattr(crisis_type, "value", crisis_type) for crisis_type in crisis_types}
+        if Crisis.CRISIS_TYPE.DISASTER.value not in crisis_type_values:
             attrs["filter_figure_disaster_sub_types"] = []
+        if Crisis.CRISIS_TYPE.CONFLICT.value not in crisis_type_values:
             attrs["filter_figure_violence_sub_types"] = []
-        elif filter_figure_crisis_types in [Crisis.CRISIS_TYPE.DISASTER]:
-            attrs["filter_figure_violence_sub_types"] = []
-        else:
-            attrs["filter_figure_disaster_sub_types"] = []
 
     def validate_report(self, attrs, errors):
         is_gidd_report = attrs.get("is_gidd_report", self.instance and self.instance.is_gidd_report)
@@ -187,6 +186,12 @@ class ReportSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
         else:
             attrs["gidd_report_year"] = None
             self.validate_figure_crisis_type(attrs)
+            start = attrs.get("filter_figure_start_after", self.instance and self.instance.filter_figure_start_after)
+            end = attrs.get("filter_figure_end_before", self.instance and self.instance.filter_figure_end_before)
+            if not start:
+                errors["filter_figure_start_after"] = gettext("This field is required.")
+            if not end:
+                errors["filter_figure_end_before"] = gettext("This field is required.")
 
     @staticmethod
     def has_permission_for_report(user, report):

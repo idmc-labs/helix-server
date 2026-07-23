@@ -206,3 +206,66 @@ class TestReportSerializer(HelixTestCase):
         # a real summary is accepted
         serializer = ReportSerializer(instance=report, data=dict(summary="real summary"), partial=True, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
+
+
+class TestReportValidationSerializer(HelixTestCase):
+    def setUp(self):
+        self.request = RequestFactory().post("/graphql")
+        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.context = dict(request=self.request)
+
+    def test_non_gidd_report_requires_date_range(self):
+        data = dict(name="no dates", is_gidd_report=False)
+        serializer = ReportSerializer(data=data, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("filter_figure_start_after", serializer.errors)
+        self.assertIn("filter_figure_end_before", serializer.errors)
+
+        data = dict(
+            name="with dates",
+            is_gidd_report=False,
+            filter_figure_start_after="2020-01-01",
+            filter_figure_end_before="2020-12-31",
+        )
+        serializer = ReportSerializer(data=data, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_figure_crisis_type_clears_only_opposite_subtypes(self):
+        from apps.crisis.models import Crisis
+        from utils.factories import DisasterSubTypeFactory, ViolenceSubTypeFactory
+
+        violence_sub_type = ViolenceSubTypeFactory.create()
+        disaster_sub_type = DisasterSubTypeFactory.create()
+        subtypes = dict(
+            filter_figure_violence_sub_types=[violence_sub_type.id],
+            filter_figure_disaster_sub_types=[disaster_sub_type.id],
+        )
+
+        def _report(crisis_types):
+            return Report.objects.create(
+                name="crisis type report",
+                filter_figure_crisis_types=crisis_types,
+                filter_figure_start_after="2020-01-01",
+                filter_figure_end_before="2020-12-31",
+            )
+
+        # DISASTER present -> keep disaster subtypes, clear violence
+        report = _report([Crisis.CRISIS_TYPE.DISASTER.value])
+        serializer = ReportSerializer(instance=report, data=subtypes, partial=True, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["filter_figure_violence_sub_types"], [])
+        self.assertEqual(serializer.validated_data["filter_figure_disaster_sub_types"], [disaster_sub_type])
+
+        # CONFLICT present -> keep violence subtypes, clear disaster
+        report = _report([Crisis.CRISIS_TYPE.CONFLICT.value])
+        serializer = ReportSerializer(instance=report, data=subtypes, partial=True, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["filter_figure_violence_sub_types"], [violence_sub_type])
+        self.assertEqual(serializer.validated_data["filter_figure_disaster_sub_types"], [])
+
+        # neither -> clear both
+        report = _report([Crisis.CRISIS_TYPE.OTHER.value])
+        serializer = ReportSerializer(instance=report, data=subtypes, partial=True, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["filter_figure_violence_sub_types"], [])
+        self.assertEqual(serializer.validated_data["filter_figure_disaster_sub_types"], [])
