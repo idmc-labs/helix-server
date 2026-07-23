@@ -371,6 +371,31 @@ class TestFigureSerializer(HelixTestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertIsNone(serializer.data["displacement_occurred"])
 
+    def test_start_date_too_far_in_future_is_rejected(self):
+        self.data["start_date"] = "2099-01-01"
+        self.data["end_date"] = "2099-01-02"
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
+            },
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+
+    def test_geo_locations_required_on_create(self):
+        self.data.pop("geo_locations")
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
+            },
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("geo_locations", serializer.errors)
+
     def test_invalid_geo_locations_country_codes(self):
         self.data["geo_locations"] = [
             {
