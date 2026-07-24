@@ -396,6 +396,32 @@ class TestFigureSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("geo_locations", serializer.errors)
 
+    def test_geo_locations_empty_list_is_rejected(self):
+        self.data["geo_locations"] = []
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
+            },
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("geo_locations", serializer.errors)
+
+    def test_geo_locations_optional_on_edit(self):
+        figure = FigureFactory.create(entry=self.entry, event=self.event, country=self.country)
+        data = copy(self.data)
+        data["id"] = figure.id
+        data.pop("geo_locations")
+        serializer = FigureSerializer(
+            data=data,
+            context={
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
+            },
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_invalid_geo_locations_country_codes(self):
         self.data["geo_locations"] = [
             {
