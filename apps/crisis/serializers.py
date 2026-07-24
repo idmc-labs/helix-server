@@ -15,7 +15,7 @@ class CrisisSerializer(serializers.ModelSerializer, MetaInformationSerializerMix
         model = Crisis
         fields = "__all__"
         extra_kwargs = {
-            "countries": {"required": True},
+            "countries": {"required": True, "allow_empty": False},
         }
 
     def validate_dates(self, attrs):
@@ -97,17 +97,9 @@ class CrisisSerializer(serializers.ModelSerializer, MetaInformationSerializerMix
             )
         return errors
 
-    def validate_empty_countries(self, attrs):
-        errors = OrderedDict()
-        countries = attrs.get("countries", [])
-        if not countries and not (self.instance and self.instance.countries.exists()):
-            errors.update(dict(countries="This field is required."))
-        return errors
-
     def validate(self, attrs):
         errors = OrderedDict()
         errors.update(self.validate_dates(attrs))
-        errors.update(self.validate_empty_countries(attrs))
         if self.instance:
             errors.update(self.validate_event_dates(attrs))
             errors.update(self.validate_event_countries(attrs))
