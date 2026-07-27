@@ -7,10 +7,12 @@ via ``generate_for_graphql_mutation``.
 from __future__ import annotations
 
 import datetime
+import types
 from uuid import UUID
 
 from pydantic import ValidationError
 from pyhelix import models as pyhelix_models
+from pyhelix.api.api import helix_client_context
 
 from apps.hulk.bulk.models import HulkEventImport, HulkEventImportEventCode
 from utils.factories import (
@@ -277,3 +279,145 @@ class TestHulkEntryImportPublishDate(HelixGraphQLTestCase):
     def test_publish_date_very_old_allowed(self):
         row = self._entry_row(publish_date="1900-01-01")
         pyhelix_models.HulkEntryImport(**row)
+
+
+class TestHulkFigureImportDates(HelixGraphQLTestCase):
+    """Figure ``start_date``/``end_date`` must not be more than 10 years in the
+    future — mirroring ``FigureSerializer._validate_dates``.
+
+    The check lives on the pyhelix parent (``parse_dates``) and bounds the
+    resolved ``_start_date``/``_end_date``, so it covers both the flow dates
+    (``start_date``/``end_date``) and the stock mapping
+    (``stock_date`` -> start, ``stock_reporting_date`` -> end). We exercise the
+    parent model directly to avoid the DB-backed entry/event/sub-type lookups on
+    the app subclass, stubbing the sub-type existence check the ``figure_cause``
+    validator performs."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        # parse_figure_cause only calls ``<manager>.validate_id_exists(id)``; a
+        # no-op stub is enough to reach the date validation under test.
+        stub_manager = types.SimpleNamespace(validate_id_exists=lambda _id: None)
+        self.stub_client = types.SimpleNamespace(
+            violence_sub_type_manager=stub_manager,
+            disaster_sub_type_manager=stub_manager,
+            other_sub_type_manager=stub_manager,
+        )
+
+    def _location(self, **overrides) -> dict:
+        loc = {
+            "uuid": "77777777-7777-7777-7777-777777777777",
+            "display_name": "Kathmandu",
+            "country_name": "Nepal",
+            "country_code": "NP",
+            "identifier": "ORIGIN",
+            "accuracy": "ADM0",
+            "geocoder": "GEONAME",
+            "latitude": 27.7,
+            "longitude": 85.3,
+        }
+        loc.update(overrides)
+        return loc
+
+    def _flow_row(self, **overrides) -> dict:
+        row = {
+            "uuid": "88888888-8888-8888-8888-888888888888",
+            "entry_id": 1,
+            "event_id": 1,
+            "figure_cause": "CONFLICT",
+            "violence_sub_type_id": 1,
+            "category": "NEW_DISPLACEMENT",  # flow
+            "term": "DISPLACED",
+            "quantifier": "EXACT",
+            "unit": "PERSON",
+            "figure_role": "RECOMMENDED",
+            "country_id": 1,
+            "start_date": "2024-01-01",
+            "start_date_accuracy": "DAY",
+            "end_date": "2024-01-31",
+            "end_date_accuracy": "DAY",
+            "reported_figure": 100,
+            "is_housing_destruction": False,
+            "displacement_occurred": "BEFORE",
+            "is_disaggregated": False,
+            "analysis_text": "analysis",
+            "source_excerpt_text": "excerpt",
+            "include_idu": False,
+            "idu_text": "",
+            "locations": [self._location()],
+            "sources_id": [1],
+        }
+        row.update(overrides)
+        return row
+
+    def _stock_row(self, **overrides) -> dict:
+        # Stock figures clear the flow dates and set the stock dates instead.
+        row = self._flow_row(
+            category="IDPS",  # stock
+            start_date=None,
+            start_date_accuracy=None,
+            end_date=None,
+            end_date_accuracy=None,
+            stock_date="2024-01-05",
+            stock_date_accuracy="DAY",
+            stock_reporting_date="2024-01-31",
+        )
+        row.update(overrides)
+        return row
+
+    @staticmethod
+    def _far_future() -> str:
+        today = datetime.date.today()
+        return today.replace(year=today.year + 11).isoformat()
+
+    @staticmethod
+    def _near_future() -> str:
+        today = datetime.date.today()
+        return today.replace(year=today.year + 5).isoformat()
+
+    # -- flow dates ----------------------------------------------------------
+
+    def test_flow_start_date_beyond_10_years_rejected(self):
+        row = self._flow_row(start_date=self._far_future(), end_date=self._far_future())
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+        self.assertIn("start_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+
+    def test_flow_end_date_beyond_10_years_rejected(self):
+        row = self._flow_row(end_date=self._far_future())
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+        self.assertIn("end_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+
+    def test_flow_dates_within_10_years_allowed(self):
+        row = self._flow_row(start_date=self._near_future(), end_date=self._near_future())
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+
+    def test_flow_very_old_dates_allowed(self):
+        row = self._flow_row(start_date="1900-01-01", end_date="1900-12-31")
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+
+    # -- stock dates (mapped to start/end) -----------------------------------
+
+    def test_stock_date_beyond_10_years_rejected(self):
+        """``stock_date`` maps to ``start_date``; a far-future value is rejected
+        against the start_date bound."""
+        row = self._stock_row(stock_date=self._far_future())
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+        self.assertIn("start_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+
+    def test_stock_reporting_date_beyond_10_years_rejected(self):
+        """``stock_reporting_date`` maps to ``end_date``; a far-future value is
+        rejected against the end_date bound."""
+        row = self._stock_row(stock_reporting_date=self._far_future())
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+        self.assertIn("end_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+
+    def test_stock_dates_within_10_years_allowed(self):
+        row = self._stock_row(stock_date=self._near_future(), stock_reporting_date=self._near_future())
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
