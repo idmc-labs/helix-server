@@ -51,7 +51,8 @@ class BulkApiOperationFigureEventPayloadSerializer(serializers.Serializer):
             figure=serializers.PrimaryKeyRelatedField(queryset=Figure.objects.all(), required=True),
             event=serializers.PrimaryKeyRelatedField(queryset=Event.objects.all(), required=True),
         ),
-    )(required=True, many=True)
+        # NOTE: bound the list before per-item DB lookups run, matching the queryset threshold
+    )(required=True, many=True, max_length=BulkApiOperation.QUERYSET_COUNT_THRESHOLD)
 
     def validate(self, attrs):
         by_figures = attrs.get("by_figures") or []

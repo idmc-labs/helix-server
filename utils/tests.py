@@ -224,7 +224,12 @@ class HelixAPITestCase(APITestCase):
             self.now_patcher = patch("django.utils.timezone.now")
             self.now_datetime = datetime.datetime(2021, 1, 1, 0, 0, 0, 123456, tzinfo=pytz.UTC)
             self.now_datetime_str = self.now_datetime.isoformat()
-            self.now_patcher.start().return_value = self.now_datetime
+            # NOTE: expose the mock so tests re-point the clock instead of calling start()
+            # again (a second start() stacks a patch that the single stop() never unwinds,
+            # leaking the frozen clock into later tests)
+            self.now_mock = self.now_patcher.start()
+            self.now_mock.return_value = self.now_datetime
+            self.addCleanup(self.now_patcher.stop)
 
     def authenticate(self, user=None):
         user = user or self.user

@@ -69,7 +69,12 @@ class TestReportingTeamRole(HelixGraphQLTestCase):
             }
         }"""
 
-        self.input = {"name": "Test Report", "isPublic": True}
+        self.input = {
+            "name": "Test Report",
+            "isPublic": True,
+            "filterFigureStartAfter": "2020-01-01",
+            "filterFigureEndBefore": "2020-12-31",
+        }
 
     def test_reporting_team_user_can_create_update_delete_report(self):
         self.force_login(self.admin)
@@ -92,10 +97,7 @@ class TestReportingTeamRole(HelixGraphQLTestCase):
 
         # Test can update report
         report_id = content["result"]["id"]
-        update_data = {
-            "id": report_id,
-            "name": "Report updated",
-        }
+        update_data = {"id": report_id, "name": "Report updated"}
         response = self.query(
             self.report_update_mutation,
             input_data=update_data,
@@ -111,10 +113,7 @@ class TestReportingTeamRole(HelixGraphQLTestCase):
 
         # Test cannot update other's report
         report_id = content_admin["result"]["id"]
-        update_data = {
-            "id": report_id,
-            "name": "Report updated",
-        }
+        update_data = {"id": report_id, "name": "Report updated"}
         response = self.query(
             self.report_update_mutation,
             input_data=update_data,
