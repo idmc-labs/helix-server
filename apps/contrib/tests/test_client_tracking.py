@@ -97,7 +97,7 @@ class TestExternalClientTrack(HelixAPITestCase):
         expected_track_count = len(IDU_EXPORT_URLS) * 2
 
         # Assume yesterdays data
-        self.now_patcher.start().return_value = self.now_datetime - timedelta(days=1)
+        self.now_mock.return_value = self.now_datetime - timedelta(days=1)
         for endpoint in endpoints:
             self.client.get(endpoint)
 
@@ -164,7 +164,7 @@ class TestExternalClientTrack(HelixAPITestCase):
         expected_track_count = len(GIDD_API_URLS) * 2
 
         # Assume yesterdays data
-        self.now_patcher.start().return_value = self.now_datetime - timedelta(days=1)
+        self.now_mock.return_value = self.now_datetime - timedelta(days=1)
         for endpoint in endpoints:
             self.client.get(endpoint)
 

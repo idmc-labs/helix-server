@@ -248,9 +248,11 @@ class CommonFigureValidationMixin:
             if geo_location_ids.difference(geo_location_ids_on_db):
                 errors["geo_locations"] = "Some locations not found."
 
-        # NOTE: geolocations mandatory check is already defined in kwargs
-        # We can skip futher validation if geo_locations is not defined
+        # At least one location is required on create (mirrors the client); the field
+        # is required=False only so partial updates may omit it and keep stored ones.
         if not geo_locations:
+            if not instance:
+                errors["geo_locations"] = "At least one location is required."
             return errors
 
         # NOTE: A location should be inside the figure's country unless:
@@ -430,6 +432,16 @@ class CommonFigureValidationMixin:
 
         return OrderedDict()
 
+    def _validate_dates(self, instance, attrs):
+        # The client applies a not-in-the-past check to start_date; here we only bound
+        # the future direction (shared MAX_FUTURE_YEARS) — very old dates stay valid.
+        errors = OrderedDict()
+        start_date = attrs.get("start_date", getattr(instance, "start_date", None))
+        end_date = attrs.get("end_date", getattr(instance, "end_date", None))
+        errors.update(is_date_within_future_bound(start_date, "start_date"))
+        errors.update(is_date_within_future_bound(end_date, "end_date"))
+        return errors
+
     def _validate_category(self, instance, attrs):
         errors = OrderedDict()
 
@@ -459,6 +471,7 @@ class CommonFigureValidationMixin:
         errors.update(self._validate_term(instance, attrs))
         errors.update(self._validate_unit(instance, attrs))
         errors.update(self._validate_category(instance, attrs))
+        errors.update(self._validate_dates(instance, attrs))
         errors.update(self._validate_figure_cause(instance, attrs))
         errors.update(self._validate_is_disaggregated(instance, attrs))
 
@@ -545,9 +558,7 @@ class FigureSerializer(
             "uuid": {"validators": [], "required": True},
             "entry": {"validators": [], "required": True},
             "calculation_logic": {"required": True, "allow_blank": False, "allow_null": False},
-            # FIXME: Add a validation that start_date should not be in the future
             "start_date": {"required": True, "allow_null": False},
-            # FIXME: Add a validation that end_date should not be in the figure (for flow)
             "end_date": {"required": True, "allow_null": False},
             "sources": {"required": True, "allow_empty": False, "allow_null": False},
             "country": {"required": True, "allow_null": False},

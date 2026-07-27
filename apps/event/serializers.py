@@ -28,6 +28,7 @@ class ActorSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
     class Meta:
         model = Actor
         fields = "__all__"
+        extra_kwargs = {"country": {"required": True}}
 
 
 class ActorUpdateSerializer(UpdateSerializerMixin, ActorSerializer):

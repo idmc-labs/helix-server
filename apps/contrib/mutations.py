@@ -230,9 +230,10 @@ class TriggerBulkOperation(graphene.Mutation):
     result = graphene.Field(BulkApiOperationObjectType)
 
     @staticmethod
-    # TODO: Define a proper permission
-    # For now, this is handle at client level.
-    # We do handle the permission internally as well.
+    @is_authenticated()
+    # NOTE: figure role/event bulk updates change figures, so require the figure change
+    # permission (monitoring expert and above). The per-figure mutation still re-checks.
+    @permission_checker(["entry.change_figure"])
     def mutate(_, info, data):
         serializer = BulkApiOperationSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):

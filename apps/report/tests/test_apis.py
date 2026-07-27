@@ -520,7 +520,12 @@ class TestPrivatePublicReports(HelixGraphQLTestCase):
     def test_should_return_private_reports_if_filter_is_not_applied(self) -> None:
         self.force_login(self.user)
         # Create report a private report
-        input = {"name": "test private report", "isPublic": False}
+        input = {
+            "name": "test private report",
+            "isPublic": False,
+            "filterFigureStartAfter": "2020-01-01",
+            "filterFigureEndBefore": "2020-12-31",
+        }
         create_response = self.query(self.mutation, input_data=input)
         content = create_response.json()
         self.assertResponseNoErrors(create_response)
@@ -548,7 +553,12 @@ class TestPrivatePublicReports(HelixGraphQLTestCase):
     def test_can_list_public_reports(self) -> None:
         self.force_login(self.user)
         # Create report a public report
-        input = {"name": "test public report", "isPublic": True}
+        input = {
+            "name": "test public report",
+            "isPublic": True,
+            "filterFigureStartAfter": "2020-01-01",
+            "filterFigureEndBefore": "2020-12-31",
+        }
         create_response = self.query(self.mutation, input_data=input)
         content = create_response.json()
         self.assertResponseNoErrors(create_response)
