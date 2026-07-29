@@ -46,10 +46,14 @@ env = environ.Env(
     S3_BUCKET_NAME=str,
     EXTERNAL_S3_BUCKET_NAME=str,
     AWS_S3_PROXY=(str, None),
-    # Hulk bulk-import: AWS S3 buckets that the attachment handler is allowed
-    # to copy_object from. Any S3 source URL whose bucket is not in this list
-    # will fail the row with a pre-error instead of falling back to httpx.
-    HULK_TRUSTED_SOURCE_BUCKETS=(list, []),
+    # Hulk bulk-import: AWS S3 buckets helix's own credentials can read, so the
+    # attachment handler copies from them server-side (s3.copy_object) instead
+    # of downloading + re-uploading the bytes. Every other source URL — S3 or
+    # not — takes the plain download+upload path, so this list is a performance
+    # opt-in, not an allowlist of permitted sources. It must stay an explicit
+    # list: attempting copy_object against any user-supplied bucket would turn
+    # helix's IAM identity into a read primitive on every bucket it can reach.
+    HULK_DIRECT_ACCESS_BUCKETS=(list, []),
     # Redis URL
     DJANGO_CACHE_REDIS_URL=str,  # redis://redis:6379/1
     DJANGO_EXTERNAL_API_CACHE_REDIS_URL=str,  # redis://redis:6379/1
@@ -480,8 +484,9 @@ GZIP_CONTENT_TYPES = [
     "application/pdf",
 ]
 
-# Hulk bulk-import: AWS S3 source-bucket allowlist (see envvar docstring above).
-HULK_TRUSTED_SOURCE_BUCKETS = [b.strip() for b in env("HULK_TRUSTED_SOURCE_BUCKETS") if b.strip()]
+# Hulk bulk-import: buckets eligible for the server-side copy fast path
+# (see envvar docstring above).
+HULK_DIRECT_ACCESS_BUCKETS = [b.strip() for b in env("HULK_DIRECT_ACCESS_BUCKETS") if b.strip()]
 
 # HEALTH-CHECK
 REDIS_URL = DJANGO_CACHE_REDIS_URL

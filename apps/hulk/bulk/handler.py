@@ -39,7 +39,7 @@ from .models import (
     HulkFigureImport,
     HulkSourcePreviewImport,
 )
-from .utils import parse_aws_s3_url, parse_same_storage_url
+from .utils import S3Source, parse_aws_s3_url, parse_same_storage_url
 
 logger = logging.getLogger(__name__)
 
@@ -70,10 +70,10 @@ class _CreateEntityError(Exception):
 
 class _PreCheckError(Exception):
     """
-    Raised before any entity-creation work to fail a row with a pre-error.
-    Used e.g. when an attachment ``file_url`` points at an AWS S3 bucket that
-    is not on the ``HULK_TRUSTED_SOURCE_BUCKETS`` allowlist — we refuse the
-    row instead of degrading to a bytes-through-httpx download.
+    Raised by a ``_create_entity`` override to fail a row with a pre-error
+    *before* any entity-creation work — i.e. when the row is unusable on its own
+    terms, so nothing has been created and nothing needs undoing. Use
+    :class:`_CreateEntityError` for failures once creation is under way.
     """
 
 
@@ -182,11 +182,17 @@ def download_file(url):
     """
     Fetch a file via HTTP for the attachment handler's slow path.
 
-    Note: same-bucket / same-MinIO and AWS S3 URLs are handled server-side via
-    ``s3.copy_object`` in ``HulkHelixAttachmentImportHandler``, so this should
-    only be reached for true external URLs.
+    Note: same-bucket / same-MinIO and AWS S3 URLs are normally handled
+    server-side via ``s3.copy_object`` in ``HulkHelixAttachmentImportHandler``,
+    so this is reached for true external URLs and for presigned URLs whose
+    object helix's own credentials cannot read (the signature only works over
+    an HTTP GET — ``copy_object`` cannot present it).
+
+    Non-2xx responses raise: S3 answers a bad/expired signature with a 403 and
+    an XML error body, which must not be stored as if it were the attachment.
     """
-    response = httpx.get(url)
+    response = httpx.get(url, follow_redirects=True)
+    response.raise_for_status()
 
     filename = get_filename_from_response(response, fallback="attachment")
 
@@ -496,35 +502,108 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         }
 
     def _create_entity(self, import_data, *, user_override: typing.Optional[User] = None) -> int:
-        # AWS S3 URLs are only accepted from allowlisted buckets — anything
-        # else fails the row outright (no httpx fallback) so we don't silently
-        # stream bytes through helix from an unvetted source. Same-storage
-        # URLs (helix's own MinIO/S3 endpoint) are implicitly trusted.
+        """
+        Pick how to get the row's file: a server-side S3 copy when we can, a
+        plain download + re-upload otherwise.
+
+        ``file_url`` is operator-supplied and can point anywhere, so the copy
+        fast path is opt-in per bucket via ``HULK_DIRECT_ACCESS_BUCKETS`` (plus
+        helix's own storage endpoint, which is always eligible). Firing
+        ``copy_object`` at whatever bucket a url happens to name would let a row
+        borrow helix's IAM identity to read buckets the importer can't. Every
+        other url — S3 or not — just gets downloaded.
+        """
         aws_source = parse_aws_s3_url(import_data.file_url)
-        if aws_source is not None:
-            src_bucket, src_key = aws_source
-            trusted = settings.HULK_TRUSTED_SOURCE_BUCKETS or []
-            if src_bucket not in trusted:
-                raise _PreCheckError(f"source bucket {src_bucket!r} is not in HULK_TRUSTED_SOURCE_BUCKETS allowlist")
-            return self._create_via_s3_copy(
-                import_data,
-                src_bucket=src_bucket,
-                src_key=src_key,
-                user_override=user_override,
-            )
+        if aws_source is not None and aws_source.bucket in (settings.HULK_DIRECT_ACCESS_BUCKETS or []):
+            return self._create_from_s3_source(import_data, aws_source, user_override=user_override)
         same_source = parse_same_storage_url(import_data.file_url)
         if same_source is not None:
-            return self._create_via_s3_copy(
-                import_data,
-                src_bucket=same_source[0],
-                src_key=same_source[1],
-                user_override=user_override,
-            )
+            return self._create_from_s3_source(import_data, same_source, user_override=user_override)
         return super()._create_entity(import_data, user_override=user_override)
 
     # ------------------------------------------------------------------
     # S3-copy fast path
     # ------------------------------------------------------------------
+    @staticmethod
+    def _media_s3_client():
+        """
+        The media bucket's boto3 client, or ``None`` when the default storage
+        isn't S3-backed (local ``FileSystemStorage`` in a dev checkout). Without
+        a client there is no server-side copy to make.
+        """
+        try:
+            # django-storages resolves ``.bucket`` lazily — a misconfigured
+            # endpoint raises here rather than returning None.
+            bucket = getattr(default_storage, "bucket", None)
+            return getattr(getattr(bucket, "meta", None), "client", None)
+        except Exception:
+            logger.exception("Could not resolve the media bucket's boto3 client")
+            return None
+
+    @staticmethod
+    def _resolve_source_key(client, source: S3Source) -> typing.Tuple[typing.Optional[str], typing.Optional[str]]:
+        """
+        HEAD each of ``source.key_candidates`` and return ``(key, None)`` for the
+        first one helix's own credentials can read.
+
+        This resolves the percent-encoding ambiguity for keys containing a
+        literal ``%`` (see :class:`S3Source`) and doubles as a readability
+        check, so we only commit to the copy path — which allocates an
+        Attachment row first — once we know the copy can work. Returns
+        ``(None, reason)`` when no candidate resolves; ``reason`` is the last
+        error, which distinguishes a missing object from an access-denied one.
+        """
+        last_error = "no key candidates"
+        for candidate in source.key_candidates:
+            try:
+                client.head_object(Bucket=source.bucket, Key=candidate)
+            except Exception as e:  # botocore ClientError (404/403) and friends
+                last_error = f"{candidate!r}: {e}"
+                continue
+            return candidate, None
+        return None, last_error
+
+    def _create_from_s3_source(
+        self,
+        import_data,
+        source: S3Source,
+        *,
+        user_override: typing.Optional[User] = None,
+    ) -> int:
+        """
+        Copy the source object server-side when helix's credentials can read it,
+        and drop back to the download path when they can't.
+
+        The bucket being configured for direct access doesn't guarantee this
+        particular object is readable (wrong key, restrictive object ACL,
+        expired role), so the copy is attempted only after a successful HEAD.
+        Falling back rather than failing also covers the presigned case: such a
+        url hands us a signature, not credentials, and ``copy_object`` cannot
+        present a signature — but an HTTP GET of the full signed url can.
+        """
+        client = self._media_s3_client()
+        resolved_key, unreadable_reason = (
+            self._resolve_source_key(client, source) if client is not None else (None, "storage backend is not S3")
+        )
+        if resolved_key is not None:
+            return self._create_via_s3_copy(
+                import_data,
+                src_bucket=source.bucket,
+                src_key=resolved_key,
+                user_override=user_override,
+            )
+        logger.warning(
+            "hulk attachment %s: s3://%s/%s not readable with helix credentials (%s); falling back to download+upload (%s)",
+            import_data.uuid,
+            source.bucket,
+            source.key,
+            unreadable_reason,
+            "the url is presigned, so the signature authorises the GET"
+            if source.is_presigned
+            else "the url is not presigned, so the GET is unauthenticated and only works for a public object",
+        )
+        return super()._create_entity(import_data, user_override=user_override)
+
     def _create_via_s3_copy(
         self,
         import_data,
@@ -561,21 +640,27 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         # Step 2: parse the presigned URL → destination bucket + key. Try AWS
         # first, then fall back to same-storage (MinIO in dev) since the
         # presigned URL points at helix's configured endpoint either way.
+        # Unlike a caller-supplied source url, this one is generated by boto3
+        # and therefore canonically encoded, so ``dst.key`` (decoded exactly
+        # once) is the real key — no candidate probing needed. The signature in
+        # its query string is irrelevant here: we only need bucket + key, and we
+        # write with our own credentials rather than PUTting to the url.
         dst = parse_aws_s3_url(presigned_url) or parse_same_storage_url(presigned_url)
         if dst is None:
             raise _CreateEntityError(f"could not parse destination bucket/key from presigned url: {presigned_url!r}")
-        dst_bucket, dst_key = dst
 
         # Step 3: server-side s3.copy_object. We use the helix media bucket's
-        # boto3 client (default_storage) — it has the credentials to read the
-        # source (if the IAM role allows it or the source is public-read)
-        # and write the destination.
+        # boto3 client (default_storage) — the caller has already confirmed it
+        # can read the source (``_resolve_source_key``) and it owns the
+        # destination bucket.
+        client = self._media_s3_client()
+        if client is None:
+            raise _CreateEntityError("default storage is not S3-backed; cannot copy_object")
         try:
-            client = default_storage.bucket.meta.client
             client.copy_object(
                 CopySource={"Bucket": src_bucket, "Key": src_key},
-                Bucket=dst_bucket,
-                Key=dst_key,
+                Bucket=dst.bucket,
+                Key=dst.key,
             )
         except Exception as e:
             raise _CreateEntityError(f"s3.copy_object failed: {e}")
