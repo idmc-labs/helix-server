@@ -1161,6 +1161,8 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
             b' "file_url": "https://hulk-source.s3.us-east-1.amazonaws.com/inputs/a.pdf"}\n'
             b'{"uuid": "22222222-2222-2222-2222-222222222222", "attachment_for": "ENTRY",'
             b' "file_url": "https://hulk-source.s3.us-east-1.amazonaws.com/inputs/b.pdf"}\n'
+            b'{"uuid": "33333333-3333-3333-3333-333333333333", "attachment_for": "ENTRY",'
+            b' "file_url": "https://hulk-source.s3.us-east-1.amazonaws.com/inputs/hash-named-blob"}\n'
         )
         bulk = HulkBulkImport.objects.create(created_by=self.user)
         _create_dataset(bulk, "attachments", s3_rows)
@@ -1206,10 +1208,20 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
 
         fake_s3 = MagicMock()
         fake_s3.copy_object.side_effect = lambda **kwargs: copy_object_calls.append(kwargs)
-        # b.pdf is stored gzipped — django-storages does that for every
-        # GZIP_CONTENT_TYPES entry, PDFs included — while a.pdf is not. The copy
-        # must restate that header for b.pdf and omit it for a.pdf.
-        fake_s3.head_object.side_effect = lambda **kw: {"ContentEncoding": "gzip"} if kw["Key"].endswith("b.pdf") else {}
+        # Per-key source metadata. b.pdf is stored gzipped (django-storages does
+        # that for every GZIP_CONTENT_TYPES entry, PDFs included) while a.pdf is
+        # not; the extension-less key carries a correct Content-Type that its file
+        # name cannot imply. The ETags let us assert the copy is made conditional.
+        source_heads = {
+            "inputs/a.pdf": {"ContentType": "application/pdf", "ETag": '"aaa"'},
+            "inputs/b.pdf": {
+                "ContentEncoding": "gzip",
+                "ContentType": "application/pdf",
+                "ETag": '"bbb"',
+            },
+            "inputs/hash-named-blob": {"ContentType": "application/pdf", "ETag": '"ccc"'},
+        }
+        fake_s3.head_object.side_effect = lambda **kw: source_heads[kw["Key"]]
 
         with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient, patch(
             "apps.hulk.bulk.handler.default_storage"
@@ -1224,24 +1236,24 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         bulk.refresh_from_db()
         self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
         success_rows = _jsonl_rows(_success_file(bulk, "attachments"))
-        self.assertEqual(len(success_rows), 2)
+        self.assertEqual(len(success_rows), 3)
 
-        # Both rows took the S3 fast path: copy_object was called twice with
+        # Every row took the S3 fast path: copy_object was called once each with
         # the source bucket/key from the file_url and the destination bucket/key
         # parsed from the presigned URL.
-        self.assertEqual(len(copy_object_calls), 2)
+        self.assertEqual(len(copy_object_calls), 3)
         self.assertEqual(
             {call["CopySource"]["Bucket"] for call in copy_object_calls},
             {"hulk-source"},
         )
         self.assertEqual(
             {call["CopySource"]["Key"] for call in copy_object_calls},
-            {"inputs/a.pdf", "inputs/b.pdf"},
+            {"inputs/a.pdf", "inputs/b.pdf", "inputs/hash-named-blob"},
         )
         self.assertEqual({call["Bucket"] for call in copy_object_calls}, {"helix-dest"})
         self.assertEqual(
             {call["Key"] for call in copy_object_calls},
-            {"hulk-dst/a.pdf", "hulk-dst/b.pdf"},
+            {"hulk-dst/a.pdf", "hulk-dst/b.pdf", "hulk-dst/hash-named-blob"},
         )
         # The copy must set Content-Type from the file name rather than inherit
         # the source object's, and that needs MetadataDirective=REPLACE —
@@ -1257,6 +1269,16 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         by_source_key = {call["CopySource"]["Key"]: call for call in copy_object_calls}
         self.assertEqual(by_source_key["inputs/b.pdf"]["ContentEncoding"], "gzip")
         self.assertNotIn("ContentEncoding", by_source_key["inputs/a.pdf"])
+        # A key whose name implies no type must inherit the source's own header
+        # rather than being downgraded to octet-stream by MetadataDirective=REPLACE.
+        self.assertEqual(by_source_key["inputs/hash-named-blob"]["ContentType"], "application/pdf")
+        # Each copy is conditional on the object we HEAD'd still being current, so
+        # an overwrite between the HEAD and the copy fails the row (412) instead of
+        # pairing new bytes with stale headers.
+        self.assertEqual(
+            {key: call["CopySourceIfMatch"] for key, call in by_source_key.items()},
+            {"inputs/a.pdf": '"aaa"', "inputs/b.pdf": '"bbb"', "inputs/hash-named-blob": '"ccc"'},
+        )
 
         # Marked as uploaded by the Mark mutation.
         for row in success_rows:

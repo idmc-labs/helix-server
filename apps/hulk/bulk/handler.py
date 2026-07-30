@@ -75,18 +75,28 @@ class _CopySource(typing.NamedTuple):
     A source object confirmed readable by ``_resolve_source_key``, plus the
     stored metadata a server-side copy has to carry over itself.
 
-    ``content_encoding`` matters because the copy replaces the destination's
-    metadata wholesale (``MetadataDirective="REPLACE"``, needed to set
-    Content-Type at all). django-storages uploads anything in
-    ``settings.GZIP_CONTENT_TYPES`` — PDFs included — with
-    ``Content-Encoding: gzip``, so dropping the header would leave gzipped bytes
-    labelled as plain content: ``verify_uploaded`` would then sniff the gzip
-    wrapper and reject the row as ``application/gzip``.
+    The copy replaces the destination's metadata wholesale
+    (``MetadataDirective="REPLACE"``, needed to set Content-Type at all), so
+    anything worth keeping has to be read here and restated there:
+
+    * ``content_encoding`` — django-storages uploads anything in
+      ``settings.GZIP_CONTENT_TYPES``, PDFs included, with
+      ``Content-Encoding: gzip``. Dropping the header would leave gzipped bytes
+      labelled as plain content, and ``verify_uploaded`` would sniff the gzip
+      wrapper and reject the row as ``application/gzip``.
+    * ``content_type`` — the fallback for when the key's name doesn't imply one
+      (a hash-named blob guesses to nothing). Forcing ``octet-stream`` onto a
+      source that was already correctly typed would be a downgrade.
+    * ``etag`` — passed as ``CopySourceIfMatch`` so the copy fails outright if
+      the source changed between that HEAD and the copy, rather than pairing new
+      bytes with the metadata read from the old ones.
     """
 
     bucket: str
     key: str
     content_encoding: typing.Optional[str] = None
+    content_type: typing.Optional[str] = None
+    etag: typing.Optional[str] = None
 
 
 class JsonlParseError(typing.NamedTuple):
@@ -628,6 +638,8 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
                     bucket=source.bucket,
                     key=candidate,
                     content_encoding=head.get("ContentEncoding") or None,
+                    content_type=head.get("ContentType") or None,
+                    etag=head.get("ETag") or None,
                 ),
                 None,
             )
@@ -700,8 +712,15 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         # Content type is a best guess from the file name — ``verify_uploaded``
         # re-derives the authoritative mimetype from the stored bytes in step 4.
         # Both branches set it so the object we serve carries the same header
-        # regardless of how its bytes got here.
-        content_type = mimetypes.guess_type(file_name)[0] or "application/octet-stream"
+        # regardless of how its bytes got here. The guess wins where it exists
+        # (a source bucket that stored a .html as octet-stream is exactly what we
+        # are correcting), and the source's own header is the fallback for keys
+        # that imply nothing — otherwise a hash-named PDF would be *downgraded*
+        # to octet-stream by this very fix.
+        content_type = mimetypes.guess_type(file_name)[0]
+        if content_type is None and copy_source is not None:
+            content_type = copy_source.content_type
+        content_type = content_type or "application/octet-stream"
         if copy_source is not None:
             # Without REPLACE, copy_object silently ignores ContentType and inherits
             # the source object's — often binary/octet-stream for a bulk-uploaded
@@ -712,6 +731,13 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
             copy_kwargs = {}
             if copy_source.content_encoding:
                 copy_kwargs["ContentEncoding"] = copy_source.content_encoding
+            if copy_source.etag:
+                # The HEAD that read this metadata happens before
+                # createBigAttachment, so the source could be overwritten in
+                # between. Copying the new bytes under the old headers is the
+                # mislabelling this whole block exists to prevent, so make S3
+                # refuse the copy (412) and fail the row loudly instead.
+                copy_kwargs["CopySourceIfMatch"] = copy_source.etag
             try:
                 client.copy_object(
                     CopySource={"Bucket": copy_source.bucket, "Key": copy_source.key},
