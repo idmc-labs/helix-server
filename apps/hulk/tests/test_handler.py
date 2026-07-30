@@ -323,16 +323,39 @@ class _CountingResponder:
         self._event_for_figures = None
 
     def __call__(self, query: str, variables: dict):
-        if "createAttachment" in query:
+        if "createBigAttachment" in query:
+            # Mirror BigAttachmentSerializer.create + its presigned-url field:
+            # the handler parses the returned url for the destination bucket/key,
+            # so it has to be a real one for the real storage backend.
+            from apps.contrib.models import Attachment, global_upload_to
+            from apps.contrib.utils import AttachmentBoto3ConnectorService
+
+            obj = Attachment(
+                attachment_for=variables["input"]["attachmentFor"],
+                mimetype=variables["input"]["mimetype"],
+                is_file_uploaded=False,
+            )
+            obj.attachment.name = global_upload_to(obj, variables["input"]["fileName"])
+            obj.save()
+            return (
+                {
+                    "createBigAttachment": {
+                        "ok": True,
+                        "errors": None,
+                        "result": {"id": obj.pk},
+                        "s3PresignedUploadUrl": AttachmentBoto3ConnectorService(instance=obj).get_attachment_presigned_url(),
+                    }
+                },
+                None,
+            )
+        if "markBigAttachmentFileAsUploaded" in query:
             from apps.contrib.models import Attachment
 
-            obj = Attachment.objects.create(
-                attachment_for=variables["input"]["attachmentFor"],
-                attachment="hulk-test/" + variables["input"].get("attachment").name
-                if hasattr(variables["input"].get("attachment"), "name")
-                else "hulk-test/file.pdf",
+            Attachment.objects.filter(pk=variables["id"]).update(is_file_uploaded=True)
+            return (
+                {"markBigAttachmentFileAsUploaded": {"ok": True, "errors": None, "result": {"id": variables["id"]}}},
+                None,
             )
-            return ({"createAttachment": {"ok": True, "errors": None, "result": {"id": obj.pk}}}, None)
         if "createSourcePreview" in query:
             from apps.contrib.models import SourcePreview
 
@@ -377,9 +400,9 @@ _DUMMY_PDF_BYTES = (
 def _patch_download_file():
     """
     Patch ``download_file`` so the attachment handler doesn't hit the network.
-    ``side_effect`` yields a fresh ContentFile per call — the underlying file
-    pointer is consumed by AttachmentSerializer.save(), so reusing one
-    ContentFile across rows would let only the first attachment succeed.
+    ``side_effect`` yields a fresh ContentFile per call — the handler reads the
+    file to upload it, so reusing one ContentFile across rows would let only the
+    first attachment succeed.
     """
     from django.core.files.base import ContentFile
 
@@ -1073,17 +1096,17 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
                     len(entity_ids),
                 )
 
-    def test_attachment_handler_uses_real_create_attachment_mutation(self):
+    def test_attachment_handler_uses_real_big_attachment_mutations(self):
         """
-        End-to-end check for the attachment handler:
+        End-to-end check for the attachment handler against the real schema:
           * downloads the file (patched to return a ContentFile)
-          * sends it through the real ``createAttachment`` GraphQL mutation
-            via ``InternalHelixGraphQlClient`` (Upload scalar passthrough)
-          * AttachmentSerializer accepts the file, saves storage, returns an
-            Attachment row
+          * allocates the row with the real ``createBigAttachment`` mutation and
+            uploads the bytes to the destination key parsed from its presigned url
+          * the real ``markBigAttachmentFileAsUploaded`` reads the stored object
+            back, sniffs its mimetype and flips ``is_file_uploaded``
           * HulkAttachment relation is created and the success file lists the
             row with ``message="Created"``.
-        This replaces the previous AttachmentSerializer bypass.
+        ``createAttachment``/``Upload!`` is no longer used by this handler at all.
         """
         from apps.contrib.models import Attachment
 
@@ -1098,18 +1121,26 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
         success_rows = _jsonl_rows(_success_file(bulk, "attachments"))
         self.assertEqual(len(success_rows), len(read_expected_input_rows("attachments")))
-        # Each success row points at a real Attachment created by the real
-        # createAttachment mutation (storage saved, etc).
+        # Each success row points at a real Attachment whose object was uploaded
+        # and then verified by markBigAttachmentFileAsUploaded — so the mimetype
+        # and size come from the stored bytes, not from the caller.
         for row in success_rows:
             attachment = Attachment.objects.get(pk=row["id"])
             self.assertTrue(bool(attachment.attachment))
+            self.assertTrue(attachment.is_file_uploaded)
+            self.assertEqual(attachment.mimetype, "application/pdf")
+            self.assertTrue(attachment.file_size)
+            # Metadata the small-upload serializer used to derive must still be
+            # populated now that every row goes through the BigAttachment path.
+            self.assertTrue(attachment.encoding)
+            self.assertTrue(attachment.filetype_detail)
             self.assertEqual(row["message"], "Created")
 
     @override_settings(HULK_DIRECT_ACCESS_BUCKETS=["hulk-source"])
     def test_attachment_handler_s3_copy_path_uses_big_attachment_mutations(self):
         """
-        When the source ``file_url`` is an AWS S3 URL, the attachment handler
-        must skip ``createAttachment`` and instead:
+        When the source ``file_url`` is an AWS S3 URL on a direct-access bucket,
+        the handler must move the bytes server-side:
 
         1. call ``createBigAttachment`` to allocate an Attachment row +
            presigned PUT URL,
@@ -1374,6 +1405,10 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         # Neither the readability probe nor the copy runs for an unlisted bucket.
         fake_s3.head_object.assert_not_called()
         fake_s3.copy_object.assert_not_called()
+        # The downloaded bytes are uploaded to the BigAttachment destination key —
+        # createAttachment/Upload! is not used for this (or any) row.
+        fake_s3.put_object.assert_called_once()
+        self.assertEqual(fake_s3.put_object.call_args.kwargs["Body"], _DUMMY_PDF_BYTES)
 
         bulk.refresh_from_db()
         self.assertEqual(_jsonl_rows(_failure_file(bulk, "attachments")), [])
@@ -1470,8 +1505,8 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         """
         A presigned ``file_url`` carries a signature, not credentials, and
         ``copy_object`` cannot present one. So when helix's own credentials
-        can't read the object, the handler must download the full signed url
-        (slow path) rather than attempt — and fail — a server-side copy.
+        can't read the object, the handler must download the full signed url and
+        upload those bytes, rather than attempt — and fail — a server-side copy.
         """
         from apps.contrib.models import Attachment
         from apps.hulk.bulk import handler as handler_mod
@@ -1486,16 +1521,12 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         bulk = HulkBulkImport.objects.create(created_by=self.user)
         _create_dataset(bulk, "attachments", s3_row)
 
+        responder = _CountingResponder()
+        mutations_run = []
+
         def _fake_run_mutation(query, variables):
-            if "createAttachment" in query:
-                obj = Attachment.objects.create(
-                    attachment_for=variables["input"]["attachmentFor"],
-                    attachment="hulk-dst/e.pdf",
-                    mimetype="application/pdf",
-                    is_file_uploaded=True,
-                )
-                return ({"createAttachment": {"ok": True, "errors": None, "result": {"id": obj.pk}}}, None)
-            raise AssertionError(f"unexpected mutation: {query!r}")
+            mutations_run.append(query)
+            return responder(query, variables)
 
         fake_s3 = MagicMock()
         fake_s3.head_object.side_effect = RuntimeError(
@@ -1517,6 +1548,11 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
             mock_download.assert_called_once_with(signed_url)
 
         fake_s3.copy_object.assert_not_called()
+        # Signed bytes still land via the BigAttachment sequence, not Upload!.
+        fake_s3.put_object.assert_called_once()
+        self.assertTrue(any("createBigAttachment" in q for q in mutations_run), mutations_run)
+        self.assertFalse(any("createAttachment(" in q for q in mutations_run), mutations_run)
+
         bulk.refresh_from_db()
         self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
         success_rows = _jsonl_rows(_success_file(bulk, "attachments"))
@@ -1565,8 +1601,10 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
             mock_download.assert_called_once_with(url)
 
         fake_s3.copy_object.assert_not_called()
-        # The BigAttachment mutations are never reached, so nothing to orphan.
-        self.assertTrue(all("createAttachment" in q for q in mutations_run), mutations_run)
+        # No copy, but the row still goes through createBigAttachment + upload +
+        # mark; the probe ran before any mutation, so nothing was left orphaned.
+        fake_s3.put_object.assert_called_once()
+        self.assertTrue(any("createBigAttachment" in q for q in mutations_run), mutations_run)
 
         bulk.refresh_from_db()
         self.assertEqual(_jsonl_rows(_failure_file(bulk, "attachments")), [])

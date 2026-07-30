@@ -48,7 +48,9 @@ POST_ERROR_KEY = "post-errors"
 
 
 class _InputBuildError(Exception):
-    """Raised by ``_build_mutation_input`` overrides when input prep fails.
+    """Raised when preparing a row's mutation input fails — e.g. a
+    ``_build_mutation_input`` override, or the attachment handler failing to
+    download the row's file.
 
     The handler catches this and records the message as a ``post-errors``
     entry on the row, since the failure happened after pydantic validation
@@ -439,28 +441,20 @@ class HulkHelixModelImportBaseHandler:
 class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
     hulk_entity_relation_cls = HulkAttachment
     hulk_entity_import_cls = HulkAttachmentImport
-    # XXX: This may create orphan attachments — if ``createAttachment`` or
-    #  the BigAttachment + copy_object + Mark sequence succeeds in the upload
-    #  step but the HulkAttachment relation row creation fails afterwards, or
-    #  if a downstream entry that references this uuid never imports, the
-    #  Attachment is left dangling without any incoming reference.
-    # ``createAttachment`` accepts an ``Upload!`` scalar — graphene-file-upload's
-    # Upload is a passthrough, so we can call it through the standard mutation
-    # path by attaching a Django file object as the ``attachment`` variable.
-    graphql_mutation_query = """
-        mutation HulkAttachmentMutation($input: AttachmentCreateInputType!) {
-          __typename
-          createAttachment(data: $input) {
-            ok
-            errors
-            result {
-              id
-            }
-          }
-        }
-    """
-
-    # Mutations used by the S3-copy fast path.
+    # XXX: This may create orphan attachments — if the BigAttachment +
+    #  copy/upload + Mark sequence succeeds in the upload step but the
+    #  HulkAttachment relation row creation fails afterwards, or if a downstream
+    #  entry that references this uuid never imports, the Attachment is left
+    #  dangling without any incoming reference.
+    #
+    # Every row goes through the BigAttachment sequence below — createBigAttachment
+    # to allocate the row + destination key, then either s3.copy_object (source we
+    # can read server-side) or put_object of the downloaded bytes, then
+    # markBigAttachmentFileAsUploaded. ``createAttachment``/``Upload!`` is
+    # deliberately NOT used: its AttachmentSerializer rejects anything over
+    # ``DJANGO_MAX_UPLOAD_SIZE`` while BigAttachmentSerializer has no such cap, so
+    # routing part of an import through it gave the same import two different
+    # size ceilings depending on where the file happened to live.
     _CREATE_BIG_ATTACHMENT_QUERY = """
         mutation HulkCreateBigAttachment($input: BigAttachmentCreateInputType!) {
           createBigAttachment(data: $input) {
@@ -489,40 +483,89 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
     _BIG_ATTACHMENT_PLACEHOLDER_MIMETYPE = "application/pdf"
 
     def graphql_response_parser_fn(self, response):
-        return response.get("createAttachment")
-
-    def _build_mutation_input(self, import_data):
-        try:
-            attachment_file = download_file(import_data.file_url)
-        except Exception as e:
-            raise _InputBuildError(f"download failed: {e}")
-        return {
-            **import_data.generate_for_graphql_mutation(),
-            "attachment": attachment_file,
-        }
+        # Required by the base class, but attachments never take the
+        # single-mutation path — ``_create_entity`` below is a full override.
+        raise AssertionError("attachment rows are created via the BigAttachment sequence, not a single mutation")
 
     def _create_entity(self, import_data, *, user_override: typing.Optional[User] = None) -> int:
         """
-        Pick how to get the row's file: a server-side S3 copy when we can, a
-        plain download + re-upload otherwise.
+        Create the Attachment row, then get the bytes to its destination key the
+        cheapest way the source allows: a server-side S3 copy when we can read
+        the source with our own credentials, otherwise download + upload.
 
         ``file_url`` is operator-supplied and can point anywhere, so the copy
         fast path is opt-in per bucket via ``HULK_DIRECT_ACCESS_BUCKETS`` (plus
         helix's own storage endpoint, which is always eligible). Firing
         ``copy_object`` at whatever bucket a url happens to name would let a row
         borrow helix's IAM identity to read buckets the importer can't. Every
-        other url — S3 or not — just gets downloaded.
+        other url — S3 or not — gets downloaded.
+
+        Both routes end in the same BigAttachment sequence, so a row's size limit
+        and metadata handling no longer depend on where its file lives.
         """
-        aws_source = parse_aws_s3_url(import_data.file_url)
-        if aws_source is not None and aws_source.bucket in (settings.HULK_DIRECT_ACCESS_BUCKETS or []):
-            return self._create_from_s3_source(import_data, aws_source, user_override=user_override)
-        same_source = parse_same_storage_url(import_data.file_url)
-        if same_source is not None:
-            return self._create_from_s3_source(import_data, same_source, user_override=user_override)
-        return super()._create_entity(import_data, user_override=user_override)
+        copy_source = self._resolve_copy_source(import_data)
+        if copy_source is not None:
+            src_bucket, src_key = copy_source
+            return self._create_via_big_attachment(
+                import_data,
+                file_name=Path(src_key).name or "attachment",
+                copy_source=copy_source,
+                user_override=user_override,
+            )
+
+        try:
+            attachment_file = download_file(import_data.file_url)
+        except Exception as e:
+            raise _InputBuildError(f"download failed: {e}")
+        return self._create_via_big_attachment(
+            import_data,
+            file_name=Path(attachment_file.name or "attachment").name or "attachment",
+            upload_file=attachment_file,
+            user_override=user_override,
+        )
 
     # ------------------------------------------------------------------
-    # S3-copy fast path
+    # Source resolution for the server-side copy
+    # ------------------------------------------------------------------
+    def _resolve_copy_source(self, import_data) -> typing.Optional[typing.Tuple[str, str]]:
+        """
+        Return ``(bucket, key)`` when this row's file can be copied server-side,
+        else ``None`` to mean "download it instead".
+
+        ``None`` covers both "not eligible" (non-S3 url, or a bucket that isn't
+        configured for direct access) and "eligible but not actually readable"
+        (wrong key, restrictive object ACL, expired role, or a presigned url
+        whose signature ``copy_object`` cannot present).
+        """
+        source = parse_aws_s3_url(import_data.file_url)
+        if source is not None and source.bucket not in (settings.HULK_DIRECT_ACCESS_BUCKETS or []):
+            source = None
+        if source is None:
+            source = parse_same_storage_url(import_data.file_url)
+        if source is None:
+            return None
+
+        client = self._media_s3_client()
+        resolved_key, unreadable_reason = (
+            self._resolve_source_key(client, source) if client is not None else (None, "storage backend is not S3")
+        )
+        if resolved_key is not None:
+            return source.bucket, resolved_key
+
+        logger.warning(
+            "hulk attachment %s: s3://%s/%s not readable with helix credentials (%s); falling back to download+upload (%s)",
+            import_data.uuid,
+            source.bucket,
+            source.key,
+            unreadable_reason,
+            "the url is presigned, so the signature authorises the GET"
+            if source.is_presigned
+            else "the url is not presigned, so the GET is unauthenticated and only works for a public object",
+        )
+        return None
+
+    # ------------------------------------------------------------------
+    # BigAttachment sequence
     # ------------------------------------------------------------------
     @staticmethod
     def _media_s3_client():
@@ -552,6 +595,18 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         Attachment row first — once we know the copy can work. Returns
         ``(None, reason)`` when no candidate resolves; ``reason`` is the last
         error, which distinguishes a missing object from an access-denied one.
+
+        One HEAD per candidate, deliberately *not* wrapped in
+        ``AttachmentBoto3ConnectorService._read_with_retry``. That helper exists
+        for reads of an object we just wrote, where a 404 can only mean "not
+        visible yet" and retrying is the only correct response. Here a 404 is the
+        answer we came for: there is a second candidate only when the url path
+        holds a percent-escape, and then which reading is right depends on
+        whether the producer encoded the key or pasted it raw — so a miss on the
+        first is informative, not a failure. Retrying would sleep ~1.4s per
+        candidate before moving on. Genuinely transient failures (connection
+        errors, 5xx, throttling) are already retried inside botocore; 403/404 are
+        not, which is exactly the split we want.
         """
         last_error = "no key candidates"
         for candidate in source.key_candidates:
@@ -563,56 +618,25 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
             return candidate, None
         return None, last_error
 
-    def _create_from_s3_source(
-        self,
-        import_data,
-        source: S3Source,
-        *,
-        user_override: typing.Optional[User] = None,
-    ) -> int:
-        """
-        Copy the source object server-side when helix's credentials can read it,
-        and drop back to the download path when they can't.
-
-        The bucket being configured for direct access doesn't guarantee this
-        particular object is readable (wrong key, restrictive object ACL,
-        expired role), so the copy is attempted only after a successful HEAD.
-        Falling back rather than failing also covers the presigned case: such a
-        url hands us a signature, not credentials, and ``copy_object`` cannot
-        present a signature — but an HTTP GET of the full signed url can.
-        """
-        client = self._media_s3_client()
-        resolved_key, unreadable_reason = (
-            self._resolve_source_key(client, source) if client is not None else (None, "storage backend is not S3")
-        )
-        if resolved_key is not None:
-            return self._create_via_s3_copy(
-                import_data,
-                src_bucket=source.bucket,
-                src_key=resolved_key,
-                user_override=user_override,
-            )
-        logger.warning(
-            "hulk attachment %s: s3://%s/%s not readable with helix credentials (%s); falling back to download+upload (%s)",
-            import_data.uuid,
-            source.bucket,
-            source.key,
-            unreadable_reason,
-            "the url is presigned, so the signature authorises the GET"
-            if source.is_presigned
-            else "the url is not presigned, so the GET is unauthenticated and only works for a public object",
-        )
-        return super()._create_entity(import_data, user_override=user_override)
-
-    def _create_via_s3_copy(
+    def _create_via_big_attachment(
         self,
         import_data,
         *,
-        src_bucket: str,
-        src_key: str,
+        file_name: str,
+        copy_source: typing.Optional[typing.Tuple[str, str]] = None,
+        upload_file=None,
         user_override: typing.Optional[User] = None,
     ) -> int:
-        file_name = Path(src_key).name or "attachment"
+        """
+        Run the BigAttachment sequence for one row.
+
+        Exactly one of ``copy_source`` (``(bucket, key)`` to ``copy_object``
+        from) or ``upload_file`` (an already-downloaded Django file to
+        ``put_object``) must be given — they are the two ways to land bytes on
+        the destination key, and everything around them is shared.
+        """
+        if (copy_source is None) == (upload_file is None):
+            raise _CreateEntityError("internal error: exactly one of copy_source/upload_file is required")
 
         # Step 1: createBigAttachment — returns Attachment row + presigned PUT URL
         # whose host/path we use as the destination bucket/key.
@@ -649,21 +673,39 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         if dst is None:
             raise _CreateEntityError(f"could not parse destination bucket/key from presigned url: {presigned_url!r}")
 
-        # Step 3: server-side s3.copy_object. We use the helix media bucket's
-        # boto3 client (default_storage) — the caller has already confirmed it
-        # can read the source (``_resolve_source_key``) and it owns the
-        # destination bucket.
+        # Step 3: land the bytes on the destination key with the helix media
+        # bucket's boto3 client (default_storage) — it owns the destination, and
+        # for a copy the caller has already confirmed it can read the source
+        # (``_resolve_source_key``). We write with our own credentials rather
+        # than PUTting to the presigned url: same result, one less hop, and no
+        # dependency on the url's Content-Type/expiry matching.
         client = self._media_s3_client()
         if client is None:
-            raise _CreateEntityError("default storage is not S3-backed; cannot copy_object")
-        try:
-            client.copy_object(
-                CopySource={"Bucket": src_bucket, "Key": src_key},
-                Bucket=dst.bucket,
-                Key=dst.key,
-            )
-        except Exception as e:
-            raise _CreateEntityError(f"s3.copy_object failed: {e}")
+            raise _CreateEntityError("default storage is not S3-backed; big attachment uploads require S3 storage")
+        if copy_source is not None:
+            src_bucket, src_key = copy_source
+            try:
+                client.copy_object(
+                    CopySource={"Bucket": src_bucket, "Key": src_key},
+                    Bucket=dst.bucket,
+                    Key=dst.key,
+                )
+            except Exception as e:
+                raise _CreateEntityError(f"s3.copy_object failed: {e}")
+        else:
+            # Content type is a best guess from the file name — ``verify_uploaded``
+            # re-derives the authoritative mimetype from the stored bytes in step 4.
+            content_type = mimetypes.guess_type(file_name)[0] or "application/octet-stream"
+            try:
+                upload_file.seek(0)
+                client.put_object(
+                    Bucket=dst.bucket,
+                    Key=dst.key,
+                    Body=upload_file.read(),
+                    ContentType=content_type,
+                )
+            except Exception as e:
+                raise _CreateEntityError(f"s3.put_object failed: {e}")
 
         # Step 4: markBigAttachmentFileAsUploaded — verifies the object exists,
         # sniffs mimetype with magic, then flips is_file_uploaded=True.

@@ -685,6 +685,29 @@ class TestVerifyUploadedReadAfterWriteRetry(TestCase):
         self.assertEqual(mock_sleep.call_count, 2)  # backed off between the two size retries
 
     @mock.patch("apps.contrib.utils.time.sleep", return_value=None)
+    def test_descriptive_sniff_failure_does_not_fail_the_upload(self, mock_sleep):
+        # encoding/filetype_detail are descriptive only — nothing validates
+        # against them — so a libmagic failure there must not reject a file whose
+        # bytes are in place and whose mimetype we already accepted.
+        service, client = self._build_service([self._ok_body()])
+
+        real_magic = utils_module.magic.Magic
+
+        def _fail_after_mimetype(*args, **kwargs):
+            # The mimetype sniff passes flags=MAGIC_MIME_TYPE; fail the others.
+            if kwargs.get("flags") == utils_module.magic.MAGIC_MIME_TYPE:
+                return real_magic(*args, **kwargs)
+            raise RuntimeError("libmagic exploded")
+
+        with mock.patch.object(utils_module.magic, "Magic", side_effect=_fail_after_mimetype):
+            result = service.verify_uploaded()
+
+        self.assertEqual(result["mimetype"], "text/plain")
+        self.assertEqual(result["file_size"], 1234)
+        self.assertEqual(result["encoding"], "")
+        self.assertEqual(result["filetype_detail"], "")
+
+    @mock.patch("apps.contrib.utils.time.sleep", return_value=None)
     def test_size_read_exhausted_retries_raises(self, mock_sleep):
         class _AlwaysFailsAttachment:
             name = "some/key.pdf"
