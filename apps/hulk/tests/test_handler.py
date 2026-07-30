@@ -1206,6 +1206,10 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
 
         fake_s3 = MagicMock()
         fake_s3.copy_object.side_effect = lambda **kwargs: copy_object_calls.append(kwargs)
+        # b.pdf is stored gzipped — django-storages does that for every
+        # GZIP_CONTENT_TYPES entry, PDFs included — while a.pdf is not. The copy
+        # must restate that header for b.pdf and omit it for a.pdf.
+        fake_s3.head_object.side_effect = lambda **kw: {"ContentEncoding": "gzip"} if kw["Key"].endswith("b.pdf") else {}
 
         with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient, patch(
             "apps.hulk.bulk.handler.default_storage"
@@ -1239,6 +1243,20 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
             {call["Key"] for call in copy_object_calls},
             {"hulk-dst/a.pdf", "hulk-dst/b.pdf"},
         )
+        # The copy must set Content-Type from the file name rather than inherit
+        # the source object's, and that needs MetadataDirective=REPLACE —
+        # ContentType alone is silently ignored under the default COPY directive,
+        # leaving the attachment served as whatever the source bucket had (often
+        # binary/octet-stream, so browsers download instead of rendering).
+        self.assertEqual({call["ContentType"] for call in copy_object_calls}, {"application/pdf"})
+        self.assertEqual({call["MetadataDirective"] for call in copy_object_calls}, {"REPLACE"})
+        # ...and because REPLACE drops every header not restated, a gzipped source
+        # must have its Content-Encoding carried over — otherwise the destination
+        # holds gzipped bytes labelled as a plain PDF and verify_uploaded sniffs
+        # the gzip wrapper, failing the row as application/gzip.
+        by_source_key = {call["CopySource"]["Key"]: call for call in copy_object_calls}
+        self.assertEqual(by_source_key["inputs/b.pdf"]["ContentEncoding"], "gzip")
+        self.assertNotIn("ContentEncoding", by_source_key["inputs/a.pdf"])
 
         # Marked as uploaded by the Mark mutation.
         for row in success_rows:
@@ -1294,6 +1312,7 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
             raise AssertionError(f"unexpected mutation: {query!r}")
 
         fake_s3 = MagicMock()
+        fake_s3.head_object.return_value = {}
         fake_s3.copy_object.side_effect = lambda **kw: copy_calls.append(kw)
 
         with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient, patch(
@@ -1353,6 +1372,7 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
             raise AssertionError(f"unexpected mutation: {query!r}")
 
         fake_s3 = MagicMock()
+        fake_s3.head_object.return_value = {}
         fake_s3.copy_object.side_effect = RuntimeError("AccessDenied")
 
         with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient, patch(

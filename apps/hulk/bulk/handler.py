@@ -70,6 +70,25 @@ class _CreateEntityError(Exception):
         self.payload = payload
 
 
+class _CopySource(typing.NamedTuple):
+    """
+    A source object confirmed readable by ``_resolve_source_key``, plus the
+    stored metadata a server-side copy has to carry over itself.
+
+    ``content_encoding`` matters because the copy replaces the destination's
+    metadata wholesale (``MetadataDirective="REPLACE"``, needed to set
+    Content-Type at all). django-storages uploads anything in
+    ``settings.GZIP_CONTENT_TYPES`` — PDFs included — with
+    ``Content-Encoding: gzip``, so dropping the header would leave gzipped bytes
+    labelled as plain content: ``verify_uploaded`` would then sniff the gzip
+    wrapper and reject the row as ``application/gzip``.
+    """
+
+    bucket: str
+    key: str
+    content_encoding: typing.Optional[str] = None
+
+
 class JsonlParseError(typing.NamedTuple):
     """
     Sentinel yielded by :func:`iter_jsonl_field` for lines that can't be
@@ -493,10 +512,9 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         """
         copy_source = self._resolve_copy_source(import_data)
         if copy_source is not None:
-            src_bucket, src_key = copy_source
             return self._create_via_big_attachment(
                 import_data,
-                file_name=Path(src_key).name or "attachment",
+                file_name=Path(copy_source.key).name or "attachment",
                 copy_source=copy_source,
                 user_override=user_override,
             )
@@ -515,10 +533,10 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
     # ------------------------------------------------------------------
     # Source resolution for the server-side copy
     # ------------------------------------------------------------------
-    def _resolve_copy_source(self, import_data) -> typing.Optional[typing.Tuple[str, str]]:
+    def _resolve_copy_source(self, import_data) -> typing.Optional[_CopySource]:
         """
-        Return ``(bucket, key)`` when this row's file can be copied server-side,
-        else ``None`` to mean "download it instead".
+        Return a :class:`_CopySource` when this row's file can be copied
+        server-side, else ``None`` to mean "download it instead".
 
         ``None`` covers both "not eligible" (non-S3 url, or a bucket that isn't
         configured for direct access) and "eligible but not actually readable"
@@ -534,11 +552,11 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
             return None
 
         client = self._media_s3_client()
-        resolved_key, unreadable_reason = (
+        resolved, unreadable_reason = (
             self._resolve_source_key(client, source) if client is not None else (None, "storage backend is not S3")
         )
-        if resolved_key is not None:
-            return source.bucket, resolved_key
+        if resolved is not None:
+            return resolved
 
         logger.warning(
             "hulk attachment %s: s3://%s/%s not readable with helix credentials (%s); falling back to download+upload (%s)",
@@ -572,10 +590,12 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
             return None
 
     @staticmethod
-    def _resolve_source_key(client, source: S3Source) -> typing.Tuple[typing.Optional[str], typing.Optional[str]]:
+    def _resolve_source_key(client, source: S3Source) -> typing.Tuple[typing.Optional[_CopySource], typing.Optional[str]]:
         """
-        HEAD each of ``source.key_candidates`` and return ``(key, None)`` for the
-        first one helix's own credentials can read.
+        HEAD each of ``source.key_candidates`` and return
+        ``(_CopySource, None)`` for the first one helix's own credentials can
+        read. The HEAD response also supplies the stored ``Content-Encoding``
+        the copy has to preserve — see :class:`_CopySource`.
 
         This resolves the percent-encoding ambiguity for keys containing a
         literal ``%`` (see :class:`S3Source`) and doubles as a readability
@@ -599,11 +619,18 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         last_error = "no key candidates"
         for candidate in source.key_candidates:
             try:
-                client.head_object(Bucket=source.bucket, Key=candidate)
+                head = client.head_object(Bucket=source.bucket, Key=candidate)
             except Exception as e:  # botocore ClientError (404/403) and friends
                 last_error = f"{candidate!r}: {e}"
                 continue
-            return candidate, None
+            return (
+                _CopySource(
+                    bucket=source.bucket,
+                    key=candidate,
+                    content_encoding=head.get("ContentEncoding") or None,
+                ),
+                None,
+            )
         return None, last_error
 
     def _create_via_big_attachment(
@@ -611,14 +638,14 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         import_data,
         *,
         file_name: str,
-        copy_source: typing.Optional[typing.Tuple[str, str]] = None,
+        copy_source: typing.Optional[_CopySource] = None,
         upload_file=None,
         user_override: typing.Optional[User] = None,
     ) -> int:
         """
         Run the BigAttachment sequence for one row.
 
-        Exactly one of ``copy_source`` (``(bucket, key)`` to ``copy_object``
+        Exactly one of ``copy_source`` (a :class:`_CopySource` to ``copy_object``
         from) or ``upload_file`` (an already-downloaded Django file to
         ``put_object``) must be given — they are the two ways to land bytes on
         the destination key, and everything around them is shared.
@@ -670,20 +697,33 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         client = self._media_s3_client()
         if client is None:
             raise _CreateEntityError("default storage is not S3-backed; big attachment uploads require S3 storage")
+        # Content type is a best guess from the file name — ``verify_uploaded``
+        # re-derives the authoritative mimetype from the stored bytes in step 4.
+        # Both branches set it so the object we serve carries the same header
+        # regardless of how its bytes got here.
+        content_type = mimetypes.guess_type(file_name)[0] or "application/octet-stream"
         if copy_source is not None:
-            src_bucket, src_key = copy_source
+            # Without REPLACE, copy_object silently ignores ContentType and inherits
+            # the source object's — often binary/octet-stream for a bulk-uploaded
+            # source, so the browser downloads the attachment instead of rendering
+            # it. REPLACE drops *every* unstated header though, so the source's
+            # Content-Encoding has to be restated or gzipped bytes end up labelled
+            # as plain content (see :class:`_CopySource`).
+            copy_kwargs = {}
+            if copy_source.content_encoding:
+                copy_kwargs["ContentEncoding"] = copy_source.content_encoding
             try:
                 client.copy_object(
-                    CopySource={"Bucket": src_bucket, "Key": src_key},
+                    CopySource={"Bucket": copy_source.bucket, "Key": copy_source.key},
                     Bucket=dst.bucket,
                     Key=dst.key,
+                    ContentType=content_type,
+                    MetadataDirective="REPLACE",
+                    **copy_kwargs,
                 )
             except Exception as e:
                 raise _CreateEntityError(f"s3.copy_object failed: {e}")
         else:
-            # Content type is a best guess from the file name — ``verify_uploaded``
-            # re-derives the authoritative mimetype from the stored bytes in step 4.
-            content_type = mimetypes.guess_type(file_name)[0] or "application/octet-stream"
             try:
                 upload_file.seek(0)
                 client.put_object(
