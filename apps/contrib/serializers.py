@@ -70,6 +70,8 @@ class MarkBigAttachmentFileUploadedSerializer(MetaInformationSerializerMixin, se
 
         attrs["mimetype"] = verified_attachment_meta["mimetype"]
         attrs["file_size"] = verified_attachment_meta["file_size"]
+        attrs["encoding"] = verified_attachment_meta["encoding"]
+        attrs["filetype_detail"] = verified_attachment_meta["filetype_detail"]
 
         return attrs
 
@@ -77,10 +79,16 @@ class MarkBigAttachmentFileUploadedSerializer(MetaInformationSerializerMixin, se
         instance.mimetype = validated_data["mimetype"]
         instance.is_file_uploaded = True
         instance.file_size = validated_data["file_size"]
+        # Same libmagic-derived fields the small-upload AttachmentSerializer
+        # sets, so a big upload isn't left with them blank.
+        instance.encoding = validated_data["encoding"]
+        instance.filetype_detail = validated_data["filetype_detail"]
         instance.save(
             update_fields=[
                 "file_size",
                 "mimetype",
+                "encoding",
+                "filetype_detail",
                 "is_file_uploaded",
             ],
         )

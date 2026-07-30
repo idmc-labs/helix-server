@@ -1,4 +1,5 @@
 import gzip
+import logging
 import time
 import typing
 from io import BytesIO
@@ -14,6 +15,8 @@ from apps.contrib.models import Attachment
 from helix.auth import PERMISSION_DENIED_MESSAGE
 from helix.exceptions import BigFileUploadVerificationException
 from helix.storages import S3MediaStorage
+
+logger = logging.getLogger(__name__)
 
 # MinIO/S3 are eventually consistent: right after a server-side copy, an
 # immediate read-back can momentarily not see the just-written object
@@ -119,7 +122,35 @@ class AttachmentBoto3ConnectorService(object):
                 mime_type = m.id_buffer(data)
                 if mime_type not in Attachment.ALLOWED_MIMETYPES:
                     raise BigFileUploadVerificationException(f"Invalid attachment type, {mime_type}")
-            return dict(file_size=file_size, mimetype=mime_type)
+            # ``encoding``/``filetype_detail`` are the same fields the small-upload
+            # AttachmentSerializer derives with libmagic; sniff them here too so a
+            # big upload isn't left with them blank. Note these read the same
+            # first-4KB buffer as the mimetype above, whereas the small path sees
+            # the whole file — enough for both flags in practice.
+            #
+            # Purely descriptive: nothing validates or authorises against them
+            # (only ``mimetype`` above is checked). So a libmagic failure here
+            # must not fail an upload whose bytes are already in place and whose
+            # type we accepted — record what we got and move on. Assigned
+            # separately so a failure on the second sniff keeps the first.
+            encoding = filetype_detail = ""
+            try:
+                with magic.Magic(flags=magic.MAGIC_MIME_ENCODING) as m:
+                    encoding = m.id_buffer(data)
+                with magic.Magic() as m:
+                    filetype_detail = m.id_buffer(data)
+            except Exception:
+                logger.warning(
+                    "Big attachment upload: could not sniff encoding/filetype_detail for attachment %s",
+                    getattr(self.instance, "pk", None),
+                    exc_info=True,
+                )
+            return dict(
+                file_size=file_size,
+                mimetype=mime_type,
+                encoding=encoding,
+                filetype_detail=filetype_detail,
+            )
         except BigFileUploadVerificationException:
             # Don't bury the specific reason ("Invalid attachment type, …")
             # under the catch-all below.
