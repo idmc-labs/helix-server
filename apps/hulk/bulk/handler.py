@@ -70,15 +70,6 @@ class _CreateEntityError(Exception):
         self.payload = payload
 
 
-class _PreCheckError(Exception):
-    """
-    Raised by a ``_create_entity`` override to fail a row with a pre-error
-    *before* any entity-creation work — i.e. when the row is unusable on its own
-    terms, so nothing has been created and nothing needs undoing. Use
-    :class:`_CreateEntityError` for failures once creation is under way.
-    """
-
-
 class JsonlParseError(typing.NamedTuple):
     """
     Sentinel yielded by :func:`iter_jsonl_field` for lines that can't be
@@ -421,9 +412,6 @@ class HulkHelixModelImportBaseHandler:
                     uuid=row_uuid,
                     entity_id=new_obj_id,
                 )
-        except _PreCheckError as e:
-            self.add_error(uuid=row_uuid, error={PRE_ERROR_KEY: str(e)})
-            return
         except _InputBuildError as e:
             self.add_error(uuid=row_uuid, error={POST_ERROR_KEY: str(e)})
             return

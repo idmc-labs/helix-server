@@ -49,8 +49,10 @@ env = environ.Env(
     # NOTE: Hulk bulk-import: S3 buckets eligible for server-side copying of `file_url`.
     # This is an authorization boundary: copies use Helix's credentials and become
     # Attachments visible to all Helix users. List only buckets safe to expose.
-    # Empty (default) disables copying; rows use download/upload instead, as they
-    # also do when a listed bucket is unreadable.
+    # Empty (default) means no *external* bucket is copyable — those rows use
+    # download/upload instead, as they also do when a listed bucket is unreadable.
+    # Helix's own storage endpoint (AWS_S3_ENDPOINT_URL) is always eligible and
+    # needs no entry here; see HulkHelixAttachmentImportHandler._resolve_copy_source.
     HULK_DIRECT_ACCESS_BUCKETS=(list, []),
     # Redis URL
     DJANGO_CACHE_REDIS_URL=str,  # redis://redis:6379/1
