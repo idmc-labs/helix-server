@@ -97,20 +97,16 @@ class CrisisFilter(MultiWordSearchFilterSet):
             self.request,
         )
         # nd/idp totals are annotated only when needed: aggregate_figures set, or sorting by them
-        # (else resolvers read the default dataloaders). We need BOTH a subquery and a CTE; a CTE
-        # alone can't do it — it is fixed to the default unfiltered scope, so aggregate_figures'
-        # filtered values must come from the parametrized subquery. The CTE is just the faster
-        # set-based path for the default values when sorting (big win on event; crisis/country are
-        # low-cardinality, so ~neutral there, kept for parity).
-        # TODO: move aggregate_figures onto dataloaders -> the subquery arm goes away.
-        figure_disaggregation = Crisis._total_figure_disaggregation_subquery(
-            figures=figure_qs,
-            reference_date=reference_date,
-        )
+        # (else resolvers read the default dataloaders). Both cases use the set-based CTE — a grouped
+        # scan over the figures grouped by crisis. aggregate_figures passes its filtered figure_qs +
+        # reference date (scoped totals); the sort path uses the default scope. This replaces the
+        # per-crisis correlated subqueries re-scanned once per page row.
         figure_count_sort_fields = {Crisis.ND_FIGURES_ANNOTATE, Crisis.IDP_FIGURES_ANNOTATE}
         has_figure_scope = figure_qs is not None
         if has_figure_scope:
-            queryset = queryset.annotate(**figure_disaggregation)
+            queryset = Crisis.annotate_total_figure_disaggregation_via_cte(
+                queryset, figures=figure_qs, reference_date=reference_date
+            )
         elif self.ordering_fields & figure_count_sort_fields:
             queryset = Crisis.annotate_total_figure_disaggregation_via_cte(queryset)
 

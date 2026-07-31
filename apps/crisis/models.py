@@ -119,17 +119,19 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         }
 
     @classmethod
-    def annotate_total_figure_disaggregation_via_cte(cls, queryset):
+    def annotate_total_figure_disaggregation_via_cte(cls, queryset, keys=None, figures=None, reference_date=None):
         """Crisis mirror of `Event.annotate_total_figure_disaggregation_via_cte`, grouping figures
-        by `event__crisis` (the `figure -> event -> crisis` two-hop) instead of `event`. Two chained
-        CTEs over `entry_figure` (joined through `entry_event`), LEFT-JOINed onto `queryset` under
-        the same `total_flow_nd_figures` / `total_stock_idp_figures` names.
+        by `event__crisis` (the `figure -> event -> crisis` two-hop) instead of `event`.
 
-        The IDP reference date is MAX(end_date) over the crisis's IDPS/RECOMMENDED figures (NULLs
-        ignored, matching the subquery); ND sums all NEW_DISPLACEMENT/RECOMMENDED figures. Figures
-        always have start_date/end_date (so no NULL guards are needed).
+        `figures`/`reference_date` default to all figures + the per-crisis MAX(end_date) reference
+        date (sort + dataloader paths). `aggregate_figures` passes the *filtered* figure queryset
+        and its own reference date (scalar for report scope, else the per-crisis max over the
+        filtered set) so the scoped totals are one grouped scan instead of correlated subqueries
+        re-scanned per page row, and the scoped reference date is exposed so
+        `stock_idp_figures_max_end_date` still matches.
 
-        Default scope only — `aggregate_figures` must use the subquery.
+        ND sums all NEW_DISPLACEMENT/RECOMMENDED figures; IDP sums IDPS/RECOMMENDED figures whose
+        end_date equals the reference date. Figures always have start_date/end_date (no NULL guards).
         """
         from apps.entry.models import Figure
 
@@ -137,62 +139,71 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         idps = Figure.FIGURE_CATEGORY_TYPES.IDPS.value
         nd = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
 
-        # CTE1: reference date per crisis = MAX(end_date) over IDPS/RECOMMENDED figures.
-        # Figures reach a crisis via two hops (figure.event_id -> event.crisis_id), so the
-        # group key is the spanned `event__crisis`, aliased to an explicit `crisis_id` column
-        # so django_cte can resolve `.col.crisis_id` (a spanned path is not a resolvable column
-        # name on the CTE's base Figure query).
-        reference_date_cte = With(
-            Figure.objects.filter(
-                category=idps,
-                role=rec,
-                event__crisis__isnull=False,
-            )
-            .values("event__crisis")
-            .annotate(
-                crisis_id=models.F("event__crisis"),
-                reference_date=models.Max("end_date"),
-            )
-            .values("crisis_id", "reference_date"),
-            name="crisis_figure_reference_date",
-        )
+        # base figure set: the filtered aggregate_figures set when scoped, else all figures
+        # (optionally narrowed to the dataloader's batch keys). Only figures reaching a crisis.
+        if figures is not None:
+            count_figures = figures.filter(event__crisis__isnull=False)
+            ref_figures = figures.filter(category=idps, role=rec, event__crisis__isnull=False)
+        else:
+            count_figures = Figure.objects.filter(event__crisis__isnull=False)
+            ref_figures = Figure.objects.filter(category=idps, role=rec, event__crisis__isnull=False)
+            if keys is not None:
+                count_figures = count_figures.filter(event__crisis__in=keys)
+                ref_figures = ref_figures.filter(event__crisis__in=keys)
 
-        # CTE2: nd/idp counts per crisis, joined to the reference date from CTE1.
-        figure_with_reference = reference_date_cte.join(
-            Figure.objects.filter(event__crisis__isnull=False),
-            event__crisis=reference_date_cte.col.crisis_id,
-            _join_type=LOUTER,
-        ).with_cte(reference_date_cte)
-        figure_count_cte = With(
-            figure_with_reference.values("event__crisis")
-            .annotate(
-                crisis_id=models.F("event__crisis"),
-                **{
-                    cls.ND_FIGURES_ANNOTATE: models.Sum(
-                        "total_figures",
-                        filter=models.Q(category=nd, role=rec),
-                    ),
-                    cls.IDP_FIGURES_ANNOTATE: models.Sum(
-                        "total_figures",
-                        filter=models.Q(category=idps, role=rec) & models.Q(end_date=reference_date_cte.col.reference_date),
-                    ),
-                },
+        if reference_date is None:
+            # CTE1: reference date per crisis = MAX(end_date) over IDPS/RECOMMENDED figures. The
+            # group key is the spanned `event__crisis`, aliased to `crisis_id` so django_cte can
+            # resolve `.col.crisis_id`.
+            reference_date_cte = With(
+                ref_figures.values("event__crisis")
+                .annotate(crisis_id=models.F("event__crisis"), reference_date=models.Max("end_date"))
+                .values("crisis_id", "reference_date"),
+                name="crisis_figure_reference_date",
             )
-            .values("crisis_id", cls.ND_FIGURES_ANNOTATE, cls.IDP_FIGURES_ANNOTATE),
+            count_base = reference_date_cte.join(
+                count_figures, event__crisis=reference_date_cte.col.crisis_id, _join_type=LOUTER
+            ).with_cte(reference_date_cte)
+            idp_end = reference_date_cte.col.reference_date
+        else:
+            # explicit scalar reference date (report scope): no reference CTE needed.
+            count_base = count_figures
+            idp_end = reference_date
+
+        expose_ref = figures is not None and reference_date is None
+        count_annotations = {
+            "crisis_id": models.F("event__crisis"),
+            cls.ND_FIGURES_ANNOTATE: models.Sum("total_figures", filter=models.Q(category=nd, role=rec)),
+            cls.IDP_FIGURES_ANNOTATE: models.Sum(
+                "total_figures", filter=models.Q(category=idps, role=rec) & models.Q(end_date=idp_end)
+            ),
+        }
+        cte_values = ["crisis_id", cls.ND_FIGURES_ANNOTATE, cls.IDP_FIGURES_ANNOTATE]
+        if expose_ref:
+            count_annotations[cls.IDP_FIGURES_REFERENCE_DATE_ANNOTATE] = models.Max(reference_date_cte.col.reference_date)
+            cte_values.append(cls.IDP_FIGURES_REFERENCE_DATE_ANNOTATE)
+
+        figure_count_cte = With(
+            count_base.values("event__crisis").annotate(**count_annotations).values(*cte_values),
             name="crisis_figure_count",
         )
 
-        # queryset is a CTEQuerySet (Crisis.objects = CTEManager()), so the join renders
-        # the WITH clause directly — same pattern as the event figure-count CTE.
+        outer = {
+            cls.ND_FIGURES_ANNOTATE: figure_count_cte.col.total_flow_nd_figures,
+            cls.IDP_FIGURES_ANNOTATE: figure_count_cte.col.total_stock_idp_figures,
+        }
+        if figures is not None:
+            outer[cls.IDP_FIGURES_REFERENCE_DATE_ANNOTATE] = (
+                getattr(figure_count_cte.col, cls.IDP_FIGURES_REFERENCE_DATE_ANNOTATE)
+                if reference_date is None
+                else models.Value(reference_date, output_field=models.DateField())
+            )
+
+        # queryset is a CTEQuerySet (Crisis.objects = CTEManager()), so the join renders the WITH.
         return (
             figure_count_cte.join(queryset, id=figure_count_cte.col.crisis_id, _join_type=LOUTER)
             .with_cte(figure_count_cte)
-            .annotate(
-                **{
-                    cls.ND_FIGURES_ANNOTATE: figure_count_cte.col.total_flow_nd_figures,
-                    cls.IDP_FIGURES_ANNOTATE: figure_count_cte.col.total_stock_idp_figures,
-                }
-            )
+            .annotate(**outer)
         )
 
     @classmethod
