@@ -55,7 +55,7 @@ class FigureLastReviewCommentStatusLoader(DataLoader):
         review_comment_qs = (
             UnifiedReviewComment.objects.filter(
                 Q(figure__in=keys)
-                and Q(
+                & Q(
                     comment_type__in=[
                         UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN,
                         UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED,
