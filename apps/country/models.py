@@ -381,19 +381,21 @@ class Country(models.Model):
         }
 
     @classmethod
-    def annotate_total_figure_disaggregation_via_cte(cls, queryset):
-        """Set-based equivalent of `_total_figure_disaggregation_subquery` (default current-year
-        scope) for the list sort path: replaces four per-country correlated subqueries with one
-        hash aggregation over `entry_figure` grouped by `country_id` (a direct FK — no join),
-        LEFT-JOINed onto `queryset` under the same four field names (`total_{flow,stock}_{conflict,
-        disaster}`).
+    def annotate_total_figure_disaggregation_via_cte(cls, queryset, keys=None, figures=None, start_date=None, end_date=None):
+        """Set-based equivalent of `_total_figure_disaggregation_subquery`: one hash aggregation
+        over `entry_figure` grouped by `country_id` (a direct FK — no join), LEFT-JOINed onto
+        `queryset` under the same four field names (`total_{flow,stock}_{conflict,disaster}`),
+        replacing four per-country correlated subqueries.
 
-        Differs from event/crisis: direct FK (no two-hop join); a *fixed* this-year end date (no
-        per-row DESC-NULLS-FIRST reference date, so no reference CTE); four counts split by
-        `event__event_type` (CONFLICT/DISASTER) x category (flow/stock). Values match the subquery
-        exactly (NULL year-difference excluded for ND; IDP keyed on the fixed end date).
+        `figures`/`start_date`/`end_date` default to all figures + the current year (the sort and
+        dataloader paths). `aggregate_figures` passes the *filtered* figure queryset and its own
+        date range so the scoped totals are one grouped scan instead of four correlated subqueries
+        re-scanned per page row — the same values, but O(1) figure scans instead of O(4·pageSize).
 
-        Default scope only — `aggregate_figures` (filtered set / year / report) must use the subquery.
+        Differs from event/crisis: direct FK (no two-hop join); a fixed end date (no per-row
+        DESC-NULLS reference date, so no reference CTE); four counts split by `event__event_type`
+        (CONFLICT/DISASTER) x category (flow/stock). Values match the subquery exactly (NULL
+        year-difference excluded for ND; IDP keyed on the exact end date).
         """
         rec = Figure.ROLE.RECOMMENDED.value
         idps = Figure.FIGURE_CATEGORY_TYPES.IDPS.value
@@ -401,32 +403,26 @@ class Country(models.Model):
         conflict = Crisis.CRISIS_TYPE.CONFLICT.value
         disaster = Crisis.CRISIS_TYPE.DISASTER.value
 
-        # Default current-year date range (matches _total_figure_disaggregation_subquery
-        # when no year / aggregate_figures is supplied).
-        start_date = datetime(year=timezone.now().year, month=1, day=1)
-        end_date = datetime(year=timezone.now().year, month=12, day=31)
+        # Default to the current-year range (matches _total_figure_disaggregation_subquery when no
+        # year / aggregate_figures is supplied); aggregate_figures passes its own bounds.
+        if start_date is None and end_date is None:
+            start_date = datetime(year=timezone.now().year, month=1, day=1)
+            end_date = datetime(year=timezone.now().year, month=12, day=31)
 
-        # ND (flow) date/category predicate, mirroring Figure._nd_figures_q for a single
-        # category (NEW_DISPLACEMENT) with the default current-year bounds. year_difference
-        # is annotated on the base queryset below via Figure.with_year_difference.
-        nd_same_year = models.Q(
-            year_difference__lt=1,
-            start_date__gte=start_date,
-            start_date__lte=end_date,
-        )
-        nd_multi_year = models.Q(
-            year_difference__gte=1,
-            end_date__gte=start_date,
-            end_date__lte=end_date,
-        )
-        nd_date_q = nd_same_year | nd_multi_year
+        # Reuse Figure's canonical nd/idp date-predicate builders (category included) rather than
+        # inlining the bounds. They omit a bound when it is None — the report scope passes only
+        # end_date, leaving start_date None (no lower bound), exactly like the subquery path via
+        # filtered_{nd,idp}_figures. (Inlining `start_date__gte=start_date` raised "Cannot use None
+        # as a query value" on that scope.) year_difference is annotated on the base below.
+        nd_q = Figure._nd_figures_q([nd], start_date, end_date)
+        idp_q = Figure._idp_figures_q([idps], start_date, end_date, end_date_lookup="exact")
 
-        # IDP (stock) date/category predicate, mirroring Figure._idp_figures_q for a single
-        # category (IDPS) with end_date_lookup="exact": end_date >= start_date AND
-        # end_date == end_date (fixed this-year end).
-        idp_date_q = models.Q(end_date__gte=start_date, end_date=end_date)
-
-        base = Figure.with_year_difference(Figure.objects.all())
+        # `figures` is the filtered aggregate_figures set when scoped; else all figures, optionally
+        # narrowed to the dataloader's batch `keys` (index scan for a page vs a full-table hash
+        # aggregate). The sort path passes neither and keeps the broad-scan plan.
+        if figures is None:
+            figures = Figure.objects.all() if keys is None else Figure.objects.filter(country__in=keys)
+        base = Figure.with_year_difference(figures)
         figure_count_cte = With(
             base.order_by()
             .values("country")
@@ -434,19 +430,19 @@ class Country(models.Model):
                 **{
                     cls.ND_CONFLICT_ANNOTATE: models.Sum(
                         "total_figures",
-                        filter=models.Q(category=nd, role=rec, event__event_type=conflict) & nd_date_q,
+                        filter=nd_q & models.Q(role=rec, event__event_type=conflict),
                     ),
                     cls.ND_DISASTER_ANNOTATE: models.Sum(
                         "total_figures",
-                        filter=models.Q(category=nd, role=rec, event__event_type=disaster) & nd_date_q,
+                        filter=nd_q & models.Q(role=rec, event__event_type=disaster),
                     ),
                     cls.IDP_CONFLICT_ANNOTATE: models.Sum(
                         "total_figures",
-                        filter=models.Q(category=idps, role=rec, event__event_type=conflict) & idp_date_q,
+                        filter=idp_q & models.Q(role=rec, event__event_type=conflict),
                     ),
                     cls.IDP_DISASTER_ANNOTATE: models.Sum(
                         "total_figures",
-                        filter=models.Q(category=idps, role=rec, event__event_type=disaster) & idp_date_q,
+                        filter=idp_q & models.Q(role=rec, event__event_type=disaster),
                     ),
                 }
             )

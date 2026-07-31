@@ -204,28 +204,36 @@ class CountryType(RelationBatchedDjangoObjectType):
         value = getattr(root, Country.IDP_DISASTER_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_idps_disaster_loader.load(root.id)
+        return info.context.country_total_figure_disaggregation_loader.load(root.id).then(
+            lambda row: row[Country.IDP_DISASTER_ANNOTATE] if row else None
+        )
 
     def resolve_total_stock_conflict(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Country.IDP_CONFLICT_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_idps_conflict_loader.load(root.id)
+        return info.context.country_total_figure_disaggregation_loader.load(root.id).then(
+            lambda row: row[Country.IDP_CONFLICT_ANNOTATE] if row else None
+        )
 
     def resolve_total_flow_conflict(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Country.ND_CONFLICT_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_nd_conflict_loader.load(root.id)
+        return info.context.country_total_figure_disaggregation_loader.load(root.id).then(
+            lambda row: row[Country.ND_CONFLICT_ANNOTATE] if row else None
+        )
 
     def resolve_total_flow_disaster(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Country.ND_DISASTER_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_nd_disaster_loader.load(root.id)
+        return info.context.country_total_figure_disaggregation_loader.load(root.id).then(
+            lambda row: row[Country.ND_DISASTER_ANNOTATE] if row else None
+        )
 
     def resolve_geojson_url(root, info, **kwargs):
         return info.context.request.build_absolute_uri(Country.geojson_url(root.iso3))
