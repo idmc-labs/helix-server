@@ -23,8 +23,6 @@ from apps.entry.dataloaders import (
     FigureLastReviewCommentStatusLoader,
     FigureSourcesReliability,
     FigureTypologyLoader,
-    TotalIDPFigureByEntryLoader,
-    TotalNDFigureByEntryLoader,
 )
 from apps.event.dataloaders import (
     EventEntryCountLoader,
@@ -96,14 +94,6 @@ class GQLContext:
     NOTE: As a convention, data loader should have the name as:
     AppName_NodeType_FieldName
     """
-
-    @cached_property
-    def entry_entry_total_stock_idp_figures(self):
-        return TotalIDPFigureByEntryLoader()
-
-    @cached_property
-    def entry_entry_total_flow_nd_figures(self):
-        return TotalNDFigureByEntryLoader()
 
     @cached_property
     def crisis_total_figure_disaggregation_loader(self):
