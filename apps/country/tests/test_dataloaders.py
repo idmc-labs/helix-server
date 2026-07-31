@@ -6,8 +6,8 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from apps.country.dataloaders import (
+    CountryTotalFigureDisaggregationLoader,
     MonitoringSubRegionCountryCountLoader,
-    TotalFigureThisYearByCountryLoader,
 )
 from apps.country.models import Country
 from apps.crisis.models import Crisis
@@ -102,7 +102,7 @@ class TestTwoRelationsToTheSameChild(HelixGraphQLTestCase):
         self.assertEqual(len(node["operatingContacts"]["results"]), 2)
 
 
-class TestTotalFigureThisYearByCountryLoader(HelixGraphQLTestCase):
+class TestCountryTotalFigureDisaggregationLoader(HelixGraphQLTestCase):
     """The four current-year totals of a country come from one annotation, so one batch —
     and one query — serves all four, each field keying into the country's own totals.
     """
@@ -189,7 +189,7 @@ class TestTotalFigureThisYearByCountryLoader(HelixGraphQLTestCase):
         first, second = self.countries["first"], self.countries["second"]
         missing = first.id + second.id  # no such country
         keys = [second.id, missing, first.id]
-        values = TotalFigureThisYearByCountryLoader().batch_load_fn(keys).get()
+        values = CountryTotalFigureDisaggregationLoader().batch_load_fn(keys).get()
 
         self.assertEqual(
             [value[Country.ND_CONFLICT_ANNOTATE] for value in values],
@@ -206,7 +206,7 @@ class TestTotalFigureThisYearByCountryLoader(HelixGraphQLTestCase):
         # The loader reads the grouped-CTE path; it must report what the correlated
         # subquery reports for the same (default current-year) scope.
         keys = [self.countries["first"].id, self.countries["second"].id]
-        loaded = TotalFigureThisYearByCountryLoader().batch_load_fn(keys).get()
+        loaded = CountryTotalFigureDisaggregationLoader().batch_load_fn(keys).get()
         subquery_rows = {
             row["id"]: {field: row[field] for field in self.DISAGGREGATION_ALIASES}
             for row in Country.objects.filter(id__in=keys)
@@ -217,5 +217,5 @@ class TestTotalFigureThisYearByCountryLoader(HelixGraphQLTestCase):
 
     def test_a_country_without_figures_reports_no_totals(self) -> None:
         empty = CountryFactory.create()
-        values = TotalFigureThisYearByCountryLoader().batch_load_fn([empty.id]).get()
+        values = CountryTotalFigureDisaggregationLoader().batch_load_fn([empty.id]).get()
         self.assertEqual(values, [{field: None for field in self.DISAGGREGATION_ALIASES}])

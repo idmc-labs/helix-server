@@ -8,9 +8,9 @@ from apps.country.dataloaders import (
     CountryLastContextualAnalysisLoader,
     CountryLastSummaryLoader,
     CountryMonitoringExpertLoader,
+    CountryTotalFigureDisaggregationLoader,
     MonitoringSubRegionCountryCountLoader,
     MonitoringSubRegionRegionalCoordinatorLoader,
-    TotalFigureThisYearByCountryLoader,
 )
 from apps.crisis.dataloaders import (
     CrisisReviewCountLoader,
@@ -146,10 +146,10 @@ class GQLContext:
         return MaxStockIDPFigureEndDateByEventLoader()
 
     @cached_property
-    def country_country_this_year_figures_loader(self):
+    def country_total_figure_disaggregation_loader(self):
         # One loader for the four (category, event type) totals: they share a query, so
         # they must share the batch that runs it.
-        return TotalFigureThisYearByCountryLoader()
+        return CountryTotalFigureDisaggregationLoader()
 
     @cached_property
     def monitoring_sub_region_country_count_loader(self):

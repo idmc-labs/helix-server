@@ -209,7 +209,7 @@ class CountryType(RelationBatchedDjangoObjectType):
         value = getattr(root, Country.IDP_DISASTER_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+        return info.context.country_total_figure_disaggregation_loader.load(root.id).then(
             itemgetter(Country.IDP_DISASTER_ANNOTATE)
         )
 
@@ -218,7 +218,7 @@ class CountryType(RelationBatchedDjangoObjectType):
         value = getattr(root, Country.IDP_CONFLICT_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+        return info.context.country_total_figure_disaggregation_loader.load(root.id).then(
             itemgetter(Country.IDP_CONFLICT_ANNOTATE)
         )
 
@@ -227,7 +227,7 @@ class CountryType(RelationBatchedDjangoObjectType):
         value = getattr(root, Country.ND_CONFLICT_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+        return info.context.country_total_figure_disaggregation_loader.load(root.id).then(
             itemgetter(Country.ND_CONFLICT_ANNOTATE)
         )
 
@@ -236,7 +236,7 @@ class CountryType(RelationBatchedDjangoObjectType):
         value = getattr(root, Country.ND_DISASTER_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+        return info.context.country_total_figure_disaggregation_loader.load(root.id).then(
             itemgetter(Country.ND_DISASTER_ANNOTATE)
         )
 
