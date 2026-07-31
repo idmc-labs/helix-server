@@ -49,7 +49,9 @@ class CrisisType(RelationBatchedDjangoObjectType):
         value = getattr(root, Crisis.IDP_FIGURES_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.crisis_crisis_total_stock_idp_figures.load(root.id)
+        return info.context.crisis_total_figure_disaggregation_loader.load(root.id).then(
+            lambda row: row[Crisis.IDP_FIGURES_ANNOTATE] if row else None
+        )
 
     def resolve_stock_idp_figures_max_end_date(root, info, **kwargs):
         NULL = "null"
@@ -67,7 +69,9 @@ class CrisisType(RelationBatchedDjangoObjectType):
         )
         if value != NULL:
             return value
-        return info.context.crisis_crisis_total_flow_nd_figures.load(root.id)
+        return info.context.crisis_total_figure_disaggregation_loader.load(root.id).then(
+            lambda row: row[Crisis.ND_FIGURES_ANNOTATE] if row else None
+        )
 
     def resolve_event_count(root, info, **kwargs):
         return info.context.event_count_dataloader.load(root.id)

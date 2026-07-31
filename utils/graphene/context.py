@@ -14,10 +14,9 @@ from apps.country.dataloaders import (
 )
 from apps.crisis.dataloaders import (
     CrisisReviewCountLoader,
+    CrisisTotalFigureDisaggregationLoader,
     EventCountLoader,
     MaxStockIDPFigureEndDateByCrisisLoader,
-    TotalIDPFigureByCrisisLoader,
-    TotalNDFigureByCrisisLoader,
 )
 from apps.entry.dataloaders import (
     FigureGeoLocationLoader,
@@ -121,12 +120,8 @@ class GQLContext:
         return TotalNDFigureByEntryLoader()
 
     @cached_property
-    def crisis_crisis_total_stock_idp_figures(self):
-        return TotalIDPFigureByCrisisLoader()
-
-    @cached_property
-    def crisis_crisis_total_flow_nd_figures(self):
-        return TotalNDFigureByCrisisLoader()
+    def crisis_total_figure_disaggregation_loader(self):
+        return CrisisTotalFigureDisaggregationLoader()
 
     @cached_property
     def crisis_stock_idp_figures_max_end_date(self):

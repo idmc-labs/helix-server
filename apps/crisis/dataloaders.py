@@ -3,37 +3,22 @@ from promise import Promise
 from promise.dataloader import DataLoader
 
 from apps.crisis.models import Crisis
-from apps.entry.models import Figure
 from apps.event.models import Event
 
 
-def batch_load_fn_by_category(keys, category):
-    qs = Crisis.objects.filter(id__in=keys).annotate(**Crisis._total_figure_disaggregation_subquery())
+class CrisisTotalFigureDisaggregationLoader(DataLoader):
+    """Both current-year figure-disaggregation totals in ONE batched, set-based CTE
+    aggregation keyed by crisis id. Replaces the two per-field loaders that each
+    recomputed both totals via the correlated subquery (2x redundant work + 2 round-trips)."""
 
-    if category == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT:
-        qs = qs.annotate(_total=models.F(Crisis.ND_FIGURES_ANNOTATE))
-    else:
-        qs = qs.annotate(_total=models.F(Crisis.IDP_FIGURES_ANNOTATE))
-
-    batch_load = {item["id"]: item["_total"] for item in qs.values("id", "_total")}
-
-    return Promise.resolve([batch_load.get(key) for key in keys])
-
-
-class TotalIDPFigureByCrisisLoader(DataLoader):
     def batch_load_fn(self, keys):
-        return batch_load_fn_by_category(
-            keys,
-            Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+        rows = Crisis.annotate_total_figure_disaggregation_via_cte(Crisis.objects.filter(id__in=keys), keys=keys).values(
+            "id",
+            Crisis.IDP_FIGURES_ANNOTATE,
+            Crisis.ND_FIGURES_ANNOTATE,
         )
-
-
-class TotalNDFigureByCrisisLoader(DataLoader):
-    def batch_load_fn(self, keys):
-        return batch_load_fn_by_category(
-            keys,
-            Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-        )
+        by_id = {row["id"]: row for row in rows}
+        return Promise.resolve([by_id.get(key) for key in keys])
 
 
 class MaxStockIDPFigureEndDateByCrisisLoader(DataLoader):
