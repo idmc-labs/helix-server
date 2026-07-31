@@ -31,10 +31,9 @@ from apps.event.dataloaders import (
     EventEntryCountLoader,
     EventFigureTypologyLoader,
     EventReviewCountLoader,
+    EventTotalFigureDisaggregationLoader,
     EventTypologyLoader,
     MaxStockIDPFigureEndDateByEventLoader,
-    TotalIDPFigureByEventLoader,
-    TotalNDFigureByEventLoader,
 )
 from apps.hulk.dataloaders import (
     HulkBulkImportDatasetsLoader,
@@ -120,12 +119,8 @@ class GQLContext:
         return MaxStockIDPFigureEndDateByCrisisLoader()
 
     @cached_property
-    def event_event_total_stock_idp_figures(self):
-        return TotalIDPFigureByEventLoader()
-
-    @cached_property
-    def event_event_total_flow_nd_figures(self):
-        return TotalNDFigureByEventLoader()
+    def event_total_figure_disaggregation_loader(self):
+        return EventTotalFigureDisaggregationLoader()
 
     @cached_property
     def event_stock_idp_figures_max_end_date(self):

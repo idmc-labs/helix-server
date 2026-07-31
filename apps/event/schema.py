@@ -245,7 +245,9 @@ class EventType(RelationBatchedDjangoObjectType):
         value = getattr(root, Event.IDP_FIGURES_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.event_event_total_stock_idp_figures.load(root.id)
+        return info.context.event_total_figure_disaggregation_loader.load(root.id).then(
+            lambda row: row[Event.IDP_FIGURES_ANNOTATE] if row else None
+        )
 
     def resolve_stock_idp_figures_max_end_date(root, info, **kwargs):
         NULL = "null"
@@ -259,7 +261,9 @@ class EventType(RelationBatchedDjangoObjectType):
         value = getattr(root, Event.ND_FIGURES_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.event_event_total_flow_nd_figures.load(root.id)
+        return info.context.event_total_figure_disaggregation_loader.load(root.id).then(
+            lambda row: row[Event.ND_FIGURES_ANNOTATE] if row else None
+        )
 
     def resolve_review_count(root, info, **kwargs):
         return info.context.event_review_count_dataloader.load(root.id)
