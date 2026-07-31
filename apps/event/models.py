@@ -517,7 +517,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         }
 
     @classmethod
-    def annotate_total_figure_disaggregation_via_cte(cls, queryset):
+    def annotate_total_figure_disaggregation_via_cte(cls, queryset, keys=None):
         """Set-based equivalent of `_total_figure_disaggregation_subquery` (default scope) for the
         list sort path: replaces ~40k per-event correlated subqueries with two chained CTEs over
         `entry_figure`, LEFT-JOINed onto `queryset` under the same `total_flow_nd_figures` /
@@ -535,18 +535,30 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         idps = Figure.FIGURE_CATEGORY_TYPES.IDPS.value
         nd = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
 
+        # When called with explicit `keys` (the dataloader batch), scope both CTEs to those
+        # events so they index-scan entry_figure.event_id instead of scanning every figure
+        # twice — the full-scan floor only pays off when a page needs many rows. The sort path
+        # passes no keys (whole filtered list) and keeps the broad-scan plan; adding the
+        # predicate there just bolts on constant-factor semi-joins that slow it down.
+        # `role` sits in the scan, not only in the aggregate FILTERs: both totals require
+        # RECOMMENDED, and the partial `WHERE role = 0` covering index is only provable from the
+        # WHERE clause. An event with no recommended figure drops out of the count CTE rather than
+        # carrying NULL sums, and its reference date is NULL either way -- CTE1 filters on role too.
+        ref_figures = Figure.objects.filter(category=idps, role=rec)
+        count_figures = Figure.objects.filter(role=rec)
+        if keys is not None:
+            ref_figures = ref_figures.filter(event__in=keys)
+            count_figures = count_figures.filter(event__in=keys)
+
         # CTE1: reference date per event = MAX(end_date) over IDPS/RECOMMENDED figures.
         reference_date_cte = With(
-            Figure.objects.filter(category=idps, role=rec)
-            .values("event")
-            .annotate(reference_date=models.Max("end_date"))
-            .values("event", "reference_date"),
+            ref_figures.values("event").annotate(reference_date=models.Max("end_date")).values("event", "reference_date"),
             name="event_figure_reference_date",
         )
 
         # CTE2: nd/idp counts per event, joined to the reference date from CTE1.
         figure_with_reference = reference_date_cte.join(
-            Figure.objects.all(),
+            count_figures,
             event=reference_date_cte.col.event_id,
             _join_type=LOUTER,
         ).with_cte(reference_date_cte)
