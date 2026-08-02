@@ -81,6 +81,36 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
         fields = {}
         multi_word_search_fields = ["article_title"]
 
+    # Opt into ordering forwarding (utils/graphene/fields.py) so qs can denormalize a
+    # to-many sort key into a per-entry scalar instead of fan-out-duplicating rows.
+    accepts_ordering = True
+
+    def __init__(self, *args, ordering=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
+
+    @property
+    def qs(self):
+        queryset = super().qs
+        # Ordering by `publishers__name` (M2M) would JOIN-fan-out one entry into one row
+        # per publisher. Denormalize the sort key into a per-entry scalar via a whole-table
+        # CTE (one hash aggregation, not a per-row subquery), LEFT JOIN by id, and order by
+        # that scalar — one row per entry, deterministic, no global DISTINCT. The outer
+        # annotation is aliased to the ordering token so order_by("publishers__name") binds
+        # to it instead of re-traversing the M2M.
+        if "publishers__name" in self.ordering_fields:
+            cte = With(
+                Entry.objects.values("id").annotate(
+                    publishers_name=StringAgg("publishers__name", EXTERNAL_ARRAY_SEPARATOR, ordering="publishers__name")
+                )
+            )
+            queryset = (
+                cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
+                .with_cte(cte)
+                .annotate(**{"publishers__name": cte.col.publishers_name})
+            )
+        return queryset
+
     @staticmethod
     def _figures_for_entry(**lookups):
         return Figure.objects.filter(entry=OuterRef("pk"), **lookups)

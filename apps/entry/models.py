@@ -1440,6 +1440,11 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     ND_FIGURES_ANNOTATE = "total_flow_nd_figures"
     IDP_FIGURES_ANNOTATE = "total_stock_idp_figures"
 
+    # CTEManager so the list queryset can render WITH clauses (used by the publishers
+    # sort-key CTE in EntryExtractionFilterSet), matching Figure/Event/Country/Crisis.
+    # Manager-only change (no migration); Entry has no soft-delete manager to preserve.
+    objects = CTEManager()
+
     url = models.URLField(verbose_name=_("Source URL"), max_length=2000, blank=True, null=True)
     associated_parked_item = models.OneToOneField(
         "parking_lot.ParkedItem", blank=True, null=True, on_delete=models.SET_NULL, related_name="entry"

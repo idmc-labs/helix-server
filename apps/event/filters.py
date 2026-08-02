@@ -1,11 +1,14 @@
 import django_filters
 import graphene
-from django.contrib.postgres.aggregates.general import ArrayAgg
+from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
 from django.db import models
 from django.db.models import Count, Q
+from django.db.models.sql.constants import LOUTER
 from django.http import HttpRequest
+from django_cte import With
 
 from apps.common.enums import QA_RULE_TYPE
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 from apps.event.constants import OSV
@@ -288,6 +291,25 @@ class EventFilter(MultiWordSearchFilterSet):
                     .values("count")[:1],
                     output_field=models.IntegerField(),
                 ),
+            )
+
+        # Ordering by `countries__idmc_short_name` (M2M) would JOIN-fan-out one event into
+        # one row per country. Denormalize the sort key into a per-event scalar via a
+        # whole-table CTE, LEFT JOIN by id, and order by that scalar — one row per event,
+        # deterministic, no global DISTINCT. Alias == the ordering token so
+        # order_by("countries__idmc_short_name") binds to this annotation, not the M2M path.
+        if "countries__idmc_short_name" in self.ordering_fields:
+            cte = With(
+                Event.objects.values("id").annotate(
+                    countries_idmc_short_name=StringAgg(
+                        "countries__idmc_short_name", EXTERNAL_ARRAY_SEPARATOR, ordering="countries__idmc_short_name"
+                    )
+                )
+            )
+            queryset = (
+                cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
+                .with_cte(cte)
+                .annotate(**{"countries__idmc_short_name": cte.col.countries_idmc_short_name})
             )
 
         # NOTE: no prefetch_related("figures"): EventType excludes the `figures` field
