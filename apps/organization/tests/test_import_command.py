@@ -33,10 +33,16 @@ class TestImportOrganizationsCommand(HelixTestCase):
     def test_create_rows(self):
         country = CountryFactory.create(iso3="NPL")
         path = write_sheet(
-            ["name", "short_name", "category", "countries", "organization_kind"],
+            ["name", "short_name", "category", "methodology", "countries", "organization_kind"],
             [
-                {"name": "Alpha Org", "short_name": "ALPHA", "category": "INTERNATIONAL"},
-                {"name": "Beta Org", "category": "NATIONAL", "countries": "NPL", "organization_kind": "Government"},
+                {"name": "Alpha Org", "short_name": "ALPHA", "category": "INTERNATIONAL", "methodology": "Desk review"},
+                {
+                    "name": "Beta Org",
+                    "category": "NATIONAL",
+                    "methodology": "Field survey",
+                    "countries": "NPL",
+                    "organization_kind": "Government",
+                },
             ],
         )
         call_command("import_organizations", path)
@@ -169,7 +175,10 @@ class TestImportOrganizationsCommand(HelixTestCase):
         self.assertNotIn("Solo Org - None", lookup.enumerate_values())
 
     def test_dry_run_commits_nothing(self):
-        path = write_sheet(["name"], [{"name": "Ephemeral"}])
+        path = write_sheet(
+            ["name", "category", "methodology"],
+            [{"name": "Ephemeral", "category": "INTERNATIONAL", "methodology": "Desk review"}],
+        )
         call_command("import_organizations", path, "--dry-run")
         self.assertEqual(Organization.objects.count(), 0)
 

@@ -1,3 +1,4 @@
+import datetime
 import tempfile
 from io import StringIO
 
@@ -38,10 +39,19 @@ class TestImportReportsCommand(HelixTestCase):
 
     def test_create_report_with_relations_and_enums(self):
         path = write_sheet(
-            ["name", "filter_figure_crises", "filter_figure_crisis_types", "filter_figure_violence_sub_types"],
+            [
+                "name",
+                "filter_figure_start_after",
+                "filter_figure_end_before",
+                "filter_figure_crises",
+                "filter_figure_crisis_types",
+                "filter_figure_violence_sub_types",
+            ],
             [
                 {
                     "name": "Report A",
+                    "filter_figure_start_after": "2020-01-01",  # non-GIDD reports require a date range
+                    "filter_figure_end_before": "2020-12-31",
                     "filter_figure_crises": str(self.crisis.id),  # crises referenced by id
                     "filter_figure_crisis_types": "CONFLICT;DISASTER",
                     "filter_figure_violence_sub_types": "State based",
@@ -60,7 +70,13 @@ class TestImportReportsCommand(HelixTestCase):
         self.assertIsNotNone(report.created_by)  # attributed to the default internal bot
 
     def test_update_requires_permitted_user(self):
-        report = Report.objects.create(name="Old", created_by=self.admin)
+        report = Report.objects.create(
+            name="Old",
+            created_by=self.admin,
+            # partial update re-runs validate(); the instance must already have the required date range
+            filter_figure_start_after=datetime.date(2020, 1, 1),
+            filter_figure_end_before=datetime.date(2020, 12, 31),
+        )
         path = write_sheet(["id", "name"], [{"id": report.id, "name": "Renamed"}])
         call_command("import_reports", path, "--user-email", self.admin.email)
 
@@ -98,7 +114,10 @@ class TestImportReportsCommand(HelixTestCase):
         self.assertFalse(Report.objects.filter(name="R").exists())
 
     def test_dry_run_commits_nothing(self):
-        path = write_sheet(["name"], [{"name": "Ephemeral"}])
+        path = write_sheet(
+            ["name", "filter_figure_start_after", "filter_figure_end_before"],
+            [{"name": "Ephemeral", "filter_figure_start_after": "2020-01-01", "filter_figure_end_before": "2020-12-31"}],
+        )
         call_command("import_reports", path, "--dry-run")
         self.assertEqual(Report.objects.count(), 0)
 
