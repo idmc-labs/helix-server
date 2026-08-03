@@ -9,7 +9,7 @@ import mimetypes
 import typing
 import uuid
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, urljoin
 
 import httpx
 import pydantic
@@ -39,6 +39,7 @@ from .models import (
     HulkFigureImport,
     HulkSourcePreviewImport,
 )
+from .url_guard import UnsafeUrlError, validate_fetch_url
 from .utils import S3Source, parse_aws_s3_url, parse_same_storage_url
 
 logger = logging.getLogger(__name__)
@@ -200,6 +201,13 @@ def get_filename_from_response(response, fallback="attachment"):
     return fallback
 
 
+# How many ``Location`` hops a row's url may take. Each hop costs a fresh
+# ``validate_fetch_url`` + DNS lookup on operator-supplied input, and a
+# legitimate file link needs a couple at most (http→https, a CDN handoff, a
+# signed-url exchange).
+MAX_DOWNLOAD_REDIRECTS = 5
+
+
 def download_file(url):
     """
     Fetch a file via HTTP for the attachment handler's slow path.
@@ -210,18 +218,31 @@ def download_file(url):
     object helix's own credentials cannot read (the signature only works over
     an HTTP GET — ``copy_object`` cannot present it).
 
+    Redirects are followed here rather than by httpx so every hop clears
+    :func:`validate_fetch_url`: a public url answering ``302 Location:
+    http://169.254.169.254/...`` is the same problem as naming that host
+    outright, and ``follow_redirects=True`` chases it without showing us the
+    target. See :mod:`apps.hulk.bulk.url_guard`.
+
     Non-2xx responses raise: S3 answers a bad/expired signature with a 403 and
     an XML error body, which must not be stored as if it were the attachment.
     """
-    response = httpx.get(url, follow_redirects=True)
-    response.raise_for_status()
-
-    filename = get_filename_from_response(response, fallback="attachment")
-
-    return ContentFile(
-        response.content,
-        name=filename,
-    )
+    with httpx.Client(follow_redirects=False) as client:
+        current_url = url
+        for _ in range(MAX_DOWNLOAD_REDIRECTS + 1):
+            validate_fetch_url(current_url)
+            response = client.get(current_url)
+            if response.has_redirect_location:
+                # Resolve against the *responding* url so a relative Location
+                # ("/next") is joined to the host that actually answered.
+                current_url = urljoin(str(response.url), response.headers["location"])
+                continue
+            response.raise_for_status()
+            return ContentFile(
+                response.content,
+                name=get_filename_from_response(response, fallback="attachment"),
+            )
+    raise httpx.TooManyRedirects(f"exceeded {MAX_DOWNLOAD_REDIRECTS} redirects starting from {url!r}")
 
 
 class _ImpersonatedUserNotFound(Exception):
@@ -515,7 +536,9 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         helix's own storage endpoint, which is always eligible). Firing
         ``copy_object`` at whatever bucket a url happens to name would let a row
         borrow helix's IAM identity to read buckets the importer can't. Every
-        other url — S3 or not — gets downloaded.
+        other url — S3 or not — gets downloaded, and only after
+        ``validate_fetch_url`` confirms it points at the public internet rather
+        than back into helix's own network.
 
         Both routes end in the same BigAttachment sequence, so a row's size limit
         and metadata handling no longer depend on where its file lives.
@@ -531,6 +554,10 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
 
         try:
             attachment_file = download_file(import_data.file_url)
+        except UnsafeUrlError as e:
+            # Distinct wording from a plain download failure: the row was
+            # refused on purpose, not lost to a flaky network.
+            raise _InputBuildError(f"refused to fetch url: {e}")
         except Exception as e:
             raise _InputBuildError(f"download failed: {e}")
         return self._create_via_big_attachment(
