@@ -471,6 +471,22 @@ class HulkHelixModelImportBaseHandler:
         except IntegrityError as e:
             self.add_error(uuid=row_uuid, error={POST_ERROR_KEY: f"relation insert failed: {e}"})
             return
+        except DatabaseError as db_error:
+            # Anything the DB throws that isn't an IntegrityError — a deadlock or
+            # serialization failure under contention, a statement timeout, a
+            # dropped connection. Uncaught it reaches ``handle()``'s blanket
+            # except and fails the whole import, discarding every other row's
+            # work, where a row with bad data only fails itself. The ``atomic``
+            # block has rolled its own work back by this point, so the run
+            # continues from a clean transaction state and the row lands in the
+            # failure JSONL, re-importable as-is.
+            logger.exception(
+                "Database error while creating %s row uuid=%s",
+                self.hulk_entity_relation_cls.get_entity_cls().__name__,
+                row_uuid,
+            )
+            self.add_error(uuid=row_uuid, error={POST_ERROR_KEY: f"database error during creation: {db_error}"})
+            return
 
         self.add_success(uuid=row_uuid, id=new_obj_id, message="Created")
         return

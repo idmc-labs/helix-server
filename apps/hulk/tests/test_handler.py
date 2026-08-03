@@ -730,6 +730,52 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         }
         self.assertEqual(post_error_uuids, attempted_mutation_uuids)
 
+    def test_unexpected_database_error_fails_only_its_own_row(self):
+        """
+        A row that trips a deadlock / statement timeout / dropped connection is
+        recorded as that row's own post-error. Any ``DatabaseError`` other than
+        ``IntegrityError`` escaping ``handle_row`` reaches ``handle()``'s
+        blanket except and fails the entire import, discarding the work of every
+        other row — unlike a row with bad data, which only fails itself.
+        """
+        from django.db import OperationalError
+
+        from apps.hulk.models import HulkEvent
+
+        bulk = HulkBulkImport.objects.create(created_by=self.user)
+        _create_dataset(bulk, "events", build_jsonl_bundle(self.ctx)["events"])
+
+        doomed_uuid = EVENT_UUIDS["disaster"]
+        real_create = HulkEvent.objects.create
+
+        def _create(**kwargs):
+            if str(kwargs.get("uuid")) == doomed_uuid:
+                raise OperationalError("deadlock detected")
+            return real_create(**kwargs)
+
+        with patch.object(HulkEvent.objects, "create", side_effect=_create), patch(
+            "apps.hulk.bulk.handler.InternalHelixGraphQlClient"
+        ) as MockClient:
+            mock_client = MagicMock()
+            mock_client.run_mutation.side_effect = _CountingResponder()
+            MockClient.return_value.__enter__.return_value = mock_client
+            ok = HulkBulkImportHandler(bulk).handle()
+
+        self.assertTrue(ok)
+        bulk.refresh_from_db()
+        self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
+
+        failures = {r["uuid"]: r["error"] for r in _jsonl_rows(_failure_file(bulk, "events"))}
+        successes = {r["uuid"] for r in _jsonl_rows(_success_file(bulk, "events"))}
+        self.assertIn(doomed_uuid, failures)
+        self.assertIn("database error during creation", failures[doomed_uuid]["post-errors"])
+
+        # Every other row that got as far as a mutation still landed in success.
+        attempted_mutation_uuids = {r["uuid"] for r in read_expected_input_rows("events")} - PYDANTIC_ONLY_FAILURE_UUIDS[
+            "events"
+        ]
+        self.assertEqual(successes, attempted_mutation_uuids - {doomed_uuid})
+
     def test_same_url_source_previews_do_not_collide_on_entity(self):
         """
         Regression: two source_preview rows sharing the same url (distinct
