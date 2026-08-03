@@ -78,7 +78,9 @@ class RestDisasterFilterSet(ReleaseMetadataFilter):
     @property
     def qs(self):
         qs = super().qs
-        return qs.filter(new_displacement__gt=0)
+        # Keep events that report displacement of either kind: new displacement
+        # (flow) or IDP stock.
+        return qs.filter(Q(new_displacement__gt=0) | Q(total_displacement__gt=0))
 
 
 class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
