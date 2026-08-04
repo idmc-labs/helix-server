@@ -19,8 +19,6 @@ extraPaths = ["apps"]
 exclude = [
     "**/node_modules",
     "**/__pycache__",
-    "apps/experimental",
-    "apps/typestubs"
 ]
 reportMissingImports = true
 reportMissingTypeStubs = false

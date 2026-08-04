@@ -187,6 +187,26 @@ class TestTriggerHulkBulkImport(HelixGraphQLTestCase):
         joined = json.dumps(errors)
         self.assertIn("Another hulk bulk import", joined)
 
+    def test_concurrent_create_is_rejected_by_advisory_lock_recheck(self):
+        """The advisory-lock re-check in create() is the authoritative guard.
+
+        Even if a request slips past validate()'s early ``.exists()`` check —
+        the TOCTOU window this fix closes — create() must still refuse to
+        create a second active import and must not leave an extra row behind.
+        We simulate the race by seeding an active row and stubbing validate()
+        to a no-op so its early check can't reject first.
+        """
+        self.force_login(self.admin)
+        HulkBulkImport.objects.create(created_by=self.admin)  # active PENDING row
+        with patch(
+            "apps.hulk.serializers.HulkBulkImportSerializer.validate",
+            side_effect=lambda attrs: attrs,
+        ):
+            resp = self._post_with_datasets(["events"])
+        # Rejected (create() raised) and no extra import row was created.
+        self.assertIn("Another hulk bulk import", resp.content.decode())
+        self.assertEqual(HulkBulkImport.objects.count(), 1)
+
     def test_mutation_partial_payload(self):
         """Submitting only one dataset should be accepted."""
         self.force_login(self.admin)

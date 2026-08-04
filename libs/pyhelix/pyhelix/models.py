@@ -377,4 +377,14 @@ class HulkFigureImport(HulkBaseModel):
             self._start_date_accuracy = self.stock_date_accuracy
             self._end_date = self.stock_reporting_date
 
+        # Mirror FigureSerializer._validate_dates: bound only the future direction
+        # (shared MAX_FUTURE_YEARS); very old dates stay valid.
+        max_future_date = _max_allowed_future_date()
+        start_date = getattr(self, "_start_date", None)
+        end_date = getattr(self, "_end_date", None)
+        if start_date and start_date > max_future_date:
+            raise ValueError(f"start_date: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
+        if end_date and end_date > max_future_date:
+            raise ValueError(f"end_date: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
+
         return self

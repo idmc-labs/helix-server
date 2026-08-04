@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 import typing
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from django.conf import settings
 
@@ -21,13 +21,85 @@ from django.conf import settings
 _AWS_S3_PATH_STYLE_HOST = re.compile(r"^s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$", re.IGNORECASE)
 _AWS_S3_VIRTUAL_HOST = re.compile(r"^([^.]+)\.s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$", re.IGNORECASE)
 
+# Query parameters that mark a URL as presigned, i.e. as carrying its own
+# short-lived read grant in the query string (SigV4 first, then the legacy
+# SigV2 form). ``s3.copy_object`` has no way to present such a signature — see
+# ``S3Source.is_presigned`` and the attachment handler's fallback.
+_PRESIGNED_QUERY_KEYS = frozenset(
+    {
+        "x-amz-signature",
+        "x-amz-credential",
+        "x-amz-security-token",
+        "x-amz-algorithm",
+        "signature",
+        "awsaccesskeyid",
+    }
+)
 
-def parse_aws_s3_url(url: str) -> typing.Optional[typing.Tuple[str, str]]:
+
+class S3Source(typing.NamedTuple):
     """
-    Return ``(bucket, key)`` if ``url`` points at an AWS S3 object, else ``None``.
+    A bucket + object key resolved from a URL, plus what we know about the URL.
 
-    Recognised forms (case-insensitive host, signed-URL query strings are
-    stripped):
+    ``key`` is the best-guess object key; ``fallback_keys`` holds the other
+    plausible reading(s) of the same URL path. Both exist because percent
+    encoding in a URL is ambiguous for keys containing a literal ``%``:
+
+    * a canonically-encoded URL for the key ``report%20final.pdf`` is
+      ``.../report%2520final.pdf`` — decoding once is correct,
+    * but exporters routinely paste the raw key into the URL instead
+      (``.../report%20final.pdf``), where decoding turns ``%20`` into a space
+      and yields a key that does not exist.
+
+    Callers that can probe storage (``head_object``) should walk
+    ``key_candidates`` and use the first key that actually resolves rather than
+    trusting a single decoding. ``s3://`` URIs are the mirror image: by
+    convention they carry the literal key, so there the undecoded path is the
+    primary candidate and the decoded form is the fallback.
+
+    ``is_presigned`` is True when the URL's query string carries an AWS
+    signature. Such a URL grants read access to whoever holds it, but that
+    grant cannot be handed to ``copy_object`` — only an HTTP GET of the full
+    URL can use it.
+    """
+
+    bucket: str
+    key: str
+    fallback_keys: typing.Tuple[str, ...] = ()
+    is_presigned: bool = False
+
+    @property
+    def key_candidates(self) -> typing.Tuple[str, ...]:
+        """Keys to try, best guess first."""
+        return (self.key, *self.fallback_keys)
+
+
+def _build_source(
+    bucket: typing.Optional[str],
+    primary_key: str,
+    alternate_key: str,
+    *,
+    is_presigned: bool = False,
+) -> typing.Optional[S3Source]:
+    """Assemble an :class:`S3Source`, dropping a redundant/empty alternate key."""
+    if not bucket or not primary_key:
+        return None
+    fallbacks = (alternate_key,) if alternate_key and alternate_key != primary_key else ()
+    return S3Source(bucket=bucket, key=primary_key, fallback_keys=fallbacks, is_presigned=is_presigned)
+
+
+def _is_presigned_query(query: str) -> bool:
+    if not query:
+        return False
+    return any(name.lower() in _PRESIGNED_QUERY_KEYS for name in parse_qs(query, keep_blank_values=True))
+
+
+def parse_aws_s3_url(url: str) -> typing.Optional[S3Source]:
+    """
+    Return an :class:`S3Source` if ``url`` points at an AWS S3 object, else ``None``.
+
+    Recognised forms (case-insensitive host; signed-URL query strings are not
+    part of the key but do set ``is_presigned``):
 
     * ``https://<bucket>.s3.<region>.amazonaws.com/<key>``
     * ``https://<bucket>.s3.amazonaws.com/<key>``
@@ -43,28 +115,32 @@ def parse_aws_s3_url(url: str) -> typing.Optional[typing.Tuple[str, str]]:
     parsed = urlparse(url)
     scheme = (parsed.scheme or "").lower()
     if scheme == "s3":
-        bucket = parsed.hostname
-        key = unquote(parsed.path.lstrip("/"))
-        return (bucket, key) if bucket and key else None
+        # ``s3://`` URIs carry the literal key by convention (that is what the
+        # AWS CLI prints and accepts), so the undecoded path wins here.
+        raw_key = parsed.path.lstrip("/")
+        return _build_source(parsed.hostname, raw_key, unquote(raw_key))
     if scheme not in {"http", "https"}:
         return None
     host = (parsed.hostname or "").lower()
-    key_or_path = unquote(parsed.path.lstrip("/"))
-    if not key_or_path:
+    raw_path = parsed.path.lstrip("/")
+    if not raw_path:
         return None
+    is_presigned = _is_presigned_query(parsed.query)
     if _AWS_S3_PATH_STYLE_HOST.match(host):
-        bucket, _, key = key_or_path.partition("/")
-        return (bucket, key) if bucket and key else None
+        # Bucket names can never contain '%', so splitting the still-encoded
+        # path is safe and keeps the raw key intact for the fallback candidate.
+        raw_bucket, _, raw_key = raw_path.partition("/")
+        return _build_source(unquote(raw_bucket), unquote(raw_key), raw_key, is_presigned=is_presigned)
     m = _AWS_S3_VIRTUAL_HOST.match(host)
     if m:
-        return m.group(1), key_or_path
+        return _build_source(m.group(1), unquote(raw_path), raw_path, is_presigned=is_presigned)
     return None
 
 
-def parse_same_storage_url(url: str) -> typing.Optional[typing.Tuple[str, str]]:
+def parse_same_storage_url(url: str) -> typing.Optional[S3Source]:
     """
-    Return ``(bucket, key)`` if ``url`` points at helix's configured S3-compatible
-    storage endpoint (e.g. MinIO in dev), else ``None``.
+    Return an :class:`S3Source` if ``url`` points at helix's configured
+    S3-compatible storage endpoint (e.g. MinIO in dev), else ``None``.
 
     The host portion of the URL must match the host of
     ``settings.AWS_S3_ENDPOINT_URL``. The path is parsed path-style as
@@ -89,6 +165,11 @@ def parse_same_storage_url(url: str) -> typing.Optional[typing.Tuple[str, str]]:
         return None
     if (parsed.hostname or "").lower() != endpoint_host:
         return None
-    path = unquote(parsed.path.lstrip("/"))
-    bucket, _, key = path.partition("/")
-    return (bucket, key) if bucket and key else None
+    raw_path = parsed.path.lstrip("/")
+    raw_bucket, _, raw_key = raw_path.partition("/")
+    return _build_source(
+        unquote(raw_bucket),
+        unquote(raw_key),
+        raw_key,
+        is_presigned=_is_presigned_query(parsed.query),
+    )

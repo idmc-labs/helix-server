@@ -39,7 +39,7 @@ from .models import (
     HulkFigureImport,
     HulkSourcePreviewImport,
 )
-from .utils import parse_aws_s3_url, parse_same_storage_url
+from .utils import S3Source, parse_aws_s3_url, parse_same_storage_url
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,9 @@ POST_ERROR_KEY = "post-errors"
 
 
 class _InputBuildError(Exception):
-    """Raised by ``_build_mutation_input`` overrides when input prep fails.
+    """Raised when preparing a row's mutation input fails — e.g. a
+    ``_build_mutation_input`` override, or the attachment handler failing to
+    download the row's file.
 
     The handler catches this and records the message as a ``post-errors``
     entry on the row, since the failure happened after pydantic validation
@@ -68,13 +70,33 @@ class _CreateEntityError(Exception):
         self.payload = payload
 
 
-class _PreCheckError(Exception):
+class _CopySource(typing.NamedTuple):
     """
-    Raised before any entity-creation work to fail a row with a pre-error.
-    Used e.g. when an attachment ``file_url`` points at an AWS S3 bucket that
-    is not on the ``HULK_TRUSTED_SOURCE_BUCKETS`` allowlist — we refuse the
-    row instead of degrading to a bytes-through-httpx download.
+    A source object confirmed readable by ``_resolve_source_key``, plus the
+    stored metadata a server-side copy has to carry over itself.
+
+    The copy replaces the destination's metadata wholesale
+    (``MetadataDirective="REPLACE"``, needed to set Content-Type at all), so
+    anything worth keeping has to be read here and restated there:
+
+    * ``content_encoding`` — django-storages uploads anything in
+      ``settings.GZIP_CONTENT_TYPES``, PDFs included, with
+      ``Content-Encoding: gzip``. Dropping the header would leave gzipped bytes
+      labelled as plain content, and ``verify_uploaded`` would sniff the gzip
+      wrapper and reject the row as ``application/gzip``.
+    * ``content_type`` — the fallback for when the key's name doesn't imply one
+      (a hash-named blob guesses to nothing). Forcing ``octet-stream`` onto a
+      source that was already correctly typed would be a downgrade.
+    * ``etag`` — passed as ``CopySourceIfMatch`` so the copy fails outright if
+      the source changed between that HEAD and the copy, rather than pairing new
+      bytes with the metadata read from the old ones.
     """
+
+    bucket: str
+    key: str
+    content_encoding: typing.Optional[str] = None
+    content_type: typing.Optional[str] = None
+    etag: typing.Optional[str] = None
 
 
 class JsonlParseError(typing.NamedTuple):
@@ -182,11 +204,17 @@ def download_file(url):
     """
     Fetch a file via HTTP for the attachment handler's slow path.
 
-    Note: same-bucket / same-MinIO and AWS S3 URLs are handled server-side via
-    ``s3.copy_object`` in ``HulkHelixAttachmentImportHandler``, so this should
-    only be reached for true external URLs.
+    Note: same-bucket / same-MinIO and AWS S3 URLs are normally handled
+    server-side via ``s3.copy_object`` in ``HulkHelixAttachmentImportHandler``,
+    so this is reached for true external URLs and for presigned URLs whose
+    object helix's own credentials cannot read (the signature only works over
+    an HTTP GET — ``copy_object`` cannot present it).
+
+    Non-2xx responses raise: S3 answers a bad/expired signature with a 403 and
+    an XML error body, which must not be stored as if it were the attachment.
     """
-    response = httpx.get(url)
+    response = httpx.get(url, follow_redirects=True)
+    response.raise_for_status()
 
     filename = get_filename_from_response(response, fallback="attachment")
 
@@ -413,9 +441,6 @@ class HulkHelixModelImportBaseHandler:
                     uuid=row_uuid,
                     entity_id=new_obj_id,
                 )
-        except _PreCheckError as e:
-            self.add_error(uuid=row_uuid, error={PRE_ERROR_KEY: str(e)})
-            return
         except _InputBuildError as e:
             self.add_error(uuid=row_uuid, error={POST_ERROR_KEY: str(e)})
             return
@@ -433,28 +458,20 @@ class HulkHelixModelImportBaseHandler:
 class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
     hulk_entity_relation_cls = HulkAttachment
     hulk_entity_import_cls = HulkAttachmentImport
-    # XXX: This may create orphan attachments — if ``createAttachment`` or
-    #  the BigAttachment + copy_object + Mark sequence succeeds in the upload
-    #  step but the HulkAttachment relation row creation fails afterwards, or
-    #  if a downstream entry that references this uuid never imports, the
-    #  Attachment is left dangling without any incoming reference.
-    # ``createAttachment`` accepts an ``Upload!`` scalar — graphene-file-upload's
-    # Upload is a passthrough, so we can call it through the standard mutation
-    # path by attaching a Django file object as the ``attachment`` variable.
-    graphql_mutation_query = """
-        mutation HulkAttachmentMutation($input: AttachmentCreateInputType!) {
-          __typename
-          createAttachment(data: $input) {
-            ok
-            errors
-            result {
-              id
-            }
-          }
-        }
-    """
-
-    # Mutations used by the S3-copy fast path.
+    # XXX: This may create orphan attachments — if the BigAttachment +
+    #  copy/upload + Mark sequence succeeds in the upload step but the
+    #  HulkAttachment relation row creation fails afterwards, or if a downstream
+    #  entry that references this uuid never imports, the Attachment is left
+    #  dangling without any incoming reference.
+    #
+    # Every row goes through the BigAttachment sequence below — createBigAttachment
+    # to allocate the row + destination key, then either s3.copy_object (source we
+    # can read server-side) or put_object of the downloaded bytes, then
+    # markBigAttachmentFileAsUploaded. ``createAttachment``/``Upload!`` is
+    # deliberately NOT used: its AttachmentSerializer rejects anything over
+    # ``DJANGO_MAX_UPLOAD_SIZE`` while BigAttachmentSerializer has no such cap, so
+    # routing part of an import through it gave the same import two different
+    # size ceilings depending on where the file happened to live.
     _CREATE_BIG_ATTACHMENT_QUERY = """
         mutation HulkCreateBigAttachment($input: BigAttachmentCreateInputType!) {
           createBigAttachment(data: $input) {
@@ -483,57 +500,170 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
     _BIG_ATTACHMENT_PLACEHOLDER_MIMETYPE = "application/pdf"
 
     def graphql_response_parser_fn(self, response):
-        return response.get("createAttachment")
+        # Required by the base class, but attachments never take the
+        # single-mutation path — ``_create_entity`` below is a full override.
+        raise AssertionError("attachment rows are created via the BigAttachment sequence, not a single mutation")
 
-    def _build_mutation_input(self, import_data):
+    def _create_entity(self, import_data, *, user_override: typing.Optional[User] = None) -> int:
+        """
+        Create the Attachment row, then get the bytes to its destination key the
+        cheapest way the source allows: a server-side S3 copy when we can read
+        the source with our own credentials, otherwise download + upload.
+
+        ``file_url`` is operator-supplied and can point anywhere, so the copy
+        fast path is opt-in per bucket via ``HULK_DIRECT_ACCESS_BUCKETS`` (plus
+        helix's own storage endpoint, which is always eligible). Firing
+        ``copy_object`` at whatever bucket a url happens to name would let a row
+        borrow helix's IAM identity to read buckets the importer can't. Every
+        other url — S3 or not — gets downloaded.
+
+        Both routes end in the same BigAttachment sequence, so a row's size limit
+        and metadata handling no longer depend on where its file lives.
+        """
+        copy_source = self._resolve_copy_source(import_data)
+        if copy_source is not None:
+            return self._create_via_big_attachment(
+                import_data,
+                file_name=Path(copy_source.key).name or "attachment",
+                copy_source=copy_source,
+                user_override=user_override,
+            )
+
         try:
             attachment_file = download_file(import_data.file_url)
         except Exception as e:
             raise _InputBuildError(f"download failed: {e}")
-        return {
-            **import_data.generate_for_graphql_mutation(),
-            "attachment": attachment_file,
-        }
-
-    def _create_entity(self, import_data, *, user_override: typing.Optional[User] = None) -> int:
-        # AWS S3 URLs are only accepted from allowlisted buckets — anything
-        # else fails the row outright (no httpx fallback) so we don't silently
-        # stream bytes through helix from an unvetted source. Same-storage
-        # URLs (helix's own MinIO/S3 endpoint) are implicitly trusted.
-        aws_source = parse_aws_s3_url(import_data.file_url)
-        if aws_source is not None:
-            src_bucket, src_key = aws_source
-            trusted = settings.HULK_TRUSTED_SOURCE_BUCKETS or []
-            if src_bucket not in trusted:
-                raise _PreCheckError(f"source bucket {src_bucket!r} is not in HULK_TRUSTED_SOURCE_BUCKETS allowlist")
-            return self._create_via_s3_copy(
-                import_data,
-                src_bucket=src_bucket,
-                src_key=src_key,
-                user_override=user_override,
-            )
-        same_source = parse_same_storage_url(import_data.file_url)
-        if same_source is not None:
-            return self._create_via_s3_copy(
-                import_data,
-                src_bucket=same_source[0],
-                src_key=same_source[1],
-                user_override=user_override,
-            )
-        return super()._create_entity(import_data, user_override=user_override)
+        return self._create_via_big_attachment(
+            import_data,
+            file_name=Path(attachment_file.name or "attachment").name or "attachment",
+            upload_file=attachment_file,
+            user_override=user_override,
+        )
 
     # ------------------------------------------------------------------
-    # S3-copy fast path
+    # Source resolution for the server-side copy
     # ------------------------------------------------------------------
-    def _create_via_s3_copy(
+    def _resolve_copy_source(self, import_data) -> typing.Optional[_CopySource]:
+        """
+        Return a :class:`_CopySource` when this row's file can be copied
+        server-side, else ``None`` to mean "download it instead".
+
+        ``None`` covers both "not eligible" (non-S3 url, or a bucket that isn't
+        configured for direct access) and "eligible but not actually readable"
+        (wrong key, restrictive object ACL, expired role, or a presigned url
+        whose signature ``copy_object`` cannot present).
+        """
+        source = parse_aws_s3_url(import_data.file_url)
+        if source is not None and source.bucket not in (settings.HULK_DIRECT_ACCESS_BUCKETS or []):
+            source = None
+        if source is None:
+            source = parse_same_storage_url(import_data.file_url)
+        if source is None:
+            return None
+
+        client = self._media_s3_client()
+        resolved, unreadable_reason = (
+            self._resolve_source_key(client, source) if client is not None else (None, "storage backend is not S3")
+        )
+        if resolved is not None:
+            return resolved
+
+        logger.warning(
+            "hulk attachment %s: s3://%s/%s not readable with helix credentials (%s); falling back to download+upload (%s)",
+            import_data.uuid,
+            source.bucket,
+            source.key,
+            unreadable_reason,
+            "the url is presigned, so the signature authorises the GET"
+            if source.is_presigned
+            else "the url is not presigned, so the GET is unauthenticated and only works for a public object",
+        )
+        return None
+
+    # ------------------------------------------------------------------
+    # BigAttachment sequence
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _media_s3_client():
+        """
+        The media bucket's boto3 client, or ``None`` when the default storage
+        isn't S3-backed (local ``FileSystemStorage`` in a dev checkout). Without
+        a client there is no server-side copy to make.
+        """
+        try:
+            # django-storages resolves ``.bucket`` lazily — a misconfigured
+            # endpoint raises here rather than returning None.
+            bucket = getattr(default_storage, "bucket", None)
+            return getattr(getattr(bucket, "meta", None), "client", None)
+        except Exception:
+            logger.exception("Could not resolve the media bucket's boto3 client")
+            return None
+
+    @staticmethod
+    def _resolve_source_key(client, source: S3Source) -> typing.Tuple[typing.Optional[_CopySource], typing.Optional[str]]:
+        """
+        HEAD each of ``source.key_candidates`` and return
+        ``(_CopySource, None)`` for the first one helix's own credentials can
+        read. The HEAD response also supplies the stored ``Content-Encoding``
+        the copy has to preserve — see :class:`_CopySource`.
+
+        This resolves the percent-encoding ambiguity for keys containing a
+        literal ``%`` (see :class:`S3Source`) and doubles as a readability
+        check, so we only commit to the copy path — which allocates an
+        Attachment row first — once we know the copy can work. Returns
+        ``(None, reason)`` when no candidate resolves; ``reason`` is the last
+        error, which distinguishes a missing object from an access-denied one.
+
+        One HEAD per candidate, deliberately *not* wrapped in
+        ``AttachmentBoto3ConnectorService._read_with_retry``. That helper exists
+        for reads of an object we just wrote, where a 404 can only mean "not
+        visible yet" and retrying is the only correct response. Here a 404 is the
+        answer we came for: there is a second candidate only when the url path
+        holds a percent-escape, and then which reading is right depends on
+        whether the producer encoded the key or pasted it raw — so a miss on the
+        first is informative, not a failure. Retrying would sleep ~1.4s per
+        candidate before moving on. Genuinely transient failures (connection
+        errors, 5xx, throttling) are already retried inside botocore; 403/404 are
+        not, which is exactly the split we want.
+        """
+        last_error = "no key candidates"
+        for candidate in source.key_candidates:
+            try:
+                head = client.head_object(Bucket=source.bucket, Key=candidate)
+            except Exception as e:  # botocore ClientError (404/403) and friends
+                last_error = f"{candidate!r}: {e}"
+                continue
+            return (
+                _CopySource(
+                    bucket=source.bucket,
+                    key=candidate,
+                    content_encoding=head.get("ContentEncoding") or None,
+                    content_type=head.get("ContentType") or None,
+                    etag=head.get("ETag") or None,
+                ),
+                None,
+            )
+        return None, last_error
+
+    def _create_via_big_attachment(
         self,
         import_data,
         *,
-        src_bucket: str,
-        src_key: str,
+        file_name: str,
+        copy_source: typing.Optional[_CopySource] = None,
+        upload_file=None,
         user_override: typing.Optional[User] = None,
     ) -> int:
-        file_name = Path(src_key).name or "attachment"
+        """
+        Run the BigAttachment sequence for one row.
+
+        Exactly one of ``copy_source`` (a :class:`_CopySource` to ``copy_object``
+        from) or ``upload_file`` (an already-downloaded Django file to
+        ``put_object``) must be given — they are the two ways to land bytes on
+        the destination key, and everything around them is shared.
+        """
+        if (copy_source is None) == (upload_file is None):
+            raise _CreateEntityError("internal error: exactly one of copy_source/upload_file is required")
 
         # Step 1: createBigAttachment — returns Attachment row + presigned PUT URL
         # whose host/path we use as the destination bucket/key.
@@ -561,24 +691,75 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         # Step 2: parse the presigned URL → destination bucket + key. Try AWS
         # first, then fall back to same-storage (MinIO in dev) since the
         # presigned URL points at helix's configured endpoint either way.
+        # Unlike a caller-supplied source url, this one is generated by boto3
+        # and therefore canonically encoded, so ``dst.key`` (decoded exactly
+        # once) is the real key — no candidate probing needed. The signature in
+        # its query string is irrelevant here: we only need bucket + key, and we
+        # write with our own credentials rather than PUTting to the url.
         dst = parse_aws_s3_url(presigned_url) or parse_same_storage_url(presigned_url)
         if dst is None:
             raise _CreateEntityError(f"could not parse destination bucket/key from presigned url: {presigned_url!r}")
-        dst_bucket, dst_key = dst
 
-        # Step 3: server-side s3.copy_object. We use the helix media bucket's
-        # boto3 client (default_storage) — it has the credentials to read the
-        # source (if the IAM role allows it or the source is public-read)
-        # and write the destination.
-        try:
-            client = default_storage.bucket.meta.client
-            client.copy_object(
-                CopySource={"Bucket": src_bucket, "Key": src_key},
-                Bucket=dst_bucket,
-                Key=dst_key,
-            )
-        except Exception as e:
-            raise _CreateEntityError(f"s3.copy_object failed: {e}")
+        # Step 3: land the bytes on the destination key with the helix media
+        # bucket's boto3 client (default_storage) — it owns the destination, and
+        # for a copy the caller has already confirmed it can read the source
+        # (``_resolve_source_key``). We write with our own credentials rather
+        # than PUTting to the presigned url: same result, one less hop, and no
+        # dependency on the url's Content-Type/expiry matching.
+        client = self._media_s3_client()
+        if client is None:
+            raise _CreateEntityError("default storage is not S3-backed; big attachment uploads require S3 storage")
+        # Content type is a best guess from the file name — ``verify_uploaded``
+        # re-derives the authoritative mimetype from the stored bytes in step 4.
+        # Both branches set it so the object we serve carries the same header
+        # regardless of how its bytes got here. The guess wins where it exists
+        # (a source bucket that stored a .html as octet-stream is exactly what we
+        # are correcting), and the source's own header is the fallback for keys
+        # that imply nothing — otherwise a hash-named PDF would be *downgraded*
+        # to octet-stream by this very fix.
+        content_type = mimetypes.guess_type(file_name)[0]
+        if content_type is None and copy_source is not None:
+            content_type = copy_source.content_type
+        content_type = content_type or "application/octet-stream"
+        if copy_source is not None:
+            # Without REPLACE, copy_object silently ignores ContentType and inherits
+            # the source object's — often binary/octet-stream for a bulk-uploaded
+            # source, so the browser downloads the attachment instead of rendering
+            # it. REPLACE drops *every* unstated header though, so the source's
+            # Content-Encoding has to be restated or gzipped bytes end up labelled
+            # as plain content (see :class:`_CopySource`).
+            copy_kwargs = {}
+            if copy_source.content_encoding:
+                copy_kwargs["ContentEncoding"] = copy_source.content_encoding
+            if copy_source.etag:
+                # The HEAD that read this metadata happens before
+                # createBigAttachment, so the source could be overwritten in
+                # between. Copying the new bytes under the old headers is the
+                # mislabelling this whole block exists to prevent, so make S3
+                # refuse the copy (412) and fail the row loudly instead.
+                copy_kwargs["CopySourceIfMatch"] = copy_source.etag
+            try:
+                client.copy_object(
+                    CopySource={"Bucket": copy_source.bucket, "Key": copy_source.key},
+                    Bucket=dst.bucket,
+                    Key=dst.key,
+                    ContentType=content_type,
+                    MetadataDirective="REPLACE",
+                    **copy_kwargs,
+                )
+            except Exception as e:
+                raise _CreateEntityError(f"s3.copy_object failed: {e}")
+        else:
+            try:
+                upload_file.seek(0)
+                client.put_object(
+                    Bucket=dst.bucket,
+                    Key=dst.key,
+                    Body=upload_file.read(),
+                    ContentType=content_type,
+                )
+            except Exception as e:
+                raise _CreateEntityError(f"s3.put_object failed: {e}")
 
         # Step 4: markBigAttachmentFileAsUploaded — verifies the object exists,
         # sniffs mimetype with magic, then flips is_file_uploaded=True.

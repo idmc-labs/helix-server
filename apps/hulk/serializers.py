@@ -1,11 +1,26 @@
 from uuid import uuid4
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.utils.translation import gettext
 from rest_framework import serializers
 
 from .models import HulkBulkImport, HulkBulkImportDataset
 from .tasks import process_hulk_bulk_import
+
+# Statuses that count as an "active" import for the single-import global lock.
+_ACTIVE_IMPORT_STATUSES = (
+    HulkBulkImport.HULK_BULK_IMPORT_STATUS.PENDING,
+    HulkBulkImport.HULK_BULK_IMPORT_STATUS.IN_PROGRESS,
+)
+
+# Fixed key for the transaction-scoped Postgres advisory lock that serializes
+# the "is another import active?" check-then-create. Any stable arbitrary
+# bigint works; 0x48554C4B is ASCII "HULK".
+_ACTIVE_IMPORT_ADVISORY_LOCK_KEY = 0x48554C4B
+
+_ACTIVE_IMPORT_ERROR = gettext(
+    "Another hulk bulk import is already pending or in progress. Wait for it to finish before starting a new one."
+)
 
 
 class HulkBulkImportDatasetCreateSerializer(serializers.Serializer):
@@ -46,17 +61,13 @@ class HulkBulkImportSerializer(serializers.Serializer):
         # Global lock: only one bulk import may be active at a time. Reject
         # creation if any row is still PENDING or IN_PROGRESS. Admins must
         # clear stuck rows (mark as FAILED) before a new import can be queued.
-        active_statuses = (
-            HulkBulkImport.HULK_BULK_IMPORT_STATUS.PENDING,
-            HulkBulkImport.HULK_BULK_IMPORT_STATUS.IN_PROGRESS,
-        )
-        if HulkBulkImport.objects.filter(status__in=active_statuses).exists():
-            raise serializers.ValidationError(
-                gettext(
-                    "Another hulk bulk import is already pending or in progress. "
-                    "Wait for it to finish before starting a new one."
-                )
-            )
+        #
+        # This is an early, best-effort check to fail fast (and avoid writing
+        # the uploaded files to storage) when an import is obviously already
+        # running. It is NOT concurrency-safe on its own — the authoritative
+        # guard is the advisory-lock-protected re-check in ``create()``.
+        if HulkBulkImport.objects.filter(status__in=_ACTIVE_IMPORT_STATUSES).exists():
+            raise serializers.ValidationError(_ACTIVE_IMPORT_ERROR)
         return attrs
 
     def update(self, instance, validated_data):
@@ -78,6 +89,19 @@ class HulkBulkImportSerializer(serializers.Serializer):
         task_id = str(uuid4())
 
         with transaction.atomic():
+            # Serialize the check-then-create critical section. The ``validate()``
+            # ``.exists()`` check is a classic TOCTOU race: several concurrent
+            # requests can all observe "no active import" before any of them
+            # creates a row, so all of them create one — violating the single
+            # active-import invariant. A transaction-scoped advisory lock forces
+            # concurrent triggers through here one at a time; it is released
+            # automatically when this transaction commits or rolls back.
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT pg_advisory_xact_lock(%s)", [_ACTIVE_IMPORT_ADVISORY_LOCK_KEY])
+            # Authoritative re-check, now that we hold the lock: whoever got
+            # here first has already committed (or is about to) their row.
+            if HulkBulkImport.objects.filter(status__in=_ACTIVE_IMPORT_STATUSES).exists():
+                raise serializers.ValidationError(_ACTIVE_IMPORT_ERROR)
             bulk = HulkBulkImport.objects.create(
                 created_by=request.user,
                 celery_task_id=task_id,

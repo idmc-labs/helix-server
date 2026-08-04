@@ -198,7 +198,7 @@ class TestJsonlHelpers(HelixGraphQLTestCase):
             ("https://s3.eu-central-1.amazonaws.com/my-bucket/k.pdf", ("my-bucket", "k.pdf")),
             # s3:// scheme
             ("s3://my-bucket/folder/x.pdf", ("my-bucket", "folder/x.pdf")),
-            # Presigned URL (query string stripped)
+            # Presigned URL (query string is not part of the key)
             (
                 "https://my-bucket.s3.amazonaws.com/k.pdf?X-Amz-Signature=abc&X-Amz-Date=20260512",
                 ("my-bucket", "k.pdf"),
@@ -214,7 +214,53 @@ class TestJsonlHelpers(HelixGraphQLTestCase):
         ]
         for url, expected in cases:
             with self.subTest(url=url):
-                self.assertEqual(parse_aws_s3_url(url), expected)
+                source = parse_aws_s3_url(url)
+                if expected is None:
+                    self.assertIsNone(source)
+                    continue
+                self.assertEqual((source.bucket, source.key), expected)
+
+    def test_parse_aws_s3_url_key_candidates_for_literal_percent(self):
+        """
+        A percent sequence in the URL path has two readings, so both are
+        offered as candidates (best guess first) instead of committing to one:
+
+        * an http(s) URL is meant to be percent-encoded → decode once, and keep
+          the undecoded path as a fallback for exporters that pasted the raw key,
+        * an ``s3://`` URI carries the literal key → the reverse order.
+        """
+        http_source = parse_aws_s3_url("https://my-bucket.s3.amazonaws.com/in/report%20final.pdf")
+        self.assertEqual(http_source.key, "in/report final.pdf")
+        self.assertEqual(http_source.key_candidates, ("in/report final.pdf", "in/report%20final.pdf"))
+
+        # Canonically encoded URL for the key that literally contains "%20".
+        encoded_source = parse_aws_s3_url("https://my-bucket.s3.amazonaws.com/in/report%2520final.pdf")
+        self.assertEqual(encoded_source.key, "in/report%20final.pdf")
+        self.assertEqual(encoded_source.key_candidates, ("in/report%20final.pdf", "in/report%2520final.pdf"))
+
+        # s3:// → literal key wins.
+        s3_source = parse_aws_s3_url("s3://my-bucket/in/100%25done.pdf")
+        self.assertEqual(s3_source.key, "in/100%25done.pdf")
+        self.assertEqual(s3_source.key_candidates, ("in/100%25done.pdf", "in/100%done.pdf"))
+
+        # Nothing to disambiguate → a single candidate.
+        plain = parse_aws_s3_url("https://my-bucket.s3.amazonaws.com/in/plain.pdf")
+        self.assertEqual(plain.key_candidates, ("in/plain.pdf",))
+
+    def test_parse_aws_s3_url_detects_presigned_urls(self):
+        """``is_presigned`` flags URLs whose query carries an AWS signature."""
+        cases = [
+            ("https://b.s3.amazonaws.com/k.pdf", False),
+            ("https://b.s3.amazonaws.com/k.pdf?versionId=abc", False),
+            # SigV4
+            ("https://b.s3.amazonaws.com/k.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=ab", True),
+            ("https://b.s3.amazonaws.com/k.pdf?x-amz-signature=ab", True),  # case-insensitive
+            # SigV2 (legacy)
+            ("https://b.s3.amazonaws.com/k.pdf?AWSAccessKeyId=AK&Signature=ab&Expires=1", True),
+        ]
+        for url, expected in cases:
+            with self.subTest(url=url):
+                self.assertEqual(parse_aws_s3_url(url).is_presigned, expected)
 
     @override_settings(AWS_S3_ENDPOINT_URL="http://minio:9000")
     def test_parse_same_storage_url_with_endpoint_configured(self):
@@ -236,7 +282,18 @@ class TestJsonlHelpers(HelixGraphQLTestCase):
         ]
         for url, expected in cases:
             with self.subTest(url=url):
-                self.assertEqual(parse_same_storage_url(url), expected)
+                source = parse_same_storage_url(url)
+                if expected is None:
+                    self.assertIsNone(source)
+                    continue
+                self.assertEqual((source.bucket, source.key), expected)
+
+    @override_settings(AWS_S3_ENDPOINT_URL="http://minio:9000")
+    def test_parse_same_storage_url_key_candidates_and_presigned(self):
+        source = parse_same_storage_url("http://minio:9000/helix-data/media/a%20b.pdf?X-Amz-Signature=x")
+        self.assertEqual(source.bucket, "helix-data")
+        self.assertEqual(source.key_candidates, ("media/a b.pdf", "media/a%20b.pdf"))
+        self.assertTrue(source.is_presigned)
 
     @override_settings(AWS_S3_ENDPOINT_URL=None)
     def test_parse_same_storage_url_without_endpoint(self):
@@ -266,16 +323,39 @@ class _CountingResponder:
         self._event_for_figures = None
 
     def __call__(self, query: str, variables: dict):
-        if "createAttachment" in query:
+        if "createBigAttachment" in query:
+            # Mirror BigAttachmentSerializer.create + its presigned-url field:
+            # the handler parses the returned url for the destination bucket/key,
+            # so it has to be a real one for the real storage backend.
+            from apps.contrib.models import Attachment, global_upload_to
+            from apps.contrib.utils import AttachmentBoto3ConnectorService
+
+            obj = Attachment(
+                attachment_for=variables["input"]["attachmentFor"],
+                mimetype=variables["input"]["mimetype"],
+                is_file_uploaded=False,
+            )
+            obj.attachment.name = global_upload_to(obj, variables["input"]["fileName"])
+            obj.save()
+            return (
+                {
+                    "createBigAttachment": {
+                        "ok": True,
+                        "errors": None,
+                        "result": {"id": obj.pk},
+                        "s3PresignedUploadUrl": AttachmentBoto3ConnectorService(instance=obj).get_attachment_presigned_url(),
+                    }
+                },
+                None,
+            )
+        if "markBigAttachmentFileAsUploaded" in query:
             from apps.contrib.models import Attachment
 
-            obj = Attachment.objects.create(
-                attachment_for=variables["input"]["attachmentFor"],
-                attachment="hulk-test/" + variables["input"].get("attachment").name
-                if hasattr(variables["input"].get("attachment"), "name")
-                else "hulk-test/file.pdf",
+            Attachment.objects.filter(pk=variables["id"]).update(is_file_uploaded=True)
+            return (
+                {"markBigAttachmentFileAsUploaded": {"ok": True, "errors": None, "result": {"id": variables["id"]}}},
+                None,
             )
-            return ({"createAttachment": {"ok": True, "errors": None, "result": {"id": obj.pk}}}, None)
         if "createSourcePreview" in query:
             from apps.contrib.models import SourcePreview
 
@@ -320,9 +400,9 @@ _DUMMY_PDF_BYTES = (
 def _patch_download_file():
     """
     Patch ``download_file`` so the attachment handler doesn't hit the network.
-    ``side_effect`` yields a fresh ContentFile per call — the underlying file
-    pointer is consumed by AttachmentSerializer.save(), so reusing one
-    ContentFile across rows would let only the first attachment succeed.
+    ``side_effect`` yields a fresh ContentFile per call — the handler reads the
+    file to upload it, so reusing one ContentFile across rows would let only the
+    first attachment succeed.
     """
     from django.core.files.base import ContentFile
 
@@ -1016,17 +1096,17 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
                     len(entity_ids),
                 )
 
-    def test_attachment_handler_uses_real_create_attachment_mutation(self):
+    def test_attachment_handler_uses_real_big_attachment_mutations(self):
         """
-        End-to-end check for the attachment handler:
+        End-to-end check for the attachment handler against the real schema:
           * downloads the file (patched to return a ContentFile)
-          * sends it through the real ``createAttachment`` GraphQL mutation
-            via ``InternalHelixGraphQlClient`` (Upload scalar passthrough)
-          * AttachmentSerializer accepts the file, saves storage, returns an
-            Attachment row
+          * allocates the row with the real ``createBigAttachment`` mutation and
+            uploads the bytes to the destination key parsed from its presigned url
+          * the real ``markBigAttachmentFileAsUploaded`` reads the stored object
+            back, sniffs its mimetype and flips ``is_file_uploaded``
           * HulkAttachment relation is created and the success file lists the
             row with ``message="Created"``.
-        This replaces the previous AttachmentSerializer bypass.
+        ``createAttachment``/``Upload!`` is no longer used by this handler at all.
         """
         from apps.contrib.models import Attachment
 
@@ -1041,18 +1121,26 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
         success_rows = _jsonl_rows(_success_file(bulk, "attachments"))
         self.assertEqual(len(success_rows), len(read_expected_input_rows("attachments")))
-        # Each success row points at a real Attachment created by the real
-        # createAttachment mutation (storage saved, etc).
+        # Each success row points at a real Attachment whose object was uploaded
+        # and then verified by markBigAttachmentFileAsUploaded — so the mimetype
+        # and size come from the stored bytes, not from the caller.
         for row in success_rows:
             attachment = Attachment.objects.get(pk=row["id"])
             self.assertTrue(bool(attachment.attachment))
+            self.assertTrue(attachment.is_file_uploaded)
+            self.assertEqual(attachment.mimetype, "application/pdf")
+            self.assertTrue(attachment.file_size)
+            # Metadata the small-upload serializer used to derive must still be
+            # populated now that every row goes through the BigAttachment path.
+            self.assertTrue(attachment.encoding)
+            self.assertTrue(attachment.filetype_detail)
             self.assertEqual(row["message"], "Created")
 
-    @override_settings(HULK_TRUSTED_SOURCE_BUCKETS=["hulk-source"])
+    @override_settings(HULK_DIRECT_ACCESS_BUCKETS=["hulk-source"])
     def test_attachment_handler_s3_copy_path_uses_big_attachment_mutations(self):
         """
-        When the source ``file_url`` is an AWS S3 URL, the attachment handler
-        must skip ``createAttachment`` and instead:
+        When the source ``file_url`` is an AWS S3 URL on a direct-access bucket,
+        the handler must move the bytes server-side:
 
         1. call ``createBigAttachment`` to allocate an Attachment row +
            presigned PUT URL,
@@ -1073,6 +1161,8 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
             b' "file_url": "https://hulk-source.s3.us-east-1.amazonaws.com/inputs/a.pdf"}\n'
             b'{"uuid": "22222222-2222-2222-2222-222222222222", "attachment_for": "ENTRY",'
             b' "file_url": "https://hulk-source.s3.us-east-1.amazonaws.com/inputs/b.pdf"}\n'
+            b'{"uuid": "33333333-3333-3333-3333-333333333333", "attachment_for": "ENTRY",'
+            b' "file_url": "https://hulk-source.s3.us-east-1.amazonaws.com/inputs/hash-named-blob"}\n'
         )
         bulk = HulkBulkImport.objects.create(created_by=self.user)
         _create_dataset(bulk, "attachments", s3_rows)
@@ -1118,6 +1208,20 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
 
         fake_s3 = MagicMock()
         fake_s3.copy_object.side_effect = lambda **kwargs: copy_object_calls.append(kwargs)
+        # Per-key source metadata. b.pdf is stored gzipped (django-storages does
+        # that for every GZIP_CONTENT_TYPES entry, PDFs included) while a.pdf is
+        # not; the extension-less key carries a correct Content-Type that its file
+        # name cannot imply. The ETags let us assert the copy is made conditional.
+        source_heads = {
+            "inputs/a.pdf": {"ContentType": "application/pdf", "ETag": '"aaa"'},
+            "inputs/b.pdf": {
+                "ContentEncoding": "gzip",
+                "ContentType": "application/pdf",
+                "ETag": '"bbb"',
+            },
+            "inputs/hash-named-blob": {"ContentType": "application/pdf", "ETag": '"ccc"'},
+        }
+        fake_s3.head_object.side_effect = lambda **kw: source_heads[kw["Key"]]
 
         with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient, patch(
             "apps.hulk.bulk.handler.default_storage"
@@ -1132,24 +1236,48 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         bulk.refresh_from_db()
         self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
         success_rows = _jsonl_rows(_success_file(bulk, "attachments"))
-        self.assertEqual(len(success_rows), 2)
+        self.assertEqual(len(success_rows), 3)
 
-        # Both rows took the S3 fast path: copy_object was called twice with
+        # Every row took the S3 fast path: copy_object was called once each with
         # the source bucket/key from the file_url and the destination bucket/key
         # parsed from the presigned URL.
-        self.assertEqual(len(copy_object_calls), 2)
+        self.assertEqual(len(copy_object_calls), 3)
         self.assertEqual(
             {call["CopySource"]["Bucket"] for call in copy_object_calls},
             {"hulk-source"},
         )
         self.assertEqual(
             {call["CopySource"]["Key"] for call in copy_object_calls},
-            {"inputs/a.pdf", "inputs/b.pdf"},
+            {"inputs/a.pdf", "inputs/b.pdf", "inputs/hash-named-blob"},
         )
         self.assertEqual({call["Bucket"] for call in copy_object_calls}, {"helix-dest"})
         self.assertEqual(
             {call["Key"] for call in copy_object_calls},
-            {"hulk-dst/a.pdf", "hulk-dst/b.pdf"},
+            {"hulk-dst/a.pdf", "hulk-dst/b.pdf", "hulk-dst/hash-named-blob"},
+        )
+        # The copy must set Content-Type from the file name rather than inherit
+        # the source object's, and that needs MetadataDirective=REPLACE —
+        # ContentType alone is silently ignored under the default COPY directive,
+        # leaving the attachment served as whatever the source bucket had (often
+        # binary/octet-stream, so browsers download instead of rendering).
+        self.assertEqual({call["ContentType"] for call in copy_object_calls}, {"application/pdf"})
+        self.assertEqual({call["MetadataDirective"] for call in copy_object_calls}, {"REPLACE"})
+        # ...and because REPLACE drops every header not restated, a gzipped source
+        # must have its Content-Encoding carried over — otherwise the destination
+        # holds gzipped bytes labelled as a plain PDF and verify_uploaded sniffs
+        # the gzip wrapper, failing the row as application/gzip.
+        by_source_key = {call["CopySource"]["Key"]: call for call in copy_object_calls}
+        self.assertEqual(by_source_key["inputs/b.pdf"]["ContentEncoding"], "gzip")
+        self.assertNotIn("ContentEncoding", by_source_key["inputs/a.pdf"])
+        # A key whose name implies no type must inherit the source's own header
+        # rather than being downgraded to octet-stream by MetadataDirective=REPLACE.
+        self.assertEqual(by_source_key["inputs/hash-named-blob"]["ContentType"], "application/pdf")
+        # Each copy is conditional on the object we HEAD'd still being current, so
+        # an overwrite between the HEAD and the copy fails the row (412) instead of
+        # pairing new bytes with stale headers.
+        self.assertEqual(
+            {key: call["CopySourceIfMatch"] for key, call in by_source_key.items()},
+            {"inputs/a.pdf": '"aaa"', "inputs/b.pdf": '"bbb"', "inputs/hash-named-blob": '"ccc"'},
         )
 
         # Marked as uploaded by the Mark mutation.
@@ -1157,12 +1285,14 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
             attachment = Attachment.objects.get(pk=row["id"])
             self.assertTrue(attachment.is_file_uploaded)
 
-    @override_settings(AWS_S3_ENDPOINT_URL="http://minio:9000")
+    @override_settings(AWS_S3_ENDPOINT_URL="http://minio:9000", HULK_DIRECT_ACCESS_BUCKETS=[])
     def test_attachment_handler_same_minio_copy_path(self):
         """
         When the source URL points at helix's own MinIO endpoint
         (``settings.AWS_S3_ENDPOINT_URL``), the handler should take the same
         ``s3.copy_object`` fast path it uses for AWS S3 — no httpx download.
+        Our own storage needs no ``HULK_DIRECT_ACCESS_BUCKETS`` entry, hence the
+        empty override.
         """
         from apps.contrib.models import Attachment
         from apps.hulk.bulk import handler as handler_mod
@@ -1204,17 +1334,20 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
             raise AssertionError(f"unexpected mutation: {query!r}")
 
         fake_s3 = MagicMock()
+        fake_s3.head_object.return_value = {}
         fake_s3.copy_object.side_effect = lambda **kw: copy_calls.append(kw)
 
         with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient, patch(
             "apps.hulk.bulk.handler.default_storage"
-        ) as mock_storage:
+        ) as mock_storage, patch("apps.hulk.bulk.handler.download_file") as mock_download:
             mock_client = MagicMock()
             mock_client.run_mutation.side_effect = _fake_run_mutation
             MockClient.return_value.__enter__.return_value = mock_client
             mock_storage.bucket.meta.client = fake_s3
 
             handler_mod.HulkBulkImportHandler(bulk).handle()
+
+            mock_download.assert_not_called()
 
         bulk.refresh_from_db()
         self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
@@ -1226,7 +1359,7 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         self.assertEqual(copy_calls[0]["Bucket"], "helix-data")
         self.assertEqual(copy_calls[0]["Key"], "hulk-dst/d.pdf")
 
-    @override_settings(HULK_TRUSTED_SOURCE_BUCKETS=["hulk-source"])
+    @override_settings(HULK_DIRECT_ACCESS_BUCKETS=["hulk-source"])
     def test_attachment_handler_s3_copy_path_records_post_error_on_copy_failure(self):
         """If ``s3.copy_object`` raises, the row lands in failure_attachments."""
         from apps.contrib.models import Attachment
@@ -1261,6 +1394,7 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
             raise AssertionError(f"unexpected mutation: {query!r}")
 
         fake_s3 = MagicMock()
+        fake_s3.head_object.return_value = {}
         fake_s3.copy_object.side_effect = RuntimeError("AccessDenied")
 
         with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient, patch(
@@ -1279,44 +1413,244 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         self.assertIn("post-errors", failure_rows[0]["error"])
         self.assertIn("s3.copy_object failed", str(failure_rows[0]["error"]["post-errors"]))
 
-    @override_settings(HULK_TRUSTED_SOURCE_BUCKETS=["trusted-bucket"])
-    def test_attachment_handler_rejects_s3_url_outside_allowlist(self):
+    @override_settings(HULK_DIRECT_ACCESS_BUCKETS=["direct-bucket"])
+    def test_attachment_handler_downloads_s3_url_outside_direct_access_list(self):
         """
-        AWS S3 URLs whose bucket is not in ``HULK_TRUSTED_SOURCE_BUCKETS``
-        must fail the row with a pre-error. We never fall back to httpx
-        download for S3 sources — that would silently stream bytes through
-        helix from an unvetted bucket.
+        An S3 url whose bucket is not configured for direct access is imported
+        the ordinary way: download + re-upload. ``copy_object`` must not be
+        attempted — helix's credentials are not meant to be pointed at whatever
+        bucket a row happens to name.
         """
         from apps.hulk.bulk import handler as handler_mod
 
-        untrusted_row = (
+        other_bucket_row = (
             b'{"uuid": "55555555-5555-5555-5555-555555555555", "attachment_for": "ENTRY",'
-            b' "file_url": "https://untrusted-bucket.s3.us-east-1.amazonaws.com/inputs/x.pdf"}\n'
+            b' "file_url": "https://other-bucket.s3.us-east-1.amazonaws.com/inputs/x.pdf"}\n'
         )
         bulk = HulkBulkImport.objects.create(created_by=self.user)
-        _create_dataset(bulk, "attachments", untrusted_row)
+        _create_dataset(bulk, "attachments", other_bucket_row)
 
         fake_s3 = MagicMock()
 
         with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient, patch(
             "apps.hulk.bulk.handler.default_storage"
+        ) as mock_storage, _patch_download_file() as mock_download:
+            mock_client = MagicMock()
+            mock_client.run_mutation.side_effect = _CountingResponder()
+            MockClient.return_value.__enter__.return_value = mock_client
+            mock_storage.bucket.meta.client = fake_s3
+
+            handler_mod.HulkBulkImportHandler(bulk).handle()
+
+            mock_download.assert_called_once_with("https://other-bucket.s3.us-east-1.amazonaws.com/inputs/x.pdf")
+
+        # Neither the readability probe nor the copy runs for an unlisted bucket.
+        fake_s3.head_object.assert_not_called()
+        fake_s3.copy_object.assert_not_called()
+        # The downloaded bytes are uploaded to the BigAttachment destination key —
+        # createAttachment/Upload! is not used for this (or any) row.
+        fake_s3.put_object.assert_called_once()
+        self.assertEqual(fake_s3.put_object.call_args.kwargs["Body"], _DUMMY_PDF_BYTES)
+
+        bulk.refresh_from_db()
+        self.assertEqual(_jsonl_rows(_failure_file(bulk, "attachments")), [])
+        self.assertEqual(len(_jsonl_rows(_success_file(bulk, "attachments"))), 1)
+
+    @override_settings(HULK_DIRECT_ACCESS_BUCKETS=["hulk-source"])
+    def test_attachment_handler_s3_copy_uses_the_key_candidate_that_exists(self):
+        """
+        For a key containing a literal ``%``, the decoded reading of the URL
+        path points at nothing. The handler must HEAD the candidates and copy
+        the one that actually exists instead of decoding blindly.
+        """
+        from apps.contrib.models import Attachment
+        from apps.hulk.bulk import handler as handler_mod
+
+        # Real key: "inputs/report%20final.pdf" (a literal '%20' in the name).
+        # The url was built by pasting the raw key in, so decoding gives
+        # "inputs/report final.pdf" — which does not exist.
+        s3_row = (
+            b'{"uuid": "66666666-6666-6666-6666-666666666666", "attachment_for": "ENTRY",'
+            b' "file_url": "https://hulk-source.s3.amazonaws.com/inputs/report%20final.pdf"}\n'
+        )
+        bulk = HulkBulkImport.objects.create(created_by=self.user)
+        _create_dataset(bulk, "attachments", s3_row)
+
+        existing_key = "inputs/report%20final.pdf"
+        head_keys = []
+        copy_calls = []
+
+        def _fake_head_object(*, Bucket, Key):
+            head_keys.append(Key)
+            if Key != existing_key:
+                raise RuntimeError("An error occurred (404) when calling the HeadObject operation: Not Found")
+            return {"ContentLength": 10}
+
+        def _fake_run_mutation(query, variables):
+            if "createBigAttachment" in query:
+                obj = Attachment.objects.create(
+                    attachment_for=variables["input"]["attachmentFor"],
+                    attachment="hulk-dst/" + variables["input"]["fileName"],
+                    mimetype=variables["input"]["mimetype"],
+                    is_file_uploaded=False,
+                )
+                return (
+                    {
+                        "createBigAttachment": {
+                            "ok": True,
+                            "errors": None,
+                            "result": {"id": obj.pk},
+                            "s3PresignedUploadUrl": (
+                                "https://helix-dest.s3.amazonaws.com/hulk-dst/report%2520final.pdf?X-Amz-Signature=z"
+                            ),
+                        }
+                    },
+                    None,
+                )
+            if "markBigAttachmentFileAsUploaded" in query:
+                Attachment.objects.filter(pk=variables["id"]).update(is_file_uploaded=True)
+                return (
+                    {"markBigAttachmentFileAsUploaded": {"ok": True, "errors": None, "result": {"id": variables["id"]}}},
+                    None,
+                )
+            raise AssertionError(f"unexpected mutation: {query!r}")
+
+        fake_s3 = MagicMock()
+        fake_s3.head_object.side_effect = _fake_head_object
+        fake_s3.copy_object.side_effect = lambda **kw: copy_calls.append(kw)
+
+        with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient, patch(
+            "apps.hulk.bulk.handler.default_storage"
         ) as mock_storage, patch("apps.hulk.bulk.handler.download_file") as mock_download:
             mock_client = MagicMock()
-            mock_client.run_mutation.side_effect = AssertionError("no mutation should run for an untrusted bucket")
+            mock_client.run_mutation.side_effect = _fake_run_mutation
             MockClient.return_value.__enter__.return_value = mock_client
             mock_storage.bucket.meta.client = fake_s3
 
             handler_mod.HulkBulkImportHandler(bulk).handle()
 
             mock_download.assert_not_called()
-        fake_s3.copy_object.assert_not_called()
 
         bulk.refresh_from_db()
-        failure_rows = _jsonl_rows(_failure_file(bulk, "attachments"))
-        self.assertEqual(len(failure_rows), 1)
-        self.assertIn("pre-errors", failure_rows[0]["error"])
-        self.assertIn("untrusted-bucket", str(failure_rows[0]["error"]["pre-errors"]))
-        self.assertIn("HULK_TRUSTED_SOURCE_BUCKETS", str(failure_rows[0]["error"]["pre-errors"]))
+        self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
+        self.assertEqual(len(_jsonl_rows(_success_file(bulk, "attachments"))), 1)
+        # Decoded candidate probed first, then the raw one that exists.
+        self.assertEqual(head_keys, ["inputs/report final.pdf", existing_key])
+        self.assertEqual(len(copy_calls), 1)
+        self.assertEqual(copy_calls[0]["CopySource"], {"Bucket": "hulk-source", "Key": existing_key})
+        # The destination url is boto3-generated, hence canonically encoded:
+        # decoding it exactly once yields the real key.
+        self.assertEqual(copy_calls[0]["Key"], "hulk-dst/report%20final.pdf")
+
+    @override_settings(HULK_DIRECT_ACCESS_BUCKETS=["hulk-source"])
+    def test_attachment_handler_presigned_source_falls_back_to_signed_download(self):
+        """
+        A presigned ``file_url`` carries a signature, not credentials, and
+        ``copy_object`` cannot present one. So when helix's own credentials
+        can't read the object, the handler must download the full signed url and
+        upload those bytes, rather than attempt — and fail — a server-side copy.
+        """
+        from apps.contrib.models import Attachment
+        from apps.hulk.bulk import handler as handler_mod
+
+        signed_url = (
+            "https://hulk-source.s3.amazonaws.com/inputs/e.pdf"
+            "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=deadbeef&X-Amz-Expires=3600"
+        )
+        s3_row = (
+            f'{{"uuid": "77777777-7777-7777-7777-777777777777", "attachment_for": "ENTRY", "file_url": "{signed_url}"}}\n'
+        ).encode()
+        bulk = HulkBulkImport.objects.create(created_by=self.user)
+        _create_dataset(bulk, "attachments", s3_row)
+
+        responder = _CountingResponder()
+        mutations_run = []
+
+        def _fake_run_mutation(query, variables):
+            mutations_run.append(query)
+            return responder(query, variables)
+
+        fake_s3 = MagicMock()
+        fake_s3.head_object.side_effect = RuntimeError(
+            "An error occurred (403) when calling the HeadObject operation: Forbidden"
+        )
+
+        with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient, patch(
+            "apps.hulk.bulk.handler.default_storage"
+        ) as mock_storage, _patch_download_file() as mock_download:
+            mock_client = MagicMock()
+            mock_client.run_mutation.side_effect = _fake_run_mutation
+            MockClient.return_value.__enter__.return_value = mock_client
+            mock_storage.bucket.meta.client = fake_s3
+
+            handler_mod.HulkBulkImportHandler(bulk).handle()
+
+            # Downloaded through the *full* signed url — dropping the query
+            # string would turn this into an unauthenticated 403.
+            mock_download.assert_called_once_with(signed_url)
+
+        fake_s3.copy_object.assert_not_called()
+        # Signed bytes still land via the BigAttachment sequence, not Upload!.
+        fake_s3.put_object.assert_called_once()
+        self.assertTrue(any("createBigAttachment" in q for q in mutations_run), mutations_run)
+        self.assertFalse(any("createAttachment(" in q for q in mutations_run), mutations_run)
+
+        bulk.refresh_from_db()
+        self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
+        success_rows = _jsonl_rows(_success_file(bulk, "attachments"))
+        self.assertEqual(len(success_rows), 1)
+        self.assertTrue(Attachment.objects.filter(pk=success_rows[0]["id"]).exists())
+
+    @override_settings(HULK_DIRECT_ACCESS_BUCKETS=["hulk-source"])
+    def test_attachment_handler_unreadable_source_in_direct_bucket_falls_back_to_download(self):
+        """
+        Being configured for direct access doesn't guarantee a given object is
+        readable (wrong key, object ACL, expired role). The probe failing must
+        degrade to download+upload — and must do so *before* createBigAttachment
+        so no orphan Attachment row is left pointing at an uncopied object.
+        """
+        from apps.hulk.bulk import handler as handler_mod
+
+        url = "https://hulk-source.s3.amazonaws.com/inputs/missing.pdf"
+        s3_row = (
+            b'{"uuid": "88888888-8888-8888-8888-888888888888", "attachment_for": "ENTRY",'
+            b' "file_url": "' + url.encode() + b'"}\n'
+        )
+        bulk = HulkBulkImport.objects.create(created_by=self.user)
+        _create_dataset(bulk, "attachments", s3_row)
+
+        mutations_run = []
+
+        def _fake_run_mutation(query, variables):
+            mutations_run.append(query)
+            return _CountingResponder()(query, variables)
+
+        fake_s3 = MagicMock()
+        fake_s3.head_object.side_effect = RuntimeError(
+            "An error occurred (404) when calling the HeadObject operation: Not Found"
+        )
+
+        with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient, patch(
+            "apps.hulk.bulk.handler.default_storage"
+        ) as mock_storage, _patch_download_file() as mock_download:
+            mock_client = MagicMock()
+            mock_client.run_mutation.side_effect = _fake_run_mutation
+            MockClient.return_value.__enter__.return_value = mock_client
+            mock_storage.bucket.meta.client = fake_s3
+
+            handler_mod.HulkBulkImportHandler(bulk).handle()
+
+            mock_download.assert_called_once_with(url)
+
+        fake_s3.copy_object.assert_not_called()
+        # No copy, but the row still goes through createBigAttachment + upload +
+        # mark; the probe ran before any mutation, so nothing was left orphaned.
+        fake_s3.put_object.assert_called_once()
+        self.assertTrue(any("createBigAttachment" in q for q in mutations_run), mutations_run)
+
+        bulk.refresh_from_db()
+        self.assertEqual(_jsonl_rows(_failure_file(bulk, "attachments")), [])
+        self.assertEqual(len(_jsonl_rows(_success_file(bulk, "attachments"))), 1)
 
     def test_attachment_handler_download_failure_is_post_error(self):
         """
