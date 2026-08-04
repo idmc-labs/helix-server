@@ -18,7 +18,7 @@ phases:
       - echo "cd into $CODEBUILD_SRC_DIR"
       - cd $CODEBUILD_SRC_DIR
       # Download the copilot linux binary. You can update this version.
-      - wget https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.28.0
+      - wget -q https://github.com/aws/copilot-cli/releases/download/v1.28.0/copilot-linux-v1.28.0
       - mv ./copilot-linux-v1.28.0 ./copilot-linux
       - chmod +x ./copilot-linux
       - printenv DOCKER_PASSWORD | docker login --username ${DOCKER_USERNAME} --password-stdin

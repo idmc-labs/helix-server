@@ -31,7 +31,7 @@ stages:
     requires_approval: true
     test_commands:
       - yum update -y --skip-broken ; yum install -y sudo
-      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.28.0
+      - wget -q https://github.com/aws/copilot-cli/releases/download/v1.28.0/copilot-linux-v1.28.0
       - mv ./copilot-linux-v1.28.0 ./copilot-linux
       - chmod +x ./copilot-linux
       - echo 'Running collectstatic api'
@@ -45,7 +45,7 @@ stages:
     requires_approval: true
     test_commands:
       - yum update -y --skip-broken ; yum install -y sudo
-      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.28.0
+      - wget -q https://github.com/aws/copilot-cli/releases/download/v1.28.0/copilot-linux-v1.28.0
       - mv ./copilot-linux-v1.28.0 ./copilot-linux
       - chmod +x ./copilot-linux
       - echo 'Running collectstatic api'
