@@ -35,7 +35,7 @@ CONFLICT_TYPES = {
         ),
         SubType(
             name="Crime-related violence",
-            idu_name="crime related violence",
+            idu_name="crime-related violence",
         ),
         SubType(
             name="Communal violence",
@@ -111,7 +111,7 @@ DISASTERS = {
             ],
             "Storm": [
                 SubType(name="Hailstorm", idu_name="a hailstorm"),
-                SubType(name="Sand/dust storm", idu_name="a sandstrom"),
+                SubType(name="Sand/dust storm", idu_name="a sandstorm"),
                 SubType(name="Storm", idu_name="a storm"),
                 SubType(name="Storm surge", idu_name="storm surge"),
                 SubType(name="Tornado", idu_name="a tornado"),

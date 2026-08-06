@@ -25,7 +25,10 @@ from apps.entry.models import (
     FigureLocation,
     FigureTag,
 )
-from apps.entry.utils import generate_idu_from_figure_data
+from apps.entry.utils import (
+    figure_to_idu_input,
+    generate_idu_excerpt,
+)
 from apps.review.models import UnifiedReviewComment
 from utils.common import round_half_up
 from utils.validations import (
@@ -351,12 +354,18 @@ class CommonFigureValidationMixin:
 
         include_idu = attrs.get("include_idu", getattr(instance, "include_idu", None))
 
-        if include_idu:
-            excerpt_idu = attrs.get("excerpt_idu", getattr(instance, "excerpt_idu", None))
-            if excerpt_idu is None or not excerpt_idu.strip():
-                errors["excerpt_idu"] = gettext("This field is required.")
-        else:
+        # When include_idu is falsy, excerpt_idu is cleared.
+        if not include_idu:
             attrs["excerpt_idu"] = None
+            return errors
+
+        # On create, an omitted excerpt_idu is auto-generated from the saved
+        # figure (see FigureSerializer.create). On update, the client always has
+        # the excerpt, so it stays required and cannot be blanked.
+        if instance is not None:
+            excerpt_idu = attrs.get("excerpt_idu", getattr(instance, "excerpt_idu", None))
+            if not excerpt_idu or not excerpt_idu.strip():
+                errors["excerpt_idu"] = gettext("This field is required.")
 
         return errors
 
@@ -589,6 +598,12 @@ class FigureSerializer(
         instance.context_of_violence.set(context_of_violence)
         instance.disaggregation_age.set(disaggregation_ages)
         instance.sources.set(sources)
+
+        # Auto-generate the IDU excerpt on create if not supplied.
+        # A user-provided excerpt_idu is respected and never overwritten.
+        if instance.include_idu and (not instance.excerpt_idu or not instance.excerpt_idu.strip()):
+            instance.excerpt_idu = generate_idu_excerpt(figure_to_idu_input(instance))
+            instance.save(update_fields=["excerpt_idu"])
 
         # Notification create
         if notification_type := get_figure_notification_type(instance.event, is_new=True):
@@ -941,43 +956,65 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
         )
 
 
+class IDUGenerateLocationSerializer(serializers.Serializer):
+    identifier = serializers.ChoiceField(
+        choices=FigureLocation.IDENTIFIER.choices(),
+        required=False,
+        allow_null=True,
+    )
+    display_name = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+
 class IDUGenerateSerializer(serializers.Serializer):
+    # Every field is optional: the preview renders placeholders for missing input rather than rejecting it.
     main_trigger = serializers.ChoiceField(
         choices=Crisis.CRISIS_TYPE.choices(),
-        required=True,
+        required=False,
+        allow_null=True,
     )
     quantifier = serializers.ChoiceField(
         choices=Figure.QUANTIFIER.choices(),
-        required=True,
+        required=False,
+        allow_null=True,
     )
-    figure = serializers.IntegerField(min_value=0)
+    figure = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     unit = serializers.ChoiceField(
         choices=Figure.UNIT.choices(),
-        required=True,
+        required=False,
+        allow_null=True,
     )
     displacement_term = serializers.ChoiceField(
         choices=Figure.FIGURE_TERMS.choices(),
-        required=True,
+        required=False,
+        allow_null=True,
     )
-    locations = FigureLocationSerializer(many=True, required=True, allow_null=False)
-    start_date = serializers.DateField()
-    end_date = serializers.DateField()
-    sources = serializers.ListField(child=serializers.IntegerField())
+    locations = IDUGenerateLocationSerializer(many=True, required=False)
+    start_date = serializers.DateField(required=False, allow_null=True)
+    end_date = serializers.DateField(required=False, allow_null=True)
+    sources = serializers.ListField(child=serializers.IntegerField(), required=False)
     disaster_sub_type = serializers.CharField(required=False, allow_null=True)
     violence_sub_type = serializers.CharField(required=False, allow_null=True)
     other_sub_type = serializers.CharField(required=False, allow_null=True)
 
-    class Meta:
-        extra_kwargs = {
-            "sources": {"required": True, "allow_empty": False},
-            "locations": {"required": True, "allow_empty": False},
-        }
-
-    def validate(self, attrs):
-        if attrs.get("end_date") < attrs.get("start_date"):
-            raise serializers.ValidationError(_("end date must be greater or equal to start date"))
-        return attrs
-
     def create(self, validated_data):
-        self.idu = generate_idu_from_figure_data(validated_data)
+        # Map the API field names onto the figure-shaped input the generator expects.
+        self.idu = generate_idu_excerpt(
+            {
+                "geo_locations": [
+                    {"identifier": loc.get("identifier"), "display_name": loc.get("display_name")}
+                    for loc in (validated_data.get("locations") or [])
+                ],
+                "reported": validated_data.get("figure"),
+                "figure_cause": validated_data.get("main_trigger"),
+                "disaster_sub_type": validated_data.get("disaster_sub_type"),
+                "violence_sub_type": validated_data.get("violence_sub_type"),
+                "other_sub_type": validated_data.get("other_sub_type"),
+                "term": validated_data.get("displacement_term"),
+                "unit": validated_data.get("unit"),
+                "quantifier": validated_data.get("quantifier"),
+                "start_date": validated_data.get("start_date"),
+                "end_date": validated_data.get("end_date"),
+                "sources": validated_data.get("sources"),
+            }
+        )
         return self

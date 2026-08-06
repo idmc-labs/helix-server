@@ -2778,18 +2778,23 @@ type IDUGenerate {
 }
 
 input IDUGenerateInputType {
-  mainTrigger: CRISIS_TYPE!
-  quantifier: QUANTIFIER!
-  figure: Int!
-  unit: UNIT!
-  displacementTerm: FIGURE_TERMS!
-  locations: [FigureLocationInputType!]!
-  startDate: Date!
-  endDate: Date!
-  sources: [Int!]!
+  mainTrigger: CRISIS_TYPE
+  quantifier: QUANTIFIER
+  figure: Int
+  unit: UNIT
+  displacementTerm: FIGURE_TERMS
+  locations: [IDUGenerateLocationInputType!]
+  startDate: Date
+  endDate: Date
+  sources: [Int!]
   disasterSubType: String
   violenceSubType: String
   otherSubType: String
+}
+
+input IDUGenerateLocationInputType {
+  identifier: IDENTIFIER
+  displayName: String
 }
 
 scalar JSONString
