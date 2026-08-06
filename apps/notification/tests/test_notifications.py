@@ -16,6 +16,9 @@ from utils.factories import (
     FigureFactory,
     MonitoringSubRegionFactory,
     NotificationFactory,
+    OrganizationFactory,
+    ViolenceFactory,
+    ViolenceSubTypeFactory,
 )
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -285,6 +288,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             identifier=FigureLocation.IDENTIFIER.ORIGIN.name,
             geocoder=FigureLocation.GEOCODER.CUSTOM_SOURCE.name,
         )
+        organization = OrganizationFactory.create()
+        violence = ViolenceFactory.create()
+        violence_sub_type = ViolenceSubTypeFactory.create(violence=violence)
         self.figures = [
             {
                 "uuid": str(uuid4()),
@@ -296,6 +302,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.name,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
+                "endDate": "2020-10-20",
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
                 "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
@@ -303,7 +310,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 "householdSize": 20,
                 "tags": [],
                 "contextOfViolence": [],
-                "sources": [],
+                "sources": [organization.id],
+                "calculationLogic": "Calculation logic",
+                "violenceSubType": violence_sub_type.id,
             }
         ]
 

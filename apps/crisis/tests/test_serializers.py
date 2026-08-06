@@ -1,7 +1,7 @@
 from django.test import RequestFactory
 
 from apps.crisis.models import Crisis
-from apps.crisis.serializers import CrisisUpdateSerializer
+from apps.crisis.serializers import CrisisSerializer, CrisisUpdateSerializer
 from utils.factories import (
     CountryFactory,
     CrisisFactory,
@@ -50,6 +50,24 @@ class TestCrisisUpdateSerializer(HelixTestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertIn("start_date", serializer.errors)
+
+    def test_countries_cannot_be_empty_on_create(self):
+        data = dict(
+            name="c",
+            crisis_type=Crisis.CRISIS_TYPE.OTHER.value,
+            crisis_narrative="n",
+            countries=[],
+        )
+        serializer = CrisisSerializer(data=data, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("countries", serializer.errors)
+
+    def test_countries_cannot_be_cleared_on_update(self):
+        crisis = CrisisFactory.create()
+        crisis.countries.set(CountryFactory.create_batch(2))
+        serializer = CrisisUpdateSerializer(instance=crisis, data=dict(countries=[]), partial=True, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("countries", serializer.errors)
 
     def test_invalid_crisis_countries_not_including_event_countries(self):
         c1, c2, c3 = CountryFactory.create_batch(3)

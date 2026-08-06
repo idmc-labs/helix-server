@@ -9,6 +9,10 @@ class CommunicationSerializer(serializers.ModelSerializer, MetaInformationSerial
     class Meta:
         model = Communication
         fields = "__all__"
+        extra_kwargs = {
+            "medium": {"required": True},
+            "country": {"required": True},
+        }
 
     def validate_document(self, document) -> dict:
         if document and not document.is_file_uploaded:
@@ -24,6 +28,9 @@ class ContactSerializer(serializers.ModelSerializer, MetaInformationSerializerMi
     class Meta:
         model = Contact
         fields = "__all__"
+        extra_kwargs = {
+            "countries_of_operation": {"required": True, "allow_empty": False},
+        }
 
 
 class ContactUpdateSerializer(UpdateSerializerMixin, ContactSerializer):

@@ -11,6 +11,11 @@ from apps.entry.models import Figure, FigureLocation
 from apps.event.models import Event, EventCode
 
 
+class AttachmentFactory(DjangoModelFactory):
+    class Meta:
+        model = "contrib.Attachment"
+
+
 class UserFactory(DjangoModelFactory):
     class Meta:
         model = "users.User"
@@ -178,7 +183,6 @@ class EventFactory(DjangoModelFactory):
     class Meta:
         model = Event
 
-    crisis = factory.SubFactory(CrisisFactory)
     event_type = factory.Iterator(Crisis.CRISIS_TYPE)
     start_date = factory.LazyFunction(lambda: date(2010, 1, 1))
     end_date = factory.LazyFunction(today().date)

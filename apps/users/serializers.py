@@ -347,6 +347,12 @@ class UserSerializer(UpdateSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "email", "first_name", "last_name", "username", "is_active"]
+        # Client requires non-empty names; reject blanking them out (absence stays
+        # allowed for patch updates via UpdateSerializerMixin).
+        extra_kwargs = {
+            "first_name": {"allow_blank": False},
+            "last_name": {"allow_blank": False},
+        }
 
     def validate_is_active(self, is_active):
         if self.instance and self.context["request"].user == self.instance:

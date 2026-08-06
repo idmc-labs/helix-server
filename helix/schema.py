@@ -20,6 +20,8 @@ from apps.extraction import schema as extraction_schema
 from apps.gidd import enums as gidd_enums
 from apps.gidd import mutations as gidd_mutations
 from apps.gidd import schema as gidd_schema
+from apps.hulk import mutations as hulk_mutations
+from apps.hulk import schema as hulk_schema
 from apps.notification import mutations as notification_mutations
 from apps.notification import schema as notification_schema
 from apps.organization import mutations as organization_mutations
@@ -54,6 +56,7 @@ class Query(
     report_schema.Query,
     notification_schema.Query,
     gidd_schema.Query,
+    hulk_schema.Query,
     graphene.ObjectType,
 ):
     debug = graphene.Field(DjangoDebug, name="_debug")
@@ -76,6 +79,7 @@ class Mutation(
     contextual_update_mutations.Mutation,
     notification_mutations.Mutation,
     gidd_mutations.Mutation,
+    hulk_mutations.Mutation,
     graphene.ObjectType,
 ):
     pass

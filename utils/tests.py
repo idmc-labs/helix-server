@@ -4,6 +4,7 @@ import os
 import shutil
 from unittest.mock import patch
 
+import pytest
 import pytz
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -36,6 +37,15 @@ TEST_CACHES = {
 
 
 TEST_AUTH_PASSWORD_VALIDATORS = []
+
+
+@pytest.fixture(scope="function")
+def snapshot_in_class(request, snapshot):
+    """
+    Wraps snapshot fixture to provide instance snapshot property for
+    unittest.TestCase tests
+    """
+    request.cls.snapshot = snapshot
 
 
 class CommonSetupClassMixin:
@@ -214,7 +224,12 @@ class HelixAPITestCase(APITestCase):
             self.now_patcher = patch("django.utils.timezone.now")
             self.now_datetime = datetime.datetime(2021, 1, 1, 0, 0, 0, 123456, tzinfo=pytz.UTC)
             self.now_datetime_str = self.now_datetime.isoformat()
-            self.now_patcher.start().return_value = self.now_datetime
+            # NOTE: expose the mock so tests re-point the clock instead of calling start()
+            # again (a second start() stacks a patch that the single stop() never unwinds,
+            # leaking the frozen clock into later tests)
+            self.now_mock = self.now_patcher.start()
+            self.now_mock.return_value = self.now_datetime
+            self.addCleanup(self.now_patcher.stop)
 
     def authenticate(self, user=None):
         user = user or self.user

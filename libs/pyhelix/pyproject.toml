@@ -1,0 +1,51 @@
+[project]
+name = "pyhelix"
+version = "0.0.1"
+description = "IDMC Helix Server helper"
+authors = [
+  {name = "Dev", email = "ch.datainfo+dev@idmc.ch"},
+]
+readme = "README.md"
+requires-python = "~=3.8.0"
+
+dependencies = [
+    "pydantic~=2.10",  # NOTE: Match this with helix-server
+    "httpx",
+]
+
+# NOTE: Make sure this is same as helix-server
+[tool.pyright]
+extraPaths = ["apps"]
+exclude = [
+    "**/node_modules",
+    "**/__pycache__",
+]
+reportMissingImports = true
+reportMissingTypeStubs = false
+
+[tool.ruff]
+line-length = 125
+extend-exclude = [
+    ".git",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "**/migrations/*",
+    "__pycache__",
+]
+
+[tool.ruff.lint]
+flake8-builtins.builtins-strict-checking = false
+ignore = [
+    "C901",
+    "E701",
+    "E203",
+]
+extend-select = ["I", "E", "F"]
+# TODO: Use this instead `select = ["ALL"]` and add rules to ignore
+#   ruff check --statistics ./
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]

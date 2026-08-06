@@ -54,6 +54,13 @@ app.conf.beat_schedule = {
         "schedule": crontab(minute="1", hour="*/24"),
         "args": [],
     },
+    # Backstop that frees the single-import lock when a worker dies mid-import
+    # and leaves a row stuck at IN_PROGRESS.
+    "fail-stale-hulk-bulk-imports": {
+        "task": "apps.hulk.tasks.fail_stale_hulk_bulk_imports",
+        "schedule": crontab(minute="*/15"),
+        "args": [],
+    },
 }
 
 # Load task modules from all registered Django apps.

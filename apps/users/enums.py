@@ -20,6 +20,7 @@ class PERMISSION_ACTION(enum.Enum):
     update_pfa_visibility = 9
     update_gidd_data = 10
     update_release_meta_data = 11
+    bulk_import = 12
 
     __labels__ = {
         add: _("Add"),
@@ -34,6 +35,7 @@ class PERMISSION_ACTION(enum.Enum):
         update_pfa_visibility: _("Update public figure visibility in GIDD"),
         update_gidd_data: _("Update GIDD data"),
         update_release_meta_data: _("Update release meta data"),
+        bulk_import: _("Bulk import"),
     }
 
 
@@ -62,6 +64,7 @@ class PERMISSION_ENTITY(enum.Enum):
     gidd = 21
     client = 22
     figuretag = 23
+    hulkbulkimport = 24
 
     __labels__ = {
         crisis: _("Crisis"),
@@ -88,6 +91,7 @@ class PERMISSION_ENTITY(enum.Enum):
         gidd: _("GIDD"),
         client: _("Client"),
         figuretag: _("Figure Tag"),
+        hulkbulkimport: _("Hulk Bulk Import"),
     }
 
 

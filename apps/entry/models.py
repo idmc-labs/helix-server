@@ -29,7 +29,6 @@ from django.db.models.functions import Cast, Concat, ExtractYear
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.crypto import get_random_string
-from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
@@ -1007,6 +1006,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         headers = OrderedDict(
             id="ID",
             old_id="Old ID",
+            hulk_uuid="Hulk (UUID)",
             created_at="Created at",
             modified_at="Updated at",
             country__iso3="ISO3",
@@ -1090,12 +1090,19 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             type_of_points="Locations type",
             locations="Locations (Name:Lat, Lon:Accuracy:Type)",
         )
-        exclude_headers = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points", "entry_link"]
+        exclude_headers = [
+            "location_display_name",
+            "loc_lat_lon",
+            "accuracy",
+            "type_of_points",
+            "entry_link",
+        ]
 
         values = (
             figures.annotate(
                 **Figure.annotate_stock_and_flow_dates(),
                 **Figure.annotate_sources_reliability(),
+                hulk_uuid=models.F("hulkfigure__uuid"),
                 centroid_lat=RawSQL("country_country.centroid[2]", params=()),
                 centroid_lon=RawSQL("country_country.centroid[1]", params=()),
                 entry_url_or_document_url=models.Case(
@@ -1498,6 +1505,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
         headers = OrderedDict(
             id="ID",
+            hulk_uuid="Hulk (UUID)",
             created_by__full_name="Created by",
             created_at="Created at",
             last_modified_by__full_name="Updated by",
@@ -1541,6 +1549,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                 request=DummyRequest(user=User.objects.get(id=user_id)),
             )
             .qs.annotate(
+                hulk_uuid=models.F("hulkentry__uuid"),
                 countries=StringAgg("figures__country__idmc_short_name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
                 countries_iso3=StringAgg("figures__country__iso3", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
                 figure_causes=ArrayAgg("figures__figure_cause", distinct=True),
@@ -1611,19 +1620,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         return "\n\n".join(
             self.sources.filter(methodology__isnull=False).exclude(methodology="").values_list("methodology", flat=True)
         )
-
-    @staticmethod
-    def clean_url_and_document(values: dict, instance=None) -> OrderedDict:
-        errors = OrderedDict()
-        if instance:
-            # we wont allow updates to entry sources
-            return errors
-        url = values.get("url", getattr(instance, "url", None))
-        document = values.get("document", getattr(instance, "document", None))
-        if not url and not document:
-            errors["url"] = gettext("Please fill the URL or upload a document.")
-            errors["document"] = gettext("Please fill the URL or upload a document.")
-        return errors
 
     # Methods
 

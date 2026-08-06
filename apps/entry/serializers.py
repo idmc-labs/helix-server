@@ -1,5 +1,6 @@
+import typing
 from collections import OrderedDict
-from copy import copy
+from datetime import datetime
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -16,6 +17,7 @@ from apps.contrib.serializers import (
     UpdateSerializerMixin,
 )
 from apps.country.models import Country
+from apps.crisis.models import Crisis
 from apps.entry.models import (
     DisaggregatedAge,
     Entry,
@@ -25,7 +27,11 @@ from apps.entry.models import (
 )
 from apps.review.models import UnifiedReviewComment
 from utils.common import round_half_up
-from utils.validations import is_child_parent_dates_valid, is_child_parent_inclusion_valid
+from utils.validations import (
+    is_child_parent_dates_valid,
+    is_child_parent_inclusion_valid,
+    is_date_within_future_bound,
+)
 
 from .utils import (
     BulkUpdateFigureManager,
@@ -35,26 +41,22 @@ from .utils import (
 )
 
 
+def xor(a: typing.Any, b: typing.Any):
+    return bool(a) ^ bool(b)
+
+
 class DisaggregatedAgeSerializer(serializers.ModelSerializer):
     # to allow updating
     id = IntegerIDField(required=False)
-
-    def validate(self, attrs):
-        errors = OrderedDict()
-        age_from = attrs.get("age_from")
-        age_to = attrs.get("age_to")
-
-        if age_from and not age_to:
-            errors["age_to"] = gettext("This field is required.")
-        if age_to and not age_from:
-            errors["age_from"] = gettext("This field is required.")
-        return attrs
 
     class Meta:
         model = DisaggregatedAge
         fields = "__all__"
         extra_kwargs = {
             "uuid": {"validators": [], "required": True},
+            "age_to": {"required": True, "allow_null": False},
+            "age_from": {"required": True, "allow_null": False},
+            "value": {"required": True, "allow_null": False},
         }
 
 
@@ -81,6 +83,22 @@ class FigureLocationSerializer(serializers.ModelSerializer):
     )
     country_code = serializers.CharField(required=True)
 
+    def validate_lat(self, value):
+        if value is None:
+            return value
+
+        if not (-90 <= value <= 90):
+            raise serializers.ValidationError("Latitude must be between -90 and 90.")
+        return value
+
+    def validate_lon(self, value):
+        if value is None:
+            return value
+
+        if not (-180 <= value <= 180):
+            raise serializers.ValidationError("Longitude must be between -180 and 180.")
+        return value
+
     def validate(self, attrs: dict) -> dict:
         """
         NOTE: In some cases osmname api does not provides country,
@@ -99,6 +117,7 @@ class FigureLocationSerializer(serializers.ModelSerializer):
         fields = "__all__"
         extra_kwargs = {
             "uuid": {"validators": [], "required": True},
+            "geocoder": {"required": True, "allow_null": False},
         }
 
     # NOTE: Preserving the geocoder_metadata
@@ -108,49 +127,158 @@ class FigureLocationSerializer(serializers.ModelSerializer):
 
 
 class CommonFigureValidationMixin:
-    def validate_disaggregation_age(self, age_groups):
-        age_groups = age_groups or []
+    def _validate_is_disaggregated(self, instance, attrs):
+        errors = OrderedDict()
+
+        is_disaggregated = attrs.get(
+            "is_disaggregated",
+            getattr(instance, "is_disaggregated", False),
+        )
+        if not is_disaggregated:
+            attrs["disaggregation_displacement_rural"] = None
+            attrs["disaggregation_displacement_urban"] = None
+            attrs["disaggregation_location_camp"] = None
+            attrs["disaggregation_location_non_camp"] = None
+            attrs["disaggregation_disability"] = None
+            attrs["disaggregation_indigenous_people"] = None
+            # NOTE: hidden in ui
+            attrs["disaggregation_conflict"] = None
+            attrs["disaggregation_conflict_communal"] = None
+            attrs["disaggregation_conflict_criminal"] = None
+            attrs["disaggregation_conflict_other"] = None
+            attrs["disaggregation_conflict_political"] = None
+            attrs["disaggregation_sex_female"] = None
+            attrs["disaggregation_sex_male"] = None
+            attrs["disaggregation_lgbtiq"] = None
+            attrs["disaggregation_age"] = []
+        else:
+            errors.update(
+                self._validate_disaggregated_sum_against_total_figures(
+                    instance,
+                    attrs,
+                    ["disaggregation_location_camp", "disaggregation_location_non_camp"],
+                    "camp and non-camp",
+                )
+            )
+            errors.update(
+                self._validate_disaggregated_sum_against_total_figures(
+                    instance,
+                    attrs,
+                    ["disaggregation_displacement_urban", "disaggregation_displacement_rural"],
+                    "urban and rural",
+                )
+            )
+            errors.update(
+                self._validate_disaggregated_sum_against_total_figures(
+                    instance,
+                    attrs,
+                    ["disaggregation_disability"],
+                    "disability",
+                )
+            )
+            errors.update(
+                self._validate_disaggregated_sum_against_total_figures(
+                    instance,
+                    attrs,
+                    ["disaggregation_indigenous_people"],
+                    "indigenous people",
+                )
+            )
+            errors.update(
+                self._validate_disaggregated_age_sum_against_total_figures(
+                    instance,
+                    attrs,
+                )
+            )
+            errors.update(self._validate_disaggregation_age(instance, attrs))
+
+        return errors
+
+    def _validate_disaggregation_age(self, instance, attrs):
+        errors = OrderedDict()
+        age_groups = attrs.get("disaggregation_age", getattr(instance, "disaggregation_age", []))
+        if not isinstance(age_groups, list):
+            return errors
+
         values = []
         for each in age_groups:
             values.append((each.get("age_from"), each.get("age_to"), each.get("sex")))
         if len(values) != len(set(values)):
-            raise serializers.ValidationError("Please provide unique age range and sex.")
-        return age_groups
+            errors.update({"disaggregation_age": "Age range and sex must be unique."})
 
-    def _validate_unit_and_household_size(self, instance, attrs):
+        return errors
+
+    def _validate_unit(self, instance, attrs):
         errors = OrderedDict()
 
         unit = attrs.get("unit", getattr(instance, "unit", Figure.UNIT.PERSON))
         household_size = attrs.get("household_size", getattr(instance, "household_size", 0))
+        reported = attrs.get("reported", getattr(instance, "reported", 0))
 
-        if unit == Figure.UNIT.HOUSEHOLD and not household_size:
-            errors.update({"household_size": "Please pass in household size for household unit."})
+        if unit == Figure.UNIT.PERSON:
+            attrs["household_size"] = None
+            attrs["total_figures"] = reported
+        elif unit == Figure.UNIT.HOUSEHOLD:
+            if not household_size:
+                attrs["total_figures"] = 0
+                errors.update({"household_size": "This field is required"})
+            else:
+                attrs["total_figures"] = round_half_up(reported * Decimal(str(household_size)))
+        else:
+            typing.assert_never(unit)
+
         return errors
 
-    def _validate_figure_geo_locations(self, instance, attrs):
+    def _validate_geo_locations(self, instance, attrs):
         errors = OrderedDict()
-        # Skip on update
+
+        country = attrs.get("country", getattr(instance, "country", None))
+        geo_locations = attrs.get("geo_locations", None)
+
+        # Skip on update if geo_locations is not sent
         if instance and "geo_locations" not in attrs:
             return errors
-        country = attrs.get("country")
-        geo_locations = attrs.get("geo_locations", None)
-        if not country and instance:
-            country = instance.country
+
+        # Check if there are invalid location ids in attrs
+        if instance and "geo_locations" in attrs:
+            geo_location_ids = {geo_location["id"] for geo_location in geo_locations if "id" in geo_location}
+            geo_location_ids_on_db = (
+                list(instance.geo_locations.values_list("id", flat=True)) if instance.geo_locations else []
+            )
+            if geo_location_ids.difference(geo_location_ids_on_db):
+                errors["geo_locations"] = "Some locations not found."
+
+        # At least one location is required on create (mirrors the client); the field
+        # is required=False only so partial updates may omit it and keep stored ones.
         if not geo_locations:
-            errors.update({"geo_locations": "This field is required."})
+            if not instance:
+                errors["geo_locations"] = "At least one location is required."
             return errors
+
+        # NOTE: A location should be inside the figure's country unless:
+        # - it's moved
+        # - figure's country does not have iso2
+        # - figure's country is not supported by geocoder
         country_code = country.iso2
         if not country_code:
-            # ignore iso2 validation if missing
             return errors
+        if country_code not in Figure.SUPPORTED_COUNTRY_CODES:
+            return errors
+
         for location in geo_locations:
             # If location is moved manually allow to save location of other coutries
             # These locations are considered as problematic border issues
-            moved = location.get("moved", False)
-            if country_code not in Figure.SUPPORTED_COUNTRY_CODES:
-                continue
-            elif location.get("country_code", "").lower() != country_code.lower() and not moved:
-                errors.update({"geo_locations": "Location should be inside the selected figure's country"})
+            location_moved = location.get("moved", False)
+            location_country_code = location.get("country_code", "")
+            if not location_moved and location_country_code.lower() != country_code.lower():
+                errors.update(
+                    {
+                        "geo_locations": (
+                            "Location should be inside the selected figure's country: "
+                            f"{location_country_code} should be {country_code}"
+                        )
+                    }
+                )
         return errors
 
     def _validate_disaggregated_sum_against_total_figures(self, instance, attrs, fields, verbose_names):
@@ -161,7 +289,7 @@ class CommonFigureValidationMixin:
 
         errors = OrderedDict()
 
-        total_figures = attrs.get("total_figures")
+        total_figures = attrs.get("total_figures", getattr(instance, "total_figures", 0))
 
         disaggregated_sum = 0
         for field in fields:
@@ -171,37 +299,22 @@ class CommonFigureValidationMixin:
             errors.update({field: _format_message(fields, verbose_names) for field in fields})
         return errors
 
-    def _validate_disaggregated_json_sum_against_total_figures(self, instance, attrs, field, verbose_name):
+    def _validate_disaggregated_age_sum_against_total_figures(self, instance, attrs):
         errors = OrderedDict()
 
         total_figures = attrs.get("total_figures")
 
-        json_field = attrs.get(field) or getattr(instance, field, None) or []
-        if not isinstance(json_field, list):
+        age_groups = attrs.get("disaggregation_age") or getattr(instance, "disaggregation_age", [])
+        if not isinstance(age_groups, list):
             return errors
-        total = sum([item["value"] for item in json_field])
+
+        total = sum([age_group["value"] for age_group in age_groups])
 
         if total > total_figures:
-            errors.update({field: f"Sum of {verbose_name} figures is greater than total figures."})
+            errors.update({"disaggregation_age": "Sum of age figures is greater than total figures."})
         return errors
 
-    def _validate_geo_locations(self, instance, attrs) -> dict:
-        _attrs = copy(attrs)
-        errors = OrderedDict()
-
-        geo_locations = _attrs.get("geo_locations", None)
-
-        # FIXME: why only check when creating entry
-        if instance and geo_locations:
-            geo_location_ids = {geo_location["id"] for geo_location in geo_locations if "id" in geo_location}
-            geo_locations_on_db = list(instance.geo_locations.values_list("id", flat=True)) if instance.geo_locations else []
-            if geo_location_ids.difference(geo_locations_on_db):
-                errors["geo_locations"] = "Some geo locations not found."
-
-        return errors
-
-    def _validate_figure_country(self, instance, attrs):
-        _attrs = copy(attrs)
+    def _validate_event_country(self, instance, attrs):
         errors = OrderedDict()
 
         event = attrs.get("event", getattr(instance, "event", None))
@@ -209,7 +322,7 @@ class CommonFigureValidationMixin:
         if event:
             errors.update(
                 is_child_parent_inclusion_valid(
-                    _attrs,
+                    attrs,
                     instance,
                     "country",
                     "event.countries",
@@ -217,7 +330,7 @@ class CommonFigureValidationMixin:
             )
         return errors
 
-    def _validate_dates(self, instance, attrs):
+    def _validate_event_dates(self, instance, attrs):
         errors = OrderedDict()
         event = attrs.get("event", getattr(instance, "event", None))
 
@@ -234,10 +347,16 @@ class CommonFigureValidationMixin:
 
     def _validate_idu(self, instance, attrs):
         errors = OrderedDict()
-        if attrs.get("include_idu", getattr(instance, "include_idu", None)):
+
+        include_idu = attrs.get("include_idu", getattr(instance, "include_idu", None))
+
+        if include_idu:
             excerpt_idu = attrs.get("excerpt_idu", getattr(instance, "excerpt_idu", None))
             if excerpt_idu is None or not excerpt_idu.strip():
                 errors["excerpt_idu"] = gettext("This field is required.")
+        else:
+            attrs["excerpt_idu"] = None
+
         return errors
 
     def _validate_figure_cause(self, instance, attrs):
@@ -250,60 +369,95 @@ class CommonFigureValidationMixin:
         event = attrs.get("event", getattr(instance, "event", None))
         figure_cause = attrs.get("figure_cause", getattr(instance, "figure_cause", None))
 
+        if figure_cause == Crisis.CRISIS_TYPE.CONFLICT:
+            # clear disaster fields
+            attrs["disaster_category"] = None
+            attrs["disaster_type"] = None
+            attrs["disaster_sub_category"] = None
+            attrs["disaster_sub_type"] = None
+            # clear other fields
+            attrs["other_sub_type"] = None
+
+            # TODO: clear osv_sub_type when it's not applicable
+
+            violence_sub_type = attrs.get("violence_sub_type", getattr(instance, "violence_sub_type", None))
+            if not violence_sub_type:
+                errors.update({"violence_sub_type": "This field is required"})
+            else:
+                attrs["violence"] = violence_sub_type.violence
+        elif figure_cause == Crisis.CRISIS_TYPE.DISASTER:
+            # clear conflict fields
+            attrs["violence"] = None
+            attrs["violence_sub_type"] = None
+            attrs["context_of_violence"] = []
+            attrs["osv_sub_type"] = None
+            # clear other fields
+            attrs["other_sub_type"] = None
+
+            disaster_sub_type = attrs.get("disaster_sub_type", getattr(instance, "disaster_sub_type", None))
+            if not disaster_sub_type:
+                errors.update({"disaster_sub_type": "This field is required"})
+            else:
+                disaster_type = disaster_sub_type.type
+                attrs["disaster_type"] = disaster_type
+                if disaster_type:
+                    disaster_sub_category = disaster_type.disaster_sub_category
+                    attrs["disaster_sub_category"] = disaster_sub_category
+                    if disaster_sub_category:
+                        attrs["disaster_category"] = disaster_sub_category.category
+        elif figure_cause == Crisis.CRISIS_TYPE.OTHER:
+            # clear disaster fields
+            attrs["disaster_category"] = None
+            attrs["disaster_type"] = None
+            attrs["disaster_sub_category"] = None
+            attrs["disaster_sub_type"] = None
+            # clear conflict fields
+            attrs["violence"] = None
+            attrs["violence_sub_type"] = None
+            attrs["context_of_violence"] = []
+            attrs["osv_sub_type"] = None
+
         if figure_cause and event and event.event_type.value != figure_cause:
-            errors.update({"figure_cause": f"Figure cause should be {event.event_type.label}"})
+            errors.update({"figure_cause": f"Cause should be {event.event_type.label}"})
         return errors
 
-    def clean_total_figures(self, instance, attrs):
-        _attrs = copy(attrs)
-        if instance:
-            unit = _attrs.get("unit", instance.unit) or Figure.UNIT.PERSON
-            reported = _attrs.get("reported", instance.reported) or 0
-            household_size = _attrs.get("household_size", instance.household_size) or 0
-        else:
-            unit = _attrs.get("unit") or Figure.UNIT.PERSON
-            reported = _attrs.get("reported") or 0
-            household_size = _attrs.get("household_size") or 0
+    def _validate_term(self, instance, attrs):
+        term = attrs.get("term", getattr(instance, "term", None))
 
-        total_figures = 0
-        if unit == Figure.UNIT.HOUSEHOLD:
-            total_figures = round_half_up(reported * Decimal(str(household_size)))
-        else:
-            total_figures = reported
-        _attrs["total_figures"] = total_figures
+        if term not in Figure.housing_list():
+            attrs["is_housing_destruction"] = None
 
-        return _attrs
+        if term not in Figure.displacement_occur_list():
+            attrs["displacement_occurred"] = None
 
-    def clean_term_with_displacement_occur(self, instance, attrs):
-        _attrs = copy(attrs)
+        return OrderedDict()
 
-        term = _attrs.get("term", getattr(instance, "term", None))
-        if term is None or term not in Figure.displacement_occur_list():
-            _attrs["displacement_occurred"] = None
-        return _attrs
+    def _validate_dates(self, instance, attrs):
+        # The client applies a not-in-the-past check to start_date; here we only bound
+        # the future direction (shared MAX_FUTURE_YEARS) — very old dates stay valid.
+        errors = OrderedDict()
+        start_date = attrs.get("start_date", getattr(instance, "start_date", None))
+        end_date = attrs.get("end_date", getattr(instance, "end_date", None))
+        errors.update(is_date_within_future_bound(start_date, "start_date"))
+        errors.update(is_date_within_future_bound(end_date, "end_date"))
+        return errors
 
-    def _update_parent_fields(self, attrs):
-        disaster_sub_type = attrs.get("disaster_sub_type", self.instance and self.instance.disaster_sub_type)
-        violence_sub_type = attrs.get("violence_sub_type", self.instance and self.instance.violence_sub_type)
+    def _validate_category(self, instance, attrs):
+        errors = OrderedDict()
 
-        attrs["disaster_category"] = None
-        attrs["disaster_type"] = None
-        attrs["disaster_sub_category"] = None
-        attrs["violence"] = None
+        category = attrs.get("category", getattr(instance, "category", None))
+        end_date = attrs.get("end_date", getattr(instance, "end_date", None))
 
-        if disaster_sub_type:
-            disaster_type = disaster_sub_type.type
-            attrs["disaster_type"] = disaster_type
-            if disaster_type:
-                disaster_sub_category = disaster_type.disaster_sub_category
-                attrs["disaster_sub_category"] = disaster_sub_category
-                if disaster_sub_category:
-                    attrs["disaster_category"] = disaster_sub_category.category
+        if category in Figure.flow_list():
+            if end_date > datetime.today().date():
+                errors.update({"end_date": "This must be a past date"})
+        elif category in Figure.stock_list():
+            attrs["end_date_accuracy"] = None
 
-        if violence_sub_type:
-            attrs["violence"] = violence_sub_type.violence
+        return errors
 
     def validate(self, attrs: dict) -> dict:
+        # FIXME: Add a note why self.instance is not used
         instance = None
         if attrs.get("id"):
             instance = Figure.objects.get(id=attrs["id"])
@@ -312,56 +466,19 @@ class CommonFigureValidationMixin:
 
         errors = OrderedDict()
 
-        # NOTE: calculate attributes
-        attrs = self.clean_total_figures(instance, attrs)
-        attrs = self.clean_term_with_displacement_occur(instance, attrs)
-
+        # NOTE: order is important
         errors.update(self._validate_idu(instance, attrs))
-        errors.update(self._validate_unit_and_household_size(instance, attrs))
-        errors.update(self._validate_geo_locations(instance, attrs))
+        errors.update(self._validate_term(instance, attrs))
+        errors.update(self._validate_unit(instance, attrs))
+        errors.update(self._validate_category(instance, attrs))
         errors.update(self._validate_dates(instance, attrs))
-        errors.update(self._validate_figure_country(instance, attrs))
-        errors.update(self._validate_figure_geo_locations(instance, attrs))
-        errors.update(
-            self._validate_disaggregated_sum_against_total_figures(
-                instance, attrs, ["disaggregation_location_camp", "disaggregation_location_non_camp"], "camp and non-camp"
-            )
-        )
-        errors.update(
-            self._validate_disaggregated_sum_against_total_figures(
-                instance,
-                attrs,
-                ["disaggregation_displacement_urban", "disaggregation_displacement_rural"],
-                "urban and rural",
-            )
-        )
-        errors.update(
-            self._validate_disaggregated_sum_against_total_figures(
-                instance,
-                attrs,
-                ["disaggregation_disability"],
-                "Disability",
-            )
-        )
-        errors.update(
-            self._validate_disaggregated_sum_against_total_figures(
-                instance,
-                attrs,
-                ["disaggregation_indigenous_people"],
-                "Indigenous people",
-            )
-        )
-        errors.update(
-            self._validate_disaggregated_json_sum_against_total_figures(
-                instance,
-                attrs,
-                "disaggregation_age",
-                "age",
-            )
-        )
         errors.update(self._validate_figure_cause(instance, attrs))
+        errors.update(self._validate_is_disaggregated(instance, attrs))
 
-        self._update_parent_fields(attrs)
+        errors.update(self._validate_event_dates(instance, attrs))
+        errors.update(self._validate_event_country(instance, attrs))
+        errors.update(self._validate_geo_locations(instance, attrs))
+
         if errors:
             raise ValidationError(errors)
 
@@ -381,7 +498,7 @@ class FigureSerializer(
 ):
     id = IntegerIDField(required=False)
     disaggregation_age = DisaggregatedAgeSerializer(many=True, required=False, allow_null=False)
-    geo_locations = FigureLocationSerializer(many=True, required=False, allow_null=False)
+    geo_locations = FigureLocationSerializer(many=True, required=False, allow_empty=False, allow_null=False)
 
     class Meta:
         model = Figure
@@ -435,12 +552,20 @@ class FigureSerializer(
             "disaggregation_conflict_criminal",
             "disaggregation_conflict_communal",
             "disaggregation_conflict_other",
-            "disaggregation_age",
             "geo_locations",
         ]
         extra_kwargs = {
             "uuid": {"validators": [], "required": True},
             "entry": {"validators": [], "required": True},
+            "calculation_logic": {"required": True, "allow_blank": False, "allow_null": False},
+            "start_date": {"required": True, "allow_null": False},
+            "end_date": {"required": True, "allow_null": False},
+            "sources": {"required": True, "allow_empty": False, "allow_null": False},
+            "country": {"required": True, "allow_null": False},
+            "term": {"required": True, "allow_null": False},
+            "category": {"required": True, "allow_null": False},
+            "role": {"required": True, "allow_null": False},
+            "unit": {"required": True, "allow_null": False},
         }
 
     def create(self, validated_data: dict) -> Figure:
@@ -575,39 +700,50 @@ class EntryCreateSerializer(
             "old_id",
             "version_id",
         )
+        extra_kwargs = {
+            "publishers": {"required": True, "allow_empty": False},
+        }
 
-    def validate_figures(self, figures):
-        if len(figures) > Entry.FIGURES_PER_ENTRY:
-            raise serializers.ValidationError(
-                gettext("Too many figures. Limit is %s. Please contact the administrator." % Entry.FIGURES_PER_ENTRY)
-            )
-        uuids = [figure["uuid"] for figure in figures]
-        if len(uuids) != len(set(uuids)):
-            raise serializers.ValidationError(gettext("Duplicate keys found. "))
-        geo_uuids = [loc["uuid"] for figure in figures for loc in figure.get("geo_locations", [])]
-        if len(geo_uuids) != len(set(geo_uuids)):
-            raise serializers.ValidationError(gettext("Duplicate geolocation keys found. "))
-        if self.instance:
-            if {each["id"] for each in figures if "id" in each}.difference(
-                list(self.instance.figures.values_list("id", flat=True))
-            ):
-                raise serializers.ValidationError(gettext("Some figures you are trying to update doesnot exist."))
-        return figures
+    def _validate_url_and_document(self, values: dict) -> OrderedDict:
+        errors = OrderedDict()
 
-    def validate_calculation_logic(self, value):
-        if not value:
-            raise serializers.ValidationError(_("This field is required"))
-        return value
+        url = values.get("url", getattr(self.instance, "url", None))
+        document = values.get("document", getattr(self.instance, "document", None))
 
-    def validate_document(self, document):
-        if document and not document.is_file_uploaded:
-            raise serializers.ValidationError(_("Document must be uploaded before linking to entry."))
-        return document
+        # NOTE: we do not allow updates to type of entry sources
+        if self.instance and (xor(self.instance.url, url) or xor(self.instance.document, document)):
+            errors["url"] = gettext("Cannot change type of the entry.")
+            errors["document"] = gettext("Cannot change type of the entry.")
+            return errors
+
+        if not url and not document:
+            # url and document not defined
+            errors["url"] = gettext("URL or document is required.")
+            errors["document"] = gettext("URL or document is required.")
+        elif url and document:
+            # url and document both defined
+            errors["url"] = gettext("Both URL and document cannot be set.")
+            errors["document"] = gettext("Both URL and document cannot be set.")
+        elif not document:
+            # url defined, document not defined
+            values["document_url"] = None
+        elif not document.is_file_uploaded:
+            # url not defined, document defined
+            errors["document"] = gettext("Document must be uploaded before linking to entry.")
+
+        return errors
+
+    def _validate_publish_date(self, attrs: dict) -> OrderedDict:
+        # reject publish_date more than N years in the future.
+        if "publish_date" not in attrs:
+            return OrderedDict()
+        return is_date_within_future_bound(attrs["publish_date"], "publish_date")
 
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()
-        errors.update(Entry.clean_url_and_document(attrs, self.instance))
+        errors.update(self._validate_url_and_document(attrs))
+        errors.update(self._validate_publish_date(attrs))
         if errors:
             raise ValidationError(errors)
         return attrs
