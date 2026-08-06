@@ -20,16 +20,39 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
         order = order.strip(",").replace(" ", "").split(",")
 
     if not order:
-        return qs
+        # Slicing an unordered queryset follows plan-dependent physical order, so
+        # rows can repeat on or vanish between pages. pk ASC (not newest-first)
+        # matches the nested-loader fallback and the de-facto insertion order the
+        # public GIDD lists rely on.
+        if qs.ordered:
+            return qs
+        return qs.order_by(qs.model._meta.pk.name)
 
+    # Append a deterministic tiebreaker (the primary key) to `mod_ordering` so
+    # paginated results are stable when rows tie on the sort key. Without it, ties
+    # come back in plan-dependent physical order, so a row can appear on two pages
+    # or be skipped across requests (and count-ordered lists reorder tied/NULL rows
+    # vs the pre-optimization order).
     mod_ordering = []
+    explicit_fields = set()
     for o in order:
         if not o:
             continue
         if o[0] == "-":
             mod_ordering.append(F(o[1:]).desc(nulls_last=True))
+            explicit_fields.add(o[1:])
         else:
             mod_ordering.append(F(o).asc(nulls_last=True))
+            explicit_fields.add(o)
+
+    # Append a deterministic pk tiebreaker to EVERY explicit ordering (unless the
+    # client already orders by pk): ties on the sort key otherwise come back in
+    # plan-dependent order, which makes cross-deployment response comparison
+    # impossible. NOTE: on indexed single-column sorts this can defeat the index
+    # for the LIMIT (~+40ms on some figure-filtered lists).
+    pk_name = qs.model._meta.pk.name
+    if pk_name not in explicit_fields and "pk" not in explicit_fields:
+        mod_ordering.append(F(pk_name).desc())
 
     return qs.distinct().order_by(*mod_ordering)
 

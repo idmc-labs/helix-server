@@ -234,7 +234,10 @@ class BulkUpdateMutation(graphene.Mutation):
 
     @classmethod
     def get_valid_delete_items(cls, delete_ids) -> models.QuerySet:
-        return cls.get_queryset().filter(pk__in=delete_ids)
+        # order_by: without it the deletions (and their notifications /
+        # deleted_result) come back in heap order, which changes whenever the
+        # rows are rewritten (e.g. a bulk_update) — order-flaky, not stable.
+        return cls.get_queryset().filter(pk__in=delete_ids).order_by("pk")
 
     @classmethod
     def get_object(cls, id) -> typing.Tuple[typing.Optional[models.Model], typing.Optional[typing.List[typing.Any]]]:

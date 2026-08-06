@@ -1,5 +1,6 @@
 from django.contrib.postgres.aggregates.general import StringAgg
-from django.db.models import Q
+from django.db import models
+from django.db.models import OuterRef, Q, Subquery
 from django_filters import rest_framework as df
 
 from apps.common.enums import GENDER_TYPE
@@ -221,7 +222,7 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
     def filter_filter_figure_violence_types(self, qs, name, value):
         if value:
             return qs.filter(
-                ~Q(figures__figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(figures__violence_type__in=value)
+                ~Q(figures__figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(figures__violence__in=value)
             ).distinct()
         return qs
 
@@ -471,7 +472,7 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
 
     def filter_filter_figure_violence_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_type__in=value)).distinct()
+            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence__in=value)).distinct()
         return qs
 
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
@@ -529,10 +530,34 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
 
     @property
     def qs(self):
-        queryset = super().qs.annotate(
-            **Figure.annotate_stock_and_flow_dates(),
-            geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR),
-            **Figure.annotate_sources_reliability(),
+        # geolocations / sources_reliability sort keys are computed per figure
+        # in correlated subqueries: annotating aggregates on the flow|stock
+        # OR-union multiplies the joins (location names repeated in the key;
+        # reliability min/max constrained by unrelated filters) and assembles
+        # in plan-dependent order — all three made the sort keys unstable.
+        # NOTE distinct would collapse genuinely duplicate-named locations, so
+        # per-figure scoping (not distinct) is the fix.
+        def per_figure(aggregate):
+            return Subquery(
+                Figure.objects.filter(id=OuterRef("id")).order_by().values("id").annotate(_agg=aggregate).values("_agg")[:1]
+            )
+
+        reliability_case = Figure.annotate_sources_reliability()["sources_reliability"]
+        queryset = (
+            super()
+            .qs.annotate(
+                **Figure.annotate_stock_and_flow_dates(),
+                geolocations=per_figure(
+                    StringAgg(
+                        "geo_locations__display_name",
+                        EXTERNAL_ARRAY_SEPARATOR,
+                        ordering="geo_locations__display_name",
+                    )
+                ),
+                lowest_source_reliability=per_figure(models.Min("sources__organization_kind__reliability")),
+                highest_source_reliability=per_figure(models.Max("sources__organization_kind__reliability")),
+            )
+            .annotate(sources_reliability=reliability_case)
         )
         start_date = self.data.get("filter_figure_start_after")
         end_date = self.data.get("filter_figure_end_before")

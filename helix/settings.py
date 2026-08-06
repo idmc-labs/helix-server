@@ -88,10 +88,14 @@ env = environ.Env(
     ENABLE_DANGER_MODE=(bool, False),
     # Exports
     EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT=(int, 10),
+    GIDD_EXPORT_CACHE_DISABLED=(bool, False),
     GOOGLE_ANALYTICS_ID=(str, None),
 )
 
 ENABLE_DANGER_MODE = env("ENABLE_DANGER_MODE")
+
+# GIDD
+GIDD_EXPORT_CACHE_DISABLED = env("GIDD_EXPORT_CACHE_DISABLED")
 
 # Attachment Size Limits
 DJANGO_MAX_UPLOAD_SIZE = 20971520  # Size defined in bytes (20 MB)

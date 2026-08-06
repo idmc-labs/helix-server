@@ -6,7 +6,6 @@ from pathlib import Path
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Case, F, Q, When
-from django.shortcuts import redirect
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
@@ -437,18 +436,16 @@ class DisasterViewSet(ListOnlyViewSetMixin):
     def export(self, request):
         qs = self.filter_queryset(self.get_queryset())
         filename = "IDMC_GIDD_Disasters_Internal_Displacement_Data.xlsx"
-        return redirect(
-            GiddExportCache.get_or_create(
-                filename,
-                request,
-                [self.filterset_class],
-                GiddExportCache.Key.DISASTER_EXPORT,
-                lambda: self._export(qs),
-                s3_parameters={
-                    "ResponseContentDisposition": f"attachment; filename={filename}",
-                    "ResponseContentType": "application/octet-stream",
-                },
-            )
+        return GiddExportCache.get_or_create(
+            filename,
+            request,
+            [self.filterset_class],
+            GiddExportCache.Key.DISASTER_EXPORT,
+            lambda: self._export(qs),
+            s3_parameters={
+                "ResponseContentDisposition": f"attachment; filename={filename}",
+                "ResponseContentType": "application/octet-stream",
+            },
         )
 
 
@@ -1051,18 +1048,16 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         ).qs.order_by("iso3", "year")
 
         filename = "IDMC_Internal_Displacement_Conflict-Violence_Disasters.xlsx"
-        return redirect(
-            GiddExportCache.get_or_create(
-                filename,
-                request,
-                [self.filterset_class, PublicFigureAnalysisFilterSet, IdpsSaddEstimateFilter],
-                GiddExportCache.Key.DISPLACEMENT_EXPORT,
-                lambda: self._export(qs, pfa_qs, idps_sadd_qs, request_cause),
-                s3_parameters={
-                    "ResponseContentDisposition": f"attachment; filename={filename}",
-                    "ResponseContentType": "application/octet-stream",
-                },
-            )
+        return GiddExportCache.get_or_create(
+            filename,
+            request,
+            [self.filterset_class, PublicFigureAnalysisFilterSet, IdpsSaddEstimateFilter],
+            GiddExportCache.Key.DISPLACEMENT_EXPORT,
+            lambda: self._export(qs, pfa_qs, idps_sadd_qs, request_cause),
+            s3_parameters={
+                "ResponseContentDisposition": f"attachment; filename={filename}",
+                "ResponseContentType": "application/octet-stream",
+            },
         )
 
 
@@ -1979,18 +1974,16 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         qs = self.filter_queryset(queryset)
 
         filename = self._generate_export_filename()
-        return redirect(
-            GiddExportCache.get_or_create(
-                f"{filename}.geojson",
-                request,
-                [self.filterset_class],
-                GiddExportCache.Key.DISAGGREGATION_EXPORT_GEOJSON,
-                lambda: self._export_disaggregated_geojson(filename, qs),
-                s3_parameters={
-                    "ResponseContentDisposition": f"attachment; filename={filename}.geojson",
-                    "ResponseContentType": "application/json",
-                },
-            )
+        return GiddExportCache.get_or_create(
+            f"{filename}.geojson",
+            request,
+            [self.filterset_class],
+            GiddExportCache.Key.DISAGGREGATION_EXPORT_GEOJSON,
+            lambda: self._export_disaggregated_geojson(filename, qs),
+            s3_parameters={
+                "ResponseContentDisposition": f"attachment; filename={filename}.geojson",
+                "ResponseContentType": "application/json",
+            },
         )
 
     @extend_schema(
@@ -2037,18 +2030,16 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         ).qs.order_by("iso3", "year", "id")
 
         filename = self._generate_export_filename()
-        return redirect(
-            GiddExportCache.get_or_create(
-                f"{filename}.xlsx",
-                request,
-                [self.filterset_class, DisaggregationPublicFigureAnalysisFilterSet],
-                GiddExportCache.Key.DISAGGREGATION_EXPORT,
-                lambda: self._export_disaggregated_excel(filename, qs, pfa_qs),
-                s3_parameters={
-                    "ResponseContentDisposition": f"attachment; filename={filename}.xlsx",
-                    "ResponseContentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                },
-            )
+        return GiddExportCache.get_or_create(
+            f"{filename}.xlsx",
+            request,
+            [self.filterset_class, DisaggregationPublicFigureAnalysisFilterSet],
+            GiddExportCache.Key.DISAGGREGATION_EXPORT,
+            lambda: self._export_disaggregated_excel(filename, qs, pfa_qs),
+            s3_parameters={
+                "ResponseContentDisposition": f"attachment; filename={filename}.xlsx",
+                "ResponseContentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            },
         )
 
 
