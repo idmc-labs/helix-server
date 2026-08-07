@@ -4,6 +4,7 @@ dataloader-engine swapped 16 type modules to ``RelationBatchedDjangoObjectType``
 auto-wires loader-backed resolvers for relation fields WITHOUT an explicit resolver:
   - forward FK / OneToOne          -> RelationNodeLoader        (_make_fk_resolver)
   - reverse-FK / M2M (plain List)  -> ReverseFKListLoader / M2MListLoader (_make_list_resolver)
+  - reverse OneToOne                -> ReverseOneToOneLoader     (_make_reverse_o2o_resolver)
 queryset-factory-flip then made ``DjangoPaginatedListObjectField.get_queryset`` return a
 plain queryset (relations are served by the loaders at ANY depth, not by
 graphene_django_extras.queryset_factory which only reached the first level under a list).
@@ -115,6 +116,19 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
         self.assertEqual(row["associatedParkedItem"]["id"], str(parked.id))
 
     # ------------------------------------------------------------------ #
+    # Reverse OneToOne  ->  ReverseOneToOneLoader
+    # ------------------------------------------------------------------ #
+    def test_reverse_o2o_resolves_correct_object(self) -> None:
+        parked = ParkingLotFactory.create()
+        entry = EntryFactory.create(associated_parked_item=parked)
+        orphan = ParkingLotFactory.create()  # no entry points back -> null
+
+        data = self._run("query { parkedItemList { results { id entry { id } } } }")
+        by_id = {r["id"]: r["entry"] for r in data["parkedItemList"]["results"]}
+        self.assertEqual(by_id[str(parked.id)]["id"], str(entry.id))
+        self.assertIsNone(by_id[str(orphan.id)])
+
+    # ------------------------------------------------------------------ #
     # Reverse-FK list  ->  ReverseFKListLoader
     # ------------------------------------------------------------------ #
     def test_reverse_fk_list_country_parked_items(self) -> None:
@@ -189,7 +203,7 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
     # ------------------------------------------------------------------ #
     # N+1 guards: per-parent query count must stay flat as parents grow
     # ------------------------------------------------------------------ #
-    def _figure_list_query_count(self, query) -> int:
+    def _query_count(self, query) -> int:
         with CaptureQueriesContext(connection) as ctx:
             self._run(query)
         return len(ctx.captured_queries)
@@ -205,11 +219,11 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
         author = UserFactory.create()
         Figure.objects.all().delete()
         self._figure(created_by=author)
-        one = self._figure_list_query_count(query)
+        one = self._query_count(query)
 
         self._figure(created_by=author)
         self._figure(created_by=author)
-        many = self._figure_list_query_count(query)
+        many = self._query_count(query)
 
         self.assertEqual(
             one,
@@ -224,17 +238,38 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
         Figure.objects.all().delete()
         f1 = self._figure()
         f1.tags.add(TagFactory.create())
-        one = self._figure_list_query_count(query)
+        one = self._query_count(query)
 
         f2 = self._figure()
         f2.tags.add(TagFactory.create())
         self._figure()
-        many = self._figure_list_query_count(query)
+        many = self._query_count(query)
 
         self.assertEqual(
             one,
             many,
             f"reverse-FK/M2M list resolution scales with row count (N+1): {one} q for 1 figure vs {many} for 3.",
+        )
+
+    def test_reverse_o2o_has_no_n_plus_1(self) -> None:
+        # A OneToOneRel matches none of the other auto-wire branches (concrete=False,
+        # one_to_many=False, many_to_many=False), so it used to get no loader and fell back
+        # to the descriptor: one query per parent row.
+        from apps.parking_lot.models import ParkedItem
+
+        query = "query { parkedItemList { results { id entry { id } } } }"
+        ParkedItem.objects.all().delete()
+        EntryFactory.create(associated_parked_item=ParkingLotFactory.create())
+        one = self._query_count(query)
+
+        EntryFactory.create(associated_parked_item=ParkingLotFactory.create())
+        ParkingLotFactory.create()  # no entry -> the loader must still not fan out
+        many = self._query_count(query)
+
+        self.assertEqual(
+            one,
+            many,
+            f"reverse-O2O resolution scales with row count (N+1): {one} q for 1 parked item vs {many} for 3.",
         )
 
     # ------------------------------------------------------------------ #
@@ -286,6 +321,46 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
                 resolver is not None and "relation_loaders" in getattr(resolver, "__module__", ""),
                 f"FigureType.{field} is not loader-wired",
             )
+
+    def test_no_reverse_o2o_field_is_left_unwired(self) -> None:
+        # The bug class: a relation kind the auto-wire has no branch for gets NO loader and
+        # degrades silently to one query per row. Walk every exposed reverse-O2O field in the
+        # schema rather than naming the two known ones, so a newly added one cannot slip back in.
+        from graphene_django_extras.utils import to_snake_case
+
+        import helix.schema  # noqa: F401
+        from utils.graphene.fields import DjangoPaginatedListObjectField
+        from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
+
+        def all_subclasses(cls):
+            found = set()
+            for sub in cls.__subclasses__():
+                found.add(sub)
+                found |= all_subclasses(sub)
+            return found
+
+        wired, unwired = [], []
+        for cls in all_subclasses(RelationBatchedDjangoObjectType):
+            model = getattr(getattr(cls, "_meta", None), "model", None)
+            if model is None:
+                continue
+            rels = {f.name: f for f in model._meta.get_fields() if f.is_relation}
+            for name in list(cls._meta.fields.keys()):
+                snake = to_snake_case(name)
+                rel = rels.get(snake) or rels.get(name)
+                if rel is None or isinstance(cls._meta.fields.get(name), DjangoPaginatedListObjectField):
+                    continue
+                if not (getattr(rel, "one_to_one", False) and not getattr(rel, "concrete", False)):
+                    continue
+                resolver = getattr(cls, "resolve_%s" % snake, None)
+                target = wired if "_make_reverse_o2o_resolver" in getattr(resolver, "__qualname__", "") else unwired
+                target.append("%s.%s" % (cls.__name__, name))
+
+        self.assertFalse(unwired, "reverse-O2O fields with no batching loader (one query per row): %r" % unwired)
+        # CountryType.portfolio + ParkedItemType.entry + the 5 hulk entity back-references.
+        self.assertGreaterEqual(len(wired), 7, "reverse-O2O field walk shrank unexpectedly")
+        self.assertIn("CountryType.portfolio", wired)
+        self.assertIn("ParkedItemType.entry", wired)
 
     def test_relation_list_loader_refs_are_collision_free(self) -> None:
         # Two fields resolving DIFFERENT relations must never share a loader cache ref: refs key
