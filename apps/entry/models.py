@@ -631,6 +631,12 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 condition=models.Q(role=0),
                 name="figure_event_cat_role_rec_idx",
             ),
+            # The report/listing scope is a 3-way OR over (category, start_date) and
+            # (category, end_date). Without these composites the planner can only BitmapAnd
+            # category x date, which costs enough that it prefers a parallel seq scan — the
+            # same rows over more CPU, which is what the 1-CPU prod cap punishes.
+            models.Index(fields=["category", "start_date"]),
+            models.Index(fields=["category", "end_date"]),
         ]
         permissions = (("approve_figure", "Can approve/unapprove figure"),)
 
