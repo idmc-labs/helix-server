@@ -9,6 +9,8 @@ from graphene_django_extras.paginations.utils import (
 )
 from graphene_django_extras.settings import graphql_api_settings
 
+from utils.graphene.ordering import declared_ordering, leads_descending, orders_by_pk
+
 
 def nulls_last_order_queryset(qs, ordering_param, **kwargs):
     """
@@ -19,14 +21,25 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
     if order:
         order = order.strip(",").replace(" ", "").split(",")
 
+    pk_name = qs.model._meta.pk.name
+
     if not order:
         # Slicing an unordered queryset follows plan-dependent physical order, so
         # rows can repeat on or vanish between pages. pk ASC (not newest-first)
         # matches the nested-loader fallback and the de-facto insertion order the
         # public GIDD lists rely on.
-        if qs.ordered:
-            return qs
-        return qs.order_by(qs.model._meta.pk.name)
+        #
+        # An ordering the queryset already carries is kept and COMPLETED, not returned as
+        # found: `Meta.ordering` and a filterset's country-first bucket are both non-unique,
+        # so without the tiebreaker the rows tying on them page unstably -- which for a
+        # two-valued bucket means the whole list.
+        existing = declared_ordering(qs)
+        if not existing:
+            return qs.order_by(pk_name)
+        if orders_by_pk(existing, pk_name):
+            return qs.order_by(*existing)
+        tiebreaker = F(pk_name).desc() if leads_descending(existing) else F(pk_name).asc()
+        return qs.order_by(*existing, tiebreaker)
 
     # Append a deterministic tiebreaker (the primary key) to `mod_ordering` so
     # paginated results are stable when rows tie on the sort key. Without it, ties
@@ -35,6 +48,7 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
     # vs the pre-optimization order).
     mod_ordering = []
     explicit_fields = set()
+    primary_descending = order[0].startswith("-") if order and order[0] else False
     for o in order:
         if not o:
             continue
@@ -45,16 +59,23 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
             mod_ordering.append(F(o).asc(nulls_last=True))
             explicit_fields.add(o)
 
-    # Append a deterministic pk tiebreaker to EVERY explicit ordering (unless the
-    # client already orders by pk): ties on the sort key otherwise come back in
-    # plan-dependent order, which makes cross-deployment response comparison
-    # impossible. NOTE: on indexed single-column sorts this can defeat the index
-    # for the LIMIT (~+40ms on some figure-filtered lists).
-    pk_name = qs.model._meta.pk.name
-    if pk_name not in explicit_fields and "pk" not in explicit_fields:
-        mod_ordering.append(F(pk_name).desc())
+    # Append a deterministic pk tiebreaker to EVERY explicit ordering (unless the client
+    # already orders by pk): ties on the sort key otherwise come back in plan-dependent order,
+    # so a row can appear on two pages or be skipped across requests. It follows the primary
+    # key's direction, so a descending sort still reads newest-first within a tie group -- a
+    # fixed ASC tiebreak renders a bulk-created batch backwards under `-created_at`.
+    # NOTE: on indexed single-column sorts this can defeat the index for the LIMIT.
+    #
+    # A filterset's own `order_by` is PREPENDED rather than replaced: `orderCountryFirst`
+    # buckets the rows a caller cares about to the front, and order_by(*mod_ordering) dropped
+    # that bucket on the floor whenever the same caller also sorted. Only `query.order_by`,
+    # never `Meta.ordering` -- a model default outranking the client's sort key would leave
+    # `ordering` with nothing to do.
+    existing = list(qs.query.order_by)
+    if pk_name not in explicit_fields and "pk" not in explicit_fields and not orders_by_pk(existing, pk_name):
+        mod_ordering.append(F(pk_name).desc() if primary_descending else F(pk_name).asc())
 
-    return qs.order_by(*mod_ordering)
+    return qs.order_by(*existing, *mod_ordering)
 
 
 class NoOrderingPageGraphqlPagination(PageGraphqlPagination):
@@ -108,15 +129,12 @@ class OrderingOnlyArgumentPagination(BaseDjangoGraphqlPagination):
         return argument_dict
 
     def paginate_queryset(self, qs, **kwargs):
-        order = kwargs.pop(self.ordering_param, None) or self.ordering
-        if order:
-            if "," in order:
-                order = order.strip(",").replace(" ", "").split(",")
-                if order.__len__() > 0:
-                    qs = qs.order_by(*order)
-            else:
-                qs = qs.order_by(order)
-        return qs
+        # One ordering rule for every list: `nulls_last_order_queryset` carries the allowlist
+        # refusal, NULLS LAST, the filterset's own ordering, and the pk tiebreaker. A field served
+        # here is often the same field a list serves through OneToManyLoader, so anything this
+        # route did differently showed up as two orders for one set of arguments.
+        kwargs[self.ordering_param] = kwargs.get(self.ordering_param) or self.ordering
+        return nulls_last_order_queryset(qs, self.ordering_param, **kwargs)
 
 
 def get_page_size(page_size: typing.Optional[int]) -> typing.Optional[int]:

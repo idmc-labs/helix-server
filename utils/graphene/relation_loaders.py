@@ -51,9 +51,13 @@ class ReverseFKListLoader(DataLoader):
 
     def batch_load_fn(self, keys):
         fk_id_attr = "%s_id" % self.fk_name
-        # pk order: unordered children come back in plan-dependent order, which
-        # breaks cross-deployment response comparison.
-        qs = self.child_model.objects.filter(**{"%s__in" % self.fk_name: keys}).order_by("pk")
+        # Deterministic order: unordered children come back in plan-dependent order, which
+        # breaks cross-deployment response comparison. Honour the child's declared ordering
+        # first — a bare order_by("pk") silently overrides it (e.g. EventCode.Meta.ordering
+        # is ["event_code"], so eventCodes came back in insertion order instead of
+        # alphabetical) — then append pk as the tiebreaker Meta.ordering usually lacks.
+        ordering = [*(self.child_model._meta.ordering or []), "pk"]
+        qs = self.child_model.objects.filter(**{"%s__in" % self.fk_name: keys}).order_by(*ordering)
         grouped = defaultdict(list)
         for obj in qs:
             grouped[getattr(obj, fk_id_attr)].append(obj)

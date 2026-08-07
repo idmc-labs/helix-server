@@ -11,6 +11,7 @@ from graphene_django_extras.paginations.utils import _nonzero_int
 from promise import Promise
 from promise.dataloader import DataLoader
 
+from utils.graphene.ordering import as_order_expressions, declared_ordering, leads_descending, orders_by_pk
 from utils.graphene.pagination import get_page_size, nulls_last_order_queryset
 
 
@@ -22,6 +23,7 @@ def _ordering_expressions(ordering_param, kwargs):
     order = order.strip(",").replace(" ", "").split(",") if order else []
     expressions = []
     explicit_fields = set()
+    primary_descending = order[0].startswith("-") if order and order[0] else False
     for field in order:
         if not field:
             continue
@@ -31,15 +33,30 @@ def _ordering_expressions(ordering_param, kwargs):
         else:
             expressions.append(F(field).asc(nulls_last=True))
             explicit_fields.add(field)
-    # RowNumber needs a deterministic order; fall back to pk (the paginated slice was
-    # otherwise on arbitrary physical order, which is not a stable contract).
+    # A filterset's own `order_by` is prepended, mirroring `nulls_last_order_queryset`: a
+    # queryset's ordering has no bearing on a window's ROW_NUMBER, so without this a nested
+    # list numbers its rows ignoring the bucket its top-level counterpart leads with.
+    existing = list(qs.query.order_by)
     if not expressions:
-        return [F("pk").asc()]
+        # RowNumber needs a deterministic order, and with nothing requested that order is the
+        # child's own: `Meta.ordering`, else pk. The Prefetch this window replaced read the
+        # children through the child's default manager, so it carried `Meta.ordering` for
+        # free; stating only pk here made a nested list disagree with its own top-level list
+        # (report { comments } came back oldest-first while reportCommentList is newest-first).
+        # Same completion as the top-level fallback: the model's keys, then a pk tiebreaker
+        # following the leading key's direction.
+        declared = declared_ordering(qs)
+        if orders_by_pk(declared, qs.model._meta.pk.name):
+            return as_order_expressions(declared)
+        tiebreaker = F("pk").desc() if leads_descending(declared) else F("pk").asc()
+        return [*as_order_expressions(declared), tiebreaker]
     # Append the pk as a deterministic tiebreaker (mirrors nulls_last_order_queryset) so a
     # paginated nested list with rows tying on the sort key numbers them stably across pages.
-    if "pk" not in explicit_fields and "id" not in explicit_fields:
-        expressions.append(F("pk").desc())
-    return expressions
+    # It follows the primary key's direction, as the top-level path does.
+    pk_name = qs.model._meta.pk.name
+    if pk_name not in explicit_fields and "pk" not in explicit_fields and not orders_by_pk(existing, pk_name):
+        expressions.append(F("pk").desc() if primary_descending else F("pk").asc())
+    return [*as_order_expressions(existing), *expressions]
 
 
 def get_relations(model1, model2):
