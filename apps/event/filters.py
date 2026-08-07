@@ -2,7 +2,7 @@ import django_filters
 import graphene
 from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.db import models
-from django.db.models import Count, Max, Min, Q
+from django.db.models import Exists, Max, Min, OuterRef, Q
 from django.db.models.sql.constants import LOUTER
 from django.http import HttpRequest
 from django_cte import With
@@ -175,50 +175,59 @@ class EventFilter(MultiWordSearchFilterSet):
 
     def filter_qa_rule(self, qs, name, value):
         if QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name == value:
-            return qs.annotate(
-                figure_count=Count(
-                    "figures",
-                    filter=Q(
-                        figures__category__in=[
+            # Exists rather than a filtered Count over `figures__geo_locations`: an aggregate whose
+            # filter spans that path puts the geolocation join in the outer FROM, where every other
+            # aggregate over `figures` then sees one row per (figure, geolocation) -- which is why
+            # the review counts need no `distinct` once this filter stops doing it.
+            return qs.filter(
+                Q(ignore_qa=True)
+                | ~Exists(
+                    Figure.objects.filter(
+                        event=OuterRef("pk"),
+                        category__in=[
                             Figure.FIGURE_CATEGORY_TYPES.IDPS,
                             Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                         ],
-                        ignore_qa=False,
-                        figures__role=Figure.ROLE.RECOMMENDED,
-                        figures__geo_locations__isnull=False,
-                    ),
-                )
-            ).filter(figure_count=0)
-        elif QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name == value:
-            events_id_qs = (
-                Figure.objects.filter(
-                    category__in=[
-                        Figure.FIGURE_CATEGORY_TYPES.IDPS,
-                        Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                    ],
-                    event__ignore_qa=False,
-                    role=Figure.ROLE.RECOMMENDED,
-                    geo_locations__isnull=False,
-                )
-                .annotate(
-                    locations=models.Subquery(
-                        Figure.geo_locations.through.objects.filter(figure=models.OuterRef("pk"))
-                        .order_by()
-                        .values("figure")
-                        .annotate(
-                            locations=ArrayAgg("figurelocation__name", distinct=True, ordering="figurelocation__name"),
-                        )
-                        .values("locations")[:1],
-                        output_field=models.CharField(),
-                    ),
-                )
-                .order_by()
-                .values("event", "category", "locations")
-                .annotate(
-                    count=Count("id", distinct=True),
+                        role=Figure.ROLE.RECOMMENDED,
+                        geo_locations__isnull=False,
+                    )
                 )
             )
-            return qs.filter(id__in=events_id_qs.filter(count__gt=1).values("event").distinct())
+        elif QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name == value:
+            # Two figures are duplicates when they share an event, a category and the same set of
+            # geolocation names. The signature is built once for every figure by a single grouped
+            # pass over the through table, then joined: as a correlated subquery it was rebuilt for
+            # each qualifying figure instead (1128ms -> 502ms on 186k figures, same event set).
+            signature = With(
+                Figure.geo_locations.through.objects.order_by()
+                .values("figure")
+                .annotate(
+                    locations=ArrayAgg("figurelocation__name", distinct=True, ordering="figurelocation__name"),
+                )
+                .values("figure", "locations"),
+                name="figure_location_signature",
+            )
+            duplicated = (
+                signature.join(
+                    Figure.objects.filter(
+                        category__in=[
+                            Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                            Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                        ],
+                        event__ignore_qa=False,
+                        role=Figure.ROLE.RECOMMENDED,
+                    ),
+                    id=signature.col.figure_id,
+                )
+                .with_cte(signature)
+                .annotate(locations=signature.col.locations)
+                .order_by()
+                .values("event", "category", "locations")
+                .annotate(count=models.Count("id", distinct=True))
+                .filter(count__gt=1)
+                .values("event")
+            )
+            return qs.filter(id__in=duplicated)
         return qs
 
     def filter_context_of_violences(self, qs, name, value):
@@ -274,26 +283,30 @@ class EventFilter(MultiWordSearchFilterSet):
         elif self.ordering_fields & figure_count_sort_fields:
             queryset = Event.annotate_total_figure_disaggregation_via_cte(queryset)
 
-        # The review-figure counts are an expensive fan-out aggregation over the whole
-        # Figure table (Count over a join + GroupAggregate). They are only needed in the
-        # queryset when the list is ordered by one of them; otherwise the review_count
-        # field is resolved via EventReviewCountLoader. This is the dominant cost of the
-        # default (created_at) list.
-        review_figures_count = Event.annotate_review_figures_count()
-        if self.ordering_fields & set(review_figures_count.keys()):
-            queryset = queryset.annotate(**review_figures_count)
+        # The review-figure counts are an expensive aggregation over the whole Figure table. They
+        # are only needed in the queryset when the list is ordered by one of them; otherwise the
+        # review_count field is resolved via EventReviewCountLoader. Sorting reads every event, so
+        # the set-based CTE is the cheaper shape here (the loader keeps the id-scoped aggregate).
+        if self.ordering_fields & Event.REVIEW_FIGURES_COUNT_ANNOTATIONS:
+            queryset = Event.annotate_review_figures_count_via_cte(queryset)
 
-        # entry_count is resolved via EventEntryCountLoader unless ordered by it.
+        # entry_count is resolved via EventEntryCountLoader unless ordered by it. Sorting needs the
+        # count for every event, which one grouped pass over `entry_figure` delivers; a correlated
+        # subquery recomputes it per row instead (357ms -> 139ms on a 50-row page, same values).
+        # No coalesce: an event with no figures has no CTE row, and the subquery it replaces is
+        # equally NULL there (731 of 40468 events on prod-like data).
         if "entry_count" in self.ordering_fields:
-            queryset = queryset.annotate(
-                entry_count=models.Subquery(
-                    Figure.objects.filter(event=models.OuterRef("pk"))
-                    .order_by()
-                    .values("event")
-                    .annotate(count=models.Count("entry", distinct=True))
-                    .values("count")[:1],
-                    output_field=models.IntegerField(),
-                ),
+            entry_count_cte = With(
+                Figure.objects.order_by()
+                .values("event")
+                .annotate(entry_count=models.Count("entry", distinct=True))
+                .values("event", "entry_count"),
+                name="event_entry_count",
+            )
+            queryset = (
+                entry_count_cte.join(queryset, id=entry_count_cte.col.event_id, _join_type=LOUTER)
+                .with_cte(entry_count_cte)
+                .annotate(entry_count=entry_count_cte.col.entry_count)
             )
 
         # Ordering by `countries__idmc_short_name` (M2M) would JOIN-fan-out one event into

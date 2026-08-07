@@ -147,8 +147,12 @@ class CrisisFilter(MultiWordSearchFilterSet):
             )
 
         # event_count is resolved via EventCountLoader unless the list is ordered by it.
+        # distinct: when a review-figure count is annotated too, it aggregates
+        # `events__figures`, and Django reuses the `events` join — so a bare Count would
+        # count figure rows. The ordering would then disagree with the eventCount values the
+        # client is shown, which come from EventCountLoader.
         if "event_count" in self.ordering_fields:
-            queryset = queryset.annotate(event_count=Count("events"))
+            queryset = queryset.annotate(event_count=Count("events", distinct=True))
 
         # NOTE: no prefetch_related("events"): CrisisType exposes `events` as a paginated
         # dataloader field (apps/crisis/schema.py), not root.events.all(), and event_count

@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models.functions import Cast
+from django.db.models.functions import Cast, Coalesce
 from django.db.models.sql.constants import LOUTER
 from django.forms import model_to_dict
 from django.utils.translation import gettext_lazy as _
@@ -471,53 +471,45 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             )
         )
 
+    # Annotation name -> the figure review status it counts. `total_count` and `progress` are
+    # derived from these four.
+    REVIEW_FIGURE_COUNT_STATUSES = {
+        "review_not_started_count": Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
+        "review_in_progress_count": Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+        "review_re_request_count": Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
+        "review_approved_count": Figure.FIGURE_REVIEW_STATUS.APPROVED,
+    }
+    REVIEW_FIGURES_COUNT_ANNOTATIONS = frozenset(REVIEW_FIGURE_COUNT_STATUSES) | {"total_count", "progress"}
+
     @classmethod
-    def annotate_review_figures_count(cls):
+    def _review_figures_count_filters(cls, figure_prefix, event_prefix):
+        """One `Q` per review count: the figure carries the status AND is either RECOMMENDED or
+        attached to an event that includes triangulation in QA.
+
+        `include_triangulation_in_qa` is a field on the EVENT, so the two arms need separate
+        prefixes: they are reached from the event row itself when the count aggregates over
+        `figures`, and through `event` when it aggregates over figures directly.
+        """
         return {
-            "review_not_started_count": models.Count(
-                "figures",
-                filter=models.Q(
-                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
-                    figures__role=Figure.ROLE.RECOMMENDED,
-                )
-                | models.Q(
-                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
-                    include_triangulation_in_qa=True,
-                ),
-            ),
-            "review_in_progress_count": models.Count(
-                "figures",
-                filter=models.Q(
-                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
-                    figures__role=Figure.ROLE.RECOMMENDED,
-                )
-                | models.Q(
-                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
-                    include_triangulation_in_qa=True,
-                ),
-            ),
-            "review_re_request_count": models.Count(
-                "figures",
-                filter=models.Q(
-                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
-                    figures__role=Figure.ROLE.RECOMMENDED,
-                )
-                | models.Q(
-                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
-                    include_triangulation_in_qa=True,
-                ),
-            ),
-            "review_approved_count": models.Count(
-                "figures",
-                filter=models.Q(
-                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
-                    figures__role=Figure.ROLE.RECOMMENDED,
-                )
-                | models.Q(
-                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
-                    include_triangulation_in_qa=True,
-                ),
-            ),
+            name: models.Q(
+                **{
+                    f"{figure_prefix}review_status": status,
+                    f"{figure_prefix}role": Figure.ROLE.RECOMMENDED,
+                }
+            )
+            | models.Q(
+                **{
+                    f"{figure_prefix}review_status": status,
+                    f"{event_prefix}include_triangulation_in_qa": True,
+                }
+            )
+            for name, status in cls.REVIEW_FIGURE_COUNT_STATUSES.items()
+        }
+
+    @classmethod
+    def _review_figures_count_derived(cls):
+        """`total_count` and `progress`, in terms of the four counts already annotated."""
+        return {
             "total_count": (
                 models.F("review_not_started_count")
                 + models.F("review_in_progress_count")
@@ -530,6 +522,60 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 output_field=models.FloatField(),
             ),
         }
+
+    @classmethod
+    def annotate_review_figures_count(cls):
+        """The six review counts as aggregates over the event's own `figures` join.
+
+        For id-scoped callers (EventReviewCountLoader, the review-status update): the aggregate
+        reads only the requested events' figures, where the whole-table CTE of
+        `annotate_review_figures_count_via_cte` scans every figure (6ms -> 74ms on 50 ids).
+
+        No `distinct`: these counts are only correct while nothing widens the `figures` join they
+        share. Every EventFilter path that touches a deeper to-many uses Exists or id__in, so the
+        join carries one row per figure. COUNT(DISTINCT) forbids hash aggregation, which is worth
+        avoiding on a 186k-row table -- the guard is
+        `apps/event/tests/test_filters.py::TestEventReviewCountAggregation`, which gives each
+        figure several geolocations and fails if any filter starts multiplying the rows.
+        """
+        return {
+            **{
+                name: models.Count("figures", filter=condition)
+                for name, condition in cls._review_figures_count_filters(
+                    figure_prefix="figures__",
+                    event_prefix="",
+                ).items()
+            },
+            **cls._review_figures_count_derived(),
+        }
+
+    @classmethod
+    def annotate_review_figures_count_via_cte(cls, queryset):
+        """Set-based equivalent of `annotate_review_figures_count` for the list sort path: one
+        grouped pass over `entry_figure` keyed on `event_id`, LEFT-JOINed onto `queryset` under
+        the same six names.
+
+        Grouping figures on their own keeps every event column out of the 186k-row aggregation,
+        so the planner hash-aggregates narrow rows instead of sorting wide ones (215ms -> 119ms
+        on a 50-row page, temp spill 4752kB -> none).
+
+        `Coalesce(..., 0)`: an event with no figures has no CTE row, while the aggregate this
+        replaces counts 0 -- and `progress` divides by `total_count`.
+        """
+        counts = cls._review_figures_count_filters(figure_prefix="", event_prefix="event__")
+        count_cte = With(
+            Figure.objects.order_by()
+            .values("event")
+            .annotate(**{name: models.Count("id", filter=condition) for name, condition in counts.items()})
+            .values("event", *counts),
+            name="event_review_figure_count",
+        )
+        return (
+            count_cte.join(queryset, id=count_cte.col.event_id, _join_type=LOUTER)
+            .with_cte(count_cte)
+            .annotate(**{name: Coalesce(getattr(count_cte.col, name), 0) for name in counts})
+            .annotate(**cls._review_figures_count_derived())
+        )
 
     # FIXME: this is wrong, this should see event and user not event and figure
     @staticmethod

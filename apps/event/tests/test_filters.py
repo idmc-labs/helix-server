@@ -15,6 +15,7 @@ from utils.factories import (
     FigureFactory,
     FigureLocationFactory,
 )
+from utils.graphene.pagination import nulls_last_order_queryset
 from utils.tests import HelixTestCase
 
 CONFLICT = Crisis.CRISIS_TYPE.CONFLICT
@@ -274,3 +275,206 @@ class TestEventFilter(HelixTestCase):
         obtained = self.filter_class(data=dict(search="asia", event_types=[CONFLICT])).qs
         expected = [asia_event_1]
         self.assertQuerySetEqual(expected, obtained)
+
+
+class TestEventReviewCountAggregation(HelixTestCase):
+    """The review counts must count figures, not the rows a co-annotated join multiplies.
+
+    `filter_qa_rule(HAS_NO_RECOMMENDED_FIGURES)` annotates an aggregate over
+    `figures__geo_locations`, and Django reuses the `figures` join, so an un-distincted Count
+    counted one row per (figure, geolocation). The list then sorted on numbers that contradicted
+    the `reviewCount` values it rendered, which come from EventReviewCountLoader.
+    """
+
+    filter_class = EventFilter
+
+    def setUp(self) -> None:
+        # ignore_qa=True keeps the event inside the HAS_NO_RECOMMENDED_FIGURES filter (its
+        # figure_count stays 0) while the figure below still counts towards the review counts --
+        # which is the shape the prod-like data hits: the geolocation join is in the FROM either
+        # way, so it multiplies the rows the review counts see.
+        self.event = EventFactory.create(ignore_qa=True, include_triangulation_in_qa=False)
+        entry = EntryFactory.create()
+        self.figure = FigureFactory.create(
+            entry=entry,
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED,
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+        )
+        # Three geolocations on ONE figure: the count must stay 1, not become 3.
+        for _ in range(3):
+            self.figure.geo_locations.add(FigureLocationFactory.create())
+
+    def _counts(self, **data):
+        qs = self.filter_class(data=data, ordering="review_not_started_count").qs
+        return qs.filter(id=self.event.id).values("review_not_started_count", "total_count").first()
+
+    def test_the_count_survives_the_qa_rule_join(self):
+        self.assertEqual(self.figure.geo_locations.count(), 3)
+        counts = self._counts(qa_rule=QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name)
+        self.assertIsNotNone(counts, "the event dropped out of the qa_rule filter")
+        self.assertEqual(counts["review_not_started_count"], 1, counts)
+        self.assertEqual(counts["total_count"], 1, counts)
+
+    def test_the_count_agrees_with_the_unfiltered_list(self):
+        self.assertEqual(
+            self._counts(qa_rule=QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name),
+            self._counts(),
+        )
+
+    def test_every_review_count_key_is_orderable(self):
+        """The six keys feed one client table; allowlisting only some breaks the others.
+
+        `progress` was allowlisted and the other five were not, so sorting the QA table by any
+        of them hard-errored while the values were rendered normally.
+        """
+        for key in Event.annotate_review_figures_count():
+            with self.subTest(key=key):
+                self.assertIn(key, Event.ORDERING_ALLOWLIST)
+                qs = nulls_last_order_queryset(self.filter_class(data={}, ordering=key).qs, "ordering", ordering=key)
+                self.assertEqual([event.id for event in qs], [self.event.id])
+
+
+class TestEventSortAnnotationsMatchAPythonRecount(HelixTestCase):
+    """The sort-path annotations are CTEs LEFT-JOINed by event id, so their edge cases are
+    structural: an event with no figures gets no CTE row at all, and the review counts' second
+    OR arm reads `include_triangulation_in_qa` off the EVENT, not off the figure.
+
+    Every value is checked against a recount done in Python over the same figures, so a CTE that
+    groups or joins wrongly cannot agree with it.
+    """
+
+    filter_class = EventFilter
+
+    def setUp(self) -> None:
+        self.entry = EntryFactory.create()
+        self.other_entry = EntryFactory.create()
+
+        # Triangulation counts towards QA here, so a non-RECOMMENDED figure still counts.
+        self.triangulated = EventFactory.create(include_triangulation_in_qa=True)
+        self._figure(self.triangulated, self.entry, Figure.ROLE.RECOMMENDED, Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED)
+        self._figure(
+            self.triangulated, self.entry, Figure.ROLE.TRIANGULATION, Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
+        )
+        self._figure(self.triangulated, self.other_entry, Figure.ROLE.TRIANGULATION, Figure.FIGURE_REVIEW_STATUS.APPROVED)
+
+        # Triangulation excluded, so only the RECOMMENDED figure counts.
+        self.recommended_only = EventFactory.create(include_triangulation_in_qa=False)
+        self._figure(self.recommended_only, self.entry, Figure.ROLE.RECOMMENDED, Figure.FIGURE_REVIEW_STATUS.APPROVED)
+        self._figure(
+            self.recommended_only, self.entry, Figure.ROLE.TRIANGULATION, Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+        )
+
+        self.figureless = EventFactory.create(include_triangulation_in_qa=True)
+
+    def _figure(self, event, entry, role, review_status):
+        return FigureFactory.create(
+            entry=entry,
+            event=event,
+            role=role,
+            review_status=review_status,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+        )
+
+    def _annotated(self, ordering, keys):
+        qs = self.filter_class(data={}, ordering=ordering).qs
+        return {row["id"]: row for row in qs.values("id", *keys)}
+
+    def _python_review_counts(self, event):
+        figures = list(event.figures.all())
+        counts = {
+            name: sum(
+                1
+                for figure in figures
+                if figure.review_status == status
+                and (figure.role == Figure.ROLE.RECOMMENDED or event.include_triangulation_in_qa)
+            )
+            for name, status in Event.REVIEW_FIGURE_COUNT_STATUSES.items()
+        }
+        total = sum(counts.values())
+        return {
+            **counts,
+            "total_count": total,
+            "progress": counts["review_approved_count"] / total if total else 0.0,
+        }
+
+    def test_review_counts_equal_the_python_recount(self):
+        keys = sorted(Event.REVIEW_FIGURES_COUNT_ANNOTATIONS)
+        annotated = self._annotated("review_not_started_count", keys)
+        for event in (self.triangulated, self.recommended_only, self.figureless):
+            with self.subTest(event=event.id, triangulation=event.include_triangulation_in_qa):
+                self.assertEqual(annotated[event.id], {"id": event.id, **self._python_review_counts(event)})
+
+    def test_review_counts_of_the_spelt_out_fixture(self):
+        """The recount and the CTE could only agree on wrong numbers if both read the fixture the
+        same wrong way, so the three shapes are also pinned literally."""
+        annotated = self._annotated("review_not_started_count", sorted(Event.REVIEW_FIGURES_COUNT_ANNOTATIONS))
+        # 2 not-started (one RECOMMENDED, one TRIANGULATION) + 1 approved TRIANGULATION.
+        self.assertEqual(
+            annotated[self.triangulated.id],
+            {
+                "id": self.triangulated.id,
+                "review_not_started_count": 2,
+                "review_in_progress_count": 0,
+                "review_re_request_count": 0,
+                "review_approved_count": 1,
+                "total_count": 3,
+                "progress": 1 / 3,
+            },
+        )
+        # The in-progress TRIANGULATION figure is invisible without the event's opt-in.
+        self.assertEqual(
+            annotated[self.recommended_only.id],
+            {
+                "id": self.recommended_only.id,
+                "review_not_started_count": 0,
+                "review_in_progress_count": 0,
+                "review_re_request_count": 0,
+                "review_approved_count": 1,
+                "total_count": 1,
+                "progress": 1.0,
+            },
+        )
+        # No CTE row: every count coalesces to 0, and progress divides nothing.
+        self.assertEqual(
+            annotated[self.figureless.id],
+            {
+                "id": self.figureless.id,
+                "review_not_started_count": 0,
+                "review_in_progress_count": 0,
+                "review_re_request_count": 0,
+                "review_approved_count": 0,
+                "total_count": 0,
+                "progress": 0.0,
+            },
+        )
+
+    def test_the_sort_path_and_the_dataloader_path_agree(self):
+        """`EventReviewCountLoader` keeps the id-scoped aggregate; the list sorts on the CTE. The
+        two must not disagree, or the table sorts on numbers it does not render."""
+        keys = sorted(Event.REVIEW_FIGURES_COUNT_ANNOTATIONS)
+        from_cte = self._annotated("review_not_started_count", keys)
+        from_aggregate = {
+            row["id"]: row for row in Event.objects.annotate(**Event.annotate_review_figures_count()).values("id", *keys)
+        }
+        self.assertEqual(from_cte, from_aggregate)
+
+    def test_entry_count_counts_distinct_entries_and_leaves_figureless_events_null(self):
+        annotated = self._annotated("entry_count", ["entry_count"])
+        for event in (self.triangulated, self.recommended_only, self.figureless):
+            entries = {figure.entry_id for figure in event.figures.all()}
+            with self.subTest(event=event.id):
+                self.assertEqual(annotated[event.id]["entry_count"], len(entries) or None)
+        # Two figures share an entry on this event: 3 figures, 2 entries.
+        self.assertEqual(self.triangulated.figures.count(), 3)
+        self.assertEqual(annotated[self.triangulated.id]["entry_count"], 2)
+        self.assertIsNone(annotated[self.figureless.id]["entry_count"])
+
+    def test_every_denormalised_sort_key_composes_in_one_query(self):
+        """Each sort key adds its own CTE to the same queryset; ordering by several at once must
+        still compile and return every event exactly once."""
+        ordering = "entry_count,-review_approved_count,total_stock_idp_figures,countries__idmc_short_name"
+        qs = nulls_last_order_queryset(self.filter_class(data={}, ordering=ordering).qs, "ordering", ordering=ordering)
+        ids = [event.id for event in qs]
+        self.assertEqual(sorted(ids), sorted(Event.objects.values_list("id", flat=True)))
