@@ -4,7 +4,14 @@ from django.db.models import Sum
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from .models import HulkBulkImportDataset
+from .models import (
+    HulkAttachment,
+    HulkBulkImportDataset,
+    HulkEntry,
+    HulkEvent,
+    HulkFigure,
+    HulkSourcePreview,
+)
 
 
 class HulkBulkImportSuccessCountLoader(DataLoader):
@@ -36,3 +43,38 @@ class HulkBulkImportDatasetsLoader(DataLoader):
         for dataset in qs:
             _map[dataset.bulk_import_id].append(dataset)
         return Promise.resolve([_map.get(key, []) for key in keys])
+
+
+class HulkRelationLoaderBase(DataLoader):
+    """Load the hulk relation row for an entity, or ``None``.
+
+    An entity was created via the pyhelix (hulk/bulk) interface iff a hulk
+    relation row points at it (one-to-one), so we batch-load those rows keyed by
+    ``entity_id`` and hand each entity its row (or ``None``).
+    """
+
+    hulk_relation_cls = None
+
+    def batch_load_fn(self, keys):
+        _map = {obj.entity_id: obj for obj in self.hulk_relation_cls.objects.filter(entity_id__in=keys)}
+        return Promise.resolve([_map.get(key) for key in keys])
+
+
+class EventHulkLoader(HulkRelationLoaderBase):
+    hulk_relation_cls = HulkEvent
+
+
+class FigureHulkLoader(HulkRelationLoaderBase):
+    hulk_relation_cls = HulkFigure
+
+
+class EntryHulkLoader(HulkRelationLoaderBase):
+    hulk_relation_cls = HulkEntry
+
+
+class AttachmentHulkLoader(HulkRelationLoaderBase):
+    hulk_relation_cls = HulkAttachment
+
+
+class SourcePreviewHulkLoader(HulkRelationLoaderBase):
+    hulk_relation_cls = HulkSourcePreview

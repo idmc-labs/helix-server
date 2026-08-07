@@ -294,8 +294,13 @@ class EventType(RelationBatchedDjangoObjectType):
     event_codes = graphene.List(graphene.NonNull(EventCodeType))
     crisis = graphene.Field("apps.crisis.schema.CrisisType")
     crisis_id = graphene.ID(required=True, source="crisis_id")
+    # See FigureType.hulk_uuid.
+    hulk_uuid = graphene.UUID()
 
     # crisis (forward FK) is auto-wired via RelationBatchedDjangoObjectType -> RelationNodeLoader.
+
+    def resolve_hulk_uuid(root, info, **kwargs):
+        return info.context.event_hulk_dataloader.load(root.id).then(lambda row: row.uuid if row else None)
 
     # The GraphQL field name (event_codes) != the model reverse accessor (event.event_code),
     # so the auto-wire can't map it; wire it explicitly through the same factory the auto-wire
