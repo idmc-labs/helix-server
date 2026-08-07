@@ -270,10 +270,15 @@ class ExportEntries(ExportBaseMutation):
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.ENTRY
 
 
+class ExportFiguresMetadataInputType(graphene.InputObjectType):
+    explode_by_locations = graphene.Boolean(required=False)
+
+
 class ExportFigures(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         # TODO: use Can we use ReportFigureExtractionFilterSet?
         filters = FigureExtractionFilterDataInputType(required=True)
+        metadata = ExportFiguresMetadataInputType(required=False)
 
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.FIGURE
 

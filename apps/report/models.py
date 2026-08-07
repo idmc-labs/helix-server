@@ -211,7 +211,7 @@ class Report(MetaInformationArchiveAbstractModel, QueryAbstractModel, FigureDisa
     retroactive_change = models.BooleanField(default=False)
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.report.filters import ReportFilter
 
         class DummyRequest:

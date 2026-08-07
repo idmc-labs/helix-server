@@ -1,4 +1,5 @@
 import graphene
+from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType
 from graphene_django_extras import (
     DjangoObjectField,
@@ -50,6 +51,7 @@ class ExcelExportType(DjangoObjectType):
     download_type_display = EnumDescription(source="get_download_type_display")
     status = graphene.Field(ExcelGenerationStatusGrapheneEnum)
     status_display = EnumDescription(source="get_status_display")
+    metadata = graphene.Field(GenericScalar)
 
     def resolve_file(root, info, **kwargs):
         if not getattr(root, "file", None):

@@ -51,7 +51,8 @@ def get_excel_sheet_content(headers, data, **kwargs):
     def append_to_worksheet(_ws, _headers, _data, _transformer):
         keys = _headers.keys()
         _ws.append([_headers[key] for key in keys])
-        for _datum in _data.iterator(chunk_size=2000):
+        iter_source = _data.iterator(chunk_size=2000) if hasattr(_data, "iterator") else _data
+        for _datum in iter_source:
             transformed_datum = _datum
             if _transformer:
                 transformed_datum = _transformer(_datum)
@@ -120,7 +121,7 @@ def generate_excel_file(download_id, user_id, model_instance_id=None):
             save_download_file(download, workbook, path)
         else:
             sheet_data_getter = download.get_model_sheet_data_getter()
-            sheet_data = sheet_data_getter(user_id=user_id, filters=download.filters)
+            sheet_data = sheet_data_getter(user_id=user_id, filters=download.filters, metadata=download.metadata)
             workbook = get_excel_sheet_content(**sheet_data)
             save_download_file(download, workbook, path)
         download.status = ExcelDownload.EXCEL_GENERATION_STATUS.COMPLETED

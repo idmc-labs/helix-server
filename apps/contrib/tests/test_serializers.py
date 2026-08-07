@@ -40,6 +40,42 @@ class TestExcelDownload(HelixTestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_excel_export_metadata_roundtrip(self):
+        """Serializer accepts arbitrary JSON in `metadata` and persists it on the instance."""
+        self.request.user = self.admin
+        self.context["request"] = self.request
+
+        metadata = {"explode_by_locations": True, "extra": [1, 2, {"nested": True}]}
+        serializer = ExcelDownloadSerializer(
+            data=dict(
+                download_type=ExcelDownload.DOWNLOAD_TYPES.FIGURE.value,
+                filters={},
+                metadata=metadata,
+            ),
+            context=self.context,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        instance = serializer.save()
+        instance.refresh_from_db()
+        self.assertEqual(instance.metadata, metadata)
+
+    def test_excel_export_metadata_optional(self):
+        """Serializer accepts the absence of `metadata` and stores None."""
+        self.request.user = self.admin
+        self.context["request"] = self.request
+
+        serializer = ExcelDownloadSerializer(
+            data=dict(
+                download_type=ExcelDownload.DOWNLOAD_TYPES.FIGURE.value,
+                filters={},
+            ),
+            context=self.context,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        instance = serializer.save()
+        instance.refresh_from_db()
+        self.assertIsNone(instance.metadata)
+
     def test_invalid_excel_export_if_in_progress_beyond_limit(self):
         self.request.user = self.admin
         self.context["request"] = self.request

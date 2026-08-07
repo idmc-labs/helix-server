@@ -37,7 +37,7 @@ class User(AbstractUser):
         return authenticated_user.has_perm("users.change_user") or user_id == authenticated_user.pk
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         """
         Generates data for Excel sheets based on filters applied to the user queryset.
 

@@ -134,7 +134,7 @@ class MonitoringSubRegion(models.Model):
     countries: models.QuerySet["Country"]
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         class DummyRequest:
             def __init__(self, user):
                 self.user = user
@@ -374,7 +374,7 @@ class Country(models.Model):
         }
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.country.filters import CountryFilter
 
         class DummyRequest:
@@ -543,7 +543,7 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
         return f"PK:{self.pk}-Country-ID:{self.country_id}-Year:{self.year}"
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.country.filters import HouseholdSizeFilter
 
         class DummyRequest:

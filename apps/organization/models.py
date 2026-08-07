@@ -84,7 +84,7 @@ class Organization(MetaInformationArchiveAbstractModel, SoftDeleteModel, models.
         ]
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.organization.filters import OrganizationFilter
 
         class DummyRequest:
