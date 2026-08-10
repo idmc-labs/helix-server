@@ -131,19 +131,24 @@ class Attachment(MetaInformationAbstractModel):
 
 class SoftDeleteQueryset(models.QuerySet):
     def delete(self):
+        # Archiving, not removal — mirrors SoftDeleteModel.delete() so a queryset-level
+        # delete (the Django admin's "Delete selected", among others) cannot destroy rows
+        # that live records still reference.
         self.update(deleted_on=timezone.now())
 
 
-class SoftDeleteManager(models.Manager):
-    def get_queryset(self):
-        return SoftDeleteQueryset(self.model, using=self._db).filter(deleted_on__isnull=True)
-
-
 class SoftDeleteModel(models.Model):
+    # `deleted_on` marks an archived row, not a removed one: the record stays readable and
+    # keeps its associations, and only the lists that offer it for selection hide it.
     deleted_on = models.DateTimeField(null=True, blank=True)
 
-    objects = SoftDeleteManager()
-    _objects = models.Manager()
+    # A non-filtering manager: it keeps the soft-delete `delete()` but hides nothing. A
+    # filtering default manager also removes the row from every relation traversal, so
+    # archiving an organization stripped it from the publishers/sources of entries and figures
+    # that were never archived — the live record lost part of its provenance. Hiding is a LIST
+    # concern, so the lists that offer organizations for selection exclude archived rows
+    # themselves and every other read keeps showing the real association.
+    objects = SoftDeleteQueryset.as_manager()
 
     def delete(self, *args, **kwargs):
         self.deleted_on = timezone.now()

@@ -22,6 +22,7 @@ class OrganizationFilter(MultiWordSearchFilterSet):
     categories = StringListFilter(method="filter_categories")
     organization_kinds = IDListFilter(method="filter_organization_kinds")
     order_country_first = IDListFilter(method="filter_order_country_first")
+    exclude_deleted = django_filters.BooleanFilter(method="filter_exclude_deleted")
 
     class Meta:
         model = Organization
@@ -45,6 +46,17 @@ class OrganizationFilter(MultiWordSearchFilterSet):
         if not value:
             return qs
         return qs.filter(organization_kind__in=value)
+
+    def filter_exclude_deleted(self, qs, name, value):
+        # Archived organizations are shown unless a caller asks otherwise, and the asking
+        # happens HERE rather than through a default: a filtering default manager, or a
+        # filterset that hides on its own initiative, also removes the row from
+        # entry.publishers / figure.sources, which drops attribution from live records that
+        # were never archived (see SoftDeleteModel). The lists that offer organizations for
+        # selection pass `excludeDeleted: true`.
+        if value:
+            return qs.filter(deleted_on__isnull=True)
+        return qs
 
     def filter_order_country_first(self, qs, name, value):
         if not value:

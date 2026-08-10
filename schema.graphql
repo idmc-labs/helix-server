@@ -3011,6 +3011,7 @@ input OrganizationFilterDataInputType {
   categories: [String!]
   organizationKinds: [ID!]
   orderCountryFirst: [ID!]
+  excludeDeleted: Boolean
 }
 
 input OrganizationKindCreateInputType {

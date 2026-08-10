@@ -148,7 +148,9 @@ class FigureType(RelationBatchedDjangoObjectType):
     other_sub_type = graphene.Field(OtherSubTypeObjectType)
     figure_typology = graphene.String()
     sources = DjangoPaginatedListObjectField(
-        OrganizationListType, related_name="sources", reverse_related_name="sourced_figures"
+        OrganizationListType,
+        related_name="sources",
+        reverse_related_name="sourced_figures",
     )
     stock_date = graphene.Date()
     stock_reporting_date = graphene.Date()
@@ -225,7 +227,9 @@ class EntryType(RelationBatchedDjangoObjectType):
     created_by = graphene.Field("apps.users.schema.UserType")
     last_modified_by = graphene.Field("apps.users.schema.UserType")
     publishers = DjangoPaginatedListObjectField(
-        OrganizationListType, related_name="publishers", reverse_related_name="published_entries"
+        OrganizationListType,
+        related_name="publishers",
+        reverse_related_name="published_entries",
     )
     preview = graphene.Field("apps.entry.schema.SourcePreviewType")
 

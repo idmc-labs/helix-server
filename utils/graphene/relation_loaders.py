@@ -17,6 +17,13 @@ This module provides:
     WITHOUT a hand-written resolver (and not a paginated list), installs a resolver routing through
     ``RelationNodeLoader``. Reverse-FK / M2M list relations are intentionally left for a follow-up
     (they need a grouped list loader; many are already paginated via ``OneToManyLoader``).
+
+NOTE: every loader here reaches its rows through ``objects``. Django's own descriptors do not —
+``ForwardManyToOneDescriptor`` resolves an FK through ``_base_manager`` and ``ManyRelatedManager``
+derives from the target's ``_default_manager`` — precisely so a filtering default manager cannot
+make an existing relation look absent. No model in this project has one, so the three are
+equivalent today. Give any model a default manager that filters rows and these loaders will start
+hiding relations the real descriptor would return.
 """
 
 from collections import defaultdict
