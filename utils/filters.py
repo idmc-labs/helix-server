@@ -119,12 +119,13 @@ class MultiWordSearchFilterSet(df.FilterSet):
         # DIFFERENT related rows. Testing those paths through `Exists` keeps the
         # fan-out inside the subquery — no `.distinct()`.
         #
-        # `helix_unaccent` for every lookup: the wrapper inlines to the extension's
-        # C function, so unindexed evaluations cost the same as the built-in
-        # `unaccent` while the planner index-serves whatever predicate shapes it
-        # can (single-column scans, same-table BitmapOr, the `Exists` child
-        # subqueries). Cross-table ORs still evaluate row-by-row — no index can
-        # drive those regardless of the function.
+        # `helix_unaccent` for every lookup: the wrapper reaches the extension's
+        # C function for about what calling it directly costs, so unindexed
+        # evaluations are no worse than the built-in `unaccent` while the planner
+        # index-serves whatever predicate shapes it can (single-column scans,
+        # same-table BitmapOr, the `Exists` child subqueries). Cross-table ORs
+        # still evaluate row-by-row — no index can drive those regardless of the
+        # function.
         model = queryset.model
         field_is_to_many = {field: self.field_path_is_to_many(field) for field in self.multiword_searchable_fields}
         filter_condition = Q()
