@@ -813,10 +813,8 @@ class Query(graphene.ObjectType):
             disaster_internal_displacement_qs.order_by().values_list("iso3", flat=True).distinct()
         )
 
-        # Conflict doesn't has hazard_type
-        if kwargs.get("hazard_type"):
-            kwargs = kwargs.pop("hazard_type")
-
+        # ConflictStatisticsFilter declares no hazard filter, and django-filter drops keys it
+        # does not declare, so the disaster-only `hazard_types` passes through harmlessly.
         conflict_total_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
         conflict_internal_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
 
