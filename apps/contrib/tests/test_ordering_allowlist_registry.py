@@ -20,7 +20,7 @@ from django.test import SimpleTestCase, TestCase
 from apps.contrib.models import Client
 from utils.factories import ClientFactory
 from utils.graphene.ordering import get_ordering_allowlist
-from utils.graphene.pagination import GatedPageGraphqlPagination
+from utils.graphene.pagination import GatedPageGraphqlPagination, nulls_last_order_queryset
 
 EXPECTED = {
     "contact.Communication": [
@@ -144,7 +144,12 @@ EXPECTED = {
         "id",
         "name",
         "progress",
+        "review_approved_count",
+        "review_in_progress_count",
+        "review_not_started_count",
+        "review_re_request_count",
         "start_date",
+        "total_count",
         "total_flow_nd_figures",
         "total_stock_idp_figures",
     ],
@@ -206,7 +211,12 @@ EXPECTED = {
         "id",
         "name",
         "progress",
+        "review_approved_count",
+        "review_in_progress_count",
+        "review_not_started_count",
+        "review_re_request_count",
         "start_date",
+        "total_count",
         "total_flow_nd_figures",
         "total_stock_idp_figures",
     ],
@@ -309,9 +319,24 @@ class TestOrderingAllowlistRegistry(SimpleTestCase):
     def test_no_allowlist_is_inherited(self):
         """A model must declare its own bound or have none.
 
-        `get_ordering_allowlist` reads the model's own `__dict__` precisely so an abstract base
-        cannot bound its children by accident; this pins that it stays that way.
+        The registry walk below only re-implements `vars()`, so it would pass even if
+        `get_ordering_allowlist` switched to `getattr` -- and no model in the project currently
+        has a bounded ancestor, so there is nothing for it to catch. Build the inheritance case
+        explicitly and put the real accessor under it.
         """
+
+        class BoundedBase:
+            ORDERING_ALLOWLIST = frozenset({"created_at"})
+
+        class Child(BoundedBase):
+            pass
+
+        self.assertEqual(get_ordering_allowlist(BoundedBase), frozenset({"created_at"}))
+        self.assertIsNone(
+            get_ordering_allowlist(Child),
+            "a base's bound must not leak to its children -- an abstract model would bound every model built on it",
+        )
+
         for model in apps.get_models():
             for base in model.__mro__[1:]:
                 if "ORDERING_ALLOWLIST" in vars(base) and "ORDERING_ALLOWLIST" not in vars(model):
@@ -323,6 +348,10 @@ class TestOrderingAllowlistRegistry(SimpleTestCase):
 
         self.assertEqual(get_ordering_allowlist(Conflict), frozenset())
         self.assertIsNotNone(get_ordering_allowlist(Conflict))
+        # And the bound has to bite: `allowed is not None` rather than a truthiness check is what
+        # keeps an empty set from reading as "no bound at all".
+        with self.assertRaisesMessage(ValueError, "Invalid ordering field: year"):
+            nulls_last_order_queryset(Conflict.objects.all(), "ordering", ordering="year")
 
 
 class TestEveryPaginatedListIsGated(SimpleTestCase):

@@ -55,6 +55,13 @@ class TestRoleFlagOrdering(HelixGraphQLTestCase):
             )
         ]
         cls.requester = create_user_with_role(USER_ROLE.ADMIN.name)
+        # One user holding TWO roles. Every fixture helper grants at most one portfolio, so
+        # without this no user has two and an annotation built as a JOIN rather than an Exists
+        # duplicates its row while totalCount still reports one -- invisible to the assertions
+        # below, and a page that repeats a user in production.
+        cls.two_role_user = create_user_with_role(USER_ROLE.ADMIN.name)
+        Portfolio.objects.create(user=cls.two_role_user, role=USER_ROLE.REPORTING_TEAM)
+        cls.users.append(cls.two_role_user)
 
     def setUp(self) -> None:
         super().setUp()
@@ -109,3 +116,35 @@ class TestRoleFlagOrdering(HelixGraphQLTestCase):
                 self.assertEqual(flags, sorted(flags), flags)
                 self.assertIn(True, flags)
                 self.assertIn(False, flags)
+
+
+class TestRoleFlagAnnotationIsGated(HelixGraphQLTestCase):
+    """The annotations exist only when the ordering asks for one.
+
+    That gating IS the commit: the default user list must not pay for three EXISTS subqueries.
+    Nothing else pins it -- the query COUNT is 3 either way, so `assertNumQueries` cannot see
+    it, and every ordering assertion passes just as well if all three are always annotated.
+    """
+
+    def test_no_ordering_annotates_nothing(self):
+        self.assertEqual(UserFilter(data={}).qs.query.annotations, {})
+
+    def test_an_unrelated_ordering_annotates_nothing(self):
+        self.assertEqual(UserFilter(data={}, ordering="full_name").qs.query.annotations, {})
+
+    def test_only_the_requested_flag_is_annotated(self):
+        for token, annotation in FLAGS:
+            with self.subTest(token=token):
+                annotations = set(UserFilter(data={}, ordering=annotation).qs.query.annotations)
+                self.assertEqual(annotations, {annotation})
+
+    def test_a_user_with_two_roles_is_not_duplicated(self):
+        """An Exists cannot multiply rows; a join over portfolios can."""
+        user = create_user_with_role(USER_ROLE.ADMIN.name)
+        Portfolio.objects.create(user=user, role=USER_ROLE.REPORTING_TEAM)
+        self.assertEqual(user.portfolios.count(), 2)
+
+        qs = UserFilter(data={}, ordering="is_admin").qs
+        ids = [each.id for each in qs]
+        self.assertEqual(len(ids), len(set(ids)), "a role annotation duplicated a user row")
+        self.assertEqual(len(ids), qs.values("id").count())

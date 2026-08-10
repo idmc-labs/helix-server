@@ -458,7 +458,7 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
         # Admin and RE can clear all other users from assignee except ME
         # FIXME: this logic does not seem right after `or`
         if event.assignee_id != info.context.user.id or info.context.user.has_perm("clear_assignee_from_event"):
-            return ClearAssigneFromEvent(
+            return ClearSelfAssigneFromEvent(
                 errors=[dict(field="nonFieldErrors", messages=gettext("You are not allowed to clear others from assignee."))]
             )
 
