@@ -56,7 +56,14 @@ class FigureGeoLocationLoader(DataLoader):
     def batch_load_fn(self, keys):
         qs = (
             Figure.objects.filter(id__in=keys)
-            .annotate(geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR))
+            # ordering makes the concatenation deterministic: without it StringAgg emits the
+            # display names in plan-dependent order, so the same figure's geolocations string
+            # can reorder across runs and index states. Order by the aggregated column itself.
+            .annotate(
+                geolocations=StringAgg(
+                    "geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR, ordering="geo_locations__display_name"
+                )
+            )
             .values("id", "geolocations")
         )
         batch_load = {item["id"]: item["geolocations"] for item in qs}
