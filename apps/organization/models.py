@@ -34,6 +34,19 @@ class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
 
 
 class Organization(MetaInformationArchiveAbstractModel, SoftDeleteModel, models.Model):
+    # organizationList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "category",
+            "countries__idmc_short_name",
+            "created_at",
+            "id",
+            "name",
+            "organization_kind__name",
+            "short_name",
+        }
+    )
+
     class ORGANIZATION_CATEGORY(enum.Enum):
         UNKNOWN = 0
         REGIONAL = 1

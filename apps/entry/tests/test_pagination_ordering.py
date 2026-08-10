@@ -3,10 +3,12 @@ from django.db.models.functions import Lower
 from django.test import SimpleTestCase
 
 from apps.entry.models import Figure
+from apps.event.models import Violence, ViolenceSubType
 from apps.report.models import ReportComment
-from utils.factories import CountryFactory, EntryFactory, EventFactory, FigureFactory
-from utils.graphene.ordering import leads_descending, orders_by_pk
-from utils.graphene.pagination import nulls_last_order_queryset
+from utils.factories import CountryFactory, EntryFactory, EventFactory, FigureFactory, ViolenceFactory
+from utils.graphene.dataloaders import _ordering_expressions
+from utils.graphene.ordering import get_ordering_allowlist, leads_descending, orders_by_pk
+from utils.graphene.pagination import OrderingOnlyArgumentPagination, nulls_last_order_queryset
 from utils.tests import HelixTestCase
 
 
@@ -72,11 +74,10 @@ class TestExistingOrderingSurvivesAClientSort(HelixTestCase):
     """A filterset's own `order_by` is prepended, not replaced.
 
     `OrganizationFilter.filter_order_country_first` buckets the organizations a caller cares
-    about to the front by ordering the queryset. Replacing that with the client's keys dropped
-    the bucket whenever the same caller also sorted, so the filter silently did nothing.
+    about to the front by ordering the queryset, and that bucket outranks the sort within it.
 
-    `Meta.ordering` is deliberately NOT prepended: a model default leading every sort would
-    leave the client's `ordering` argument with nothing to do.
+    `Meta.ordering` is not prepended: a model default leading every sort would leave the
+    client's `ordering` argument with nothing to do.
     """
 
     def setUp(self) -> None:
@@ -292,8 +293,8 @@ class TestNestedListOrderingGuard(HelixTestCase):
     def test_the_childs_meta_ordering_is_the_fallback(self):
         """Mirrors the top-level fallback: the model's keys, then a pk tiebreaker.
 
-        Stating only pk here made `report { comments }` come back oldest-first while
-        `reportCommentList` is newest-first.
+        A window numbering by pk alone would order a nested list differently from its own
+        top-level list over the same model.
         """
         self.assertEqual(
             [str(each) for each in _ordering_expressions(ReportComment.objects.all(), "ordering", {})],

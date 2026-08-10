@@ -59,6 +59,16 @@ class ContextOfViolence(MetaInformationAbstractModel, NameAttributedModels):
     Holds the context of violence
     """
 
+    # contextOfViolenceList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "created_by__full_name",
+            "id",
+            "name",
+        }
+    )
+
     class Meta:
         indexes = [
             models.Index(fields=["name"]),
@@ -103,6 +113,17 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
     """
     Conflict related actors
     """
+
+    # actorList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "country__idmc_short_name",
+            "created_at",
+            "id",
+            "name",
+            "torg",
+        }
+    )
 
     country = models.ForeignKey(
         "country.Country", verbose_name=_("Country"), null=True, on_delete=models.SET_NULL, related_name="actors"
@@ -180,6 +201,30 @@ class DisasterSubType(NameAttributedModels):
 
 
 class Event(MetaInformationArchiveAbstractModel, models.Model):
+    # eventList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "countries__idmc_short_name",
+            "created_at",
+            "created_by__full_name",
+            "crisis__name",
+            "end_date",
+            "entry_count",
+            "event_type",
+            "id",
+            "name",
+            "progress",
+            "review_approved_count",
+            "review_in_progress_count",
+            "review_not_started_count",
+            "review_re_request_count",
+            "start_date",
+            "total_count",
+            "total_flow_nd_figures",
+            "total_stock_idp_figures",
+        }
+    )
+
     class EVENT_REVIEW_STATUS(enum.Enum):
         REVIEW_NOT_STARTED = 0
         REVIEW_IN_PROGRESS = 1
@@ -517,7 +562,12 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 + models.F("review_approved_count")
             ),
             "progress": models.Case(
-                models.When(total_count__gt=0, then=models.F("review_approved_count") / models.F("total_count")),
+                # Cast: both counts are integers, so the division truncates and every partially
+                # approved row reads 0 -- the FloatField on the Case only labels the result.
+                models.When(
+                    total_count__gt=0,
+                    then=Cast(models.F("review_approved_count"), models.FloatField()) / models.F("total_count"),
+                ),
                 default=models.Value(0),
                 output_field=models.FloatField(),
             ),

@@ -158,8 +158,9 @@ class TestSoftDeletedOrganizationVisibility(HelixGraphQLTestCase):
 class TestArchivedOrganizationProvenance(HelixGraphQLTestCase):
     """The provenance paths: an entry's publishers and a figure's sources.
 
-    These are the reads the old filtering manager broke, and the reason nothing hides an
-    archived organization by default. Both routes are covered -- the single-object route and
+    These reads are the reason nothing hides an archived organization by default: a filtering
+    manager removes the row here too, and the association is a fact about a live record that was
+    never archived. Both routes are covered -- the single-object route and
     the nested-in-a-list route, which resolve through different loaders -- and `totalCount`
     as well as `results`, because they are computed by separate loaders and only `results`
     would notice a change to one of them.

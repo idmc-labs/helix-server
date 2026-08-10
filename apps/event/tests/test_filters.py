@@ -295,27 +295,61 @@ class TestEventReviewCountAggregation(HelixTestCase):
         # way, so it multiplies the rows the review counts see.
         self.event = EventFactory.create(ignore_qa=True, include_triangulation_in_qa=False)
         entry = EntryFactory.create()
-        self.figure = FigureFactory.create(
-            entry=entry,
-            event=self.event,
-            role=Figure.ROLE.RECOMMENDED,
-            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-        )
-        # Three geolocations on ONE figure: the count must stay 1, not become 3.
-        for _ in range(3):
-            self.figure.geo_locations.add(FigureLocationFactory.create())
+        # One figure per review status, three geolocations each: every count must stay 1, not
+        # become 3. One status per figure is what makes all four counts load-bearing -- with a
+        # single figure the other three are 0 either way.
+        self.figures = {}
+        for status in (
+            Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
+            Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+            Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
+            Figure.FIGURE_REVIEW_STATUS.APPROVED,
+        ):
+            figure = FigureFactory.create(
+                entry=entry,
+                event=self.event,
+                role=Figure.ROLE.RECOMMENDED,
+                review_status=status,
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            )
+            for _ in range(3):
+                figure.geo_locations.add(FigureLocationFactory.create())
+            self.figures[status] = figure
+
+    KEYS = (
+        "review_not_started_count",
+        "review_in_progress_count",
+        "review_re_request_count",
+        "review_approved_count",
+        "total_count",
+        "progress",
+    )
 
     def _counts(self, **data):
         qs = self.filter_class(data=data, ordering="review_not_started_count").qs
-        return qs.filter(id=self.event.id).values("review_not_started_count", "total_count").first()
+        return qs.filter(id=self.event.id).values(*self.KEYS).first()
 
-    def test_the_count_survives_the_qa_rule_join(self):
-        self.assertEqual(self.figure.geo_locations.count(), 3)
+    def test_every_count_survives_the_qa_rule_join(self):
+        for figure in self.figures.values():
+            self.assertEqual(figure.geo_locations.count(), 3)
         counts = self._counts(qa_rule=QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name)
         self.assertIsNotNone(counts, "the event dropped out of the qa_rule filter")
-        self.assertEqual(counts["review_not_started_count"], 1, counts)
-        self.assertEqual(counts["total_count"], 1, counts)
+        self.assertEqual(
+            counts,
+            {
+                "review_not_started_count": 1,
+                "review_in_progress_count": 1,
+                "review_re_request_count": 1,
+                "review_approved_count": 1,
+                "total_count": 4,
+                "progress": 0.25,
+            },
+        )
+
+    def test_progress_is_a_fraction_not_an_integer_division(self):
+        """1 approved of 4 is 0.25; an integer division truncates every partial row to 0."""
+        counts = self._counts()
+        self.assertAlmostEqual(counts["progress"], 0.25, places=4)
 
     def test_the_count_agrees_with_the_unfiltered_list(self):
         self.assertEqual(

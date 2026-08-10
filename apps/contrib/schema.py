@@ -1,7 +1,6 @@
 import graphene
 from graphene_django_extras import (
     DjangoObjectField,
-    PageGraphqlPagination,
 )
 
 from apps.contrib.bulk_operations.serializers import BulkApiOperationPayloadSerializer
@@ -33,6 +32,7 @@ from apps.extraction.filters import FigureExtractionBulkOperationFilterDataType
 from utils.error_types import CustomErrorType
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField, generate_type_for_serializer
+from utils.graphene.pagination import GatedPageGraphqlPagination
 from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
@@ -230,20 +230,20 @@ class BulkApiOperationListType(CustomDjangoListObjectType):
 class Query:
     attachment = DjangoObjectField(AttachmentType)
     excel_exports = DjangoPaginatedListObjectField(
-        ExcelExportsListType, pagination=PageGraphqlPagination(page_size_query_param="pageSize")
+        ExcelExportsListType, pagination=GatedPageGraphqlPagination(page_size_query_param="pageSize")
     )
     client = DjangoObjectField(ClientType)
     client_list = DjangoPaginatedListObjectField(
-        ClientListType, pagination=PageGraphqlPagination(page_size_query_param="pageSize")
+        ClientListType, pagination=GatedPageGraphqlPagination(page_size_query_param="pageSize")
     )
     client_track_information_list = DjangoPaginatedListObjectField(
-        ClientTrackInformationListType, pagination=PageGraphqlPagination(page_size_query_param="pageSize")
+        ClientTrackInformationListType, pagination=GatedPageGraphqlPagination(page_size_query_param="pageSize")
     )
 
     bulk_api_operation = DjangoObjectField(BulkApiOperationObjectType)
     bulk_api_operations = DjangoPaginatedListObjectField(
         BulkApiOperationListType,
-        pagination=PageGraphqlPagination(
+        pagination=GatedPageGraphqlPagination(
             page_size_query_param="pageSize",
         ),
     )

@@ -1,12 +1,32 @@
-"""Helpers shared by the chokepoints that turn a client `ordering` string into SQL.
+"""Per-model bound on the free-form GraphQL `ordering` argument.
 
+A model bounds itself by declaring an `ORDERING_ALLOWLIST` frozenset. The bound lives on the
+model because every chokepoint that validates ordering holds a queryset and never learns which
+field is being resolved; lists over the same model therefore share one key set, so a nested
+`country { figures }` cannot accept sort keys `figureList` rejects.
+
+All three paths from a client `ordering` string to SQL are gated:
 `nulls_last_order_queryset` and `OrderingOnlyArgumentPagination.paginate_queryset`
-(`utils/graphene/pagination.py`) serve the top-level and enum-ish lists, and
-`_ordering_expressions` (`utils/graphene/dataloaders.py`) the paginated nested lists
-`OneToManyLoader` resolves with a `Window(order_by=...)`. All of them need the same readings of
-a sort key: what ordering a queryset already carries, which direction it leads with, whether it
-already sorts on the primary key, and how to turn its string keys into expressions a `Window`
-can resolve.
+(`utils/graphene/pagination.py`) for top-level and enum-ish lists, and
+`_ordering_expressions` (`utils/graphene/dataloaders.py`) for the paginated nested lists
+`OneToManyLoader` resolves with a `Window(order_by=...)`. A token absent from a bounded
+model's set is therefore unreachable on EVERY list over that model — which is what lets a
+to-many denormalisation be retired rather than merely unused; see
+`apps/contrib/tests/test_to_many_ordering_fanout.py`.
+
+Keys are post-`to_snake_case` (`utils/graphene/fields.py` normalises every token before it
+reaches the validator) and carry no direction prefix — a leading `-` is stripped first. A key
+may name a model field or an annotation the filterset adds; an annotation that has not been
+applied fails the resolvability check rather than reaching query compilation.
+
+An EMPTY frozenset is a bound, not an omission: it refuses every explicit `ordering` token
+while leaving an unordered request untouched. A model with no `ORDERING_ALLOWLIST` at all is
+unbounded and falls back to the resolvability check alone, so such a list degrades rather than
+breaks. The attribute is read off the model's own `__dict__` so it is never inherited — an
+abstract base declaring one must not silently bound every model built on it.
+
+Widening a set is a deliberate act: `apps/contrib/tests/test_ordering_allowlist_registry.py`
+pins the whole registry against a snapshot, so any change has to be recorded there too.
 """
 
 import typing
@@ -82,3 +102,12 @@ def strip_direction(token: str) -> str:
     field on the model.
     """
     return token[1:] if token.startswith("-") else token
+
+
+def get_ordering_allowlist(model) -> typing.Optional[typing.FrozenSet[str]]:
+    """The ordering tokens `model`'s lists accept, or None when the model is unbounded.
+
+    Read from the model's own `__dict__` rather than by attribute lookup: every model here
+    inherits from an abstract base, and `getattr` would hand a base's set to every child.
+    """
+    return vars(model).get("ORDERING_ALLOWLIST")

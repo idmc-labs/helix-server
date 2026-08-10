@@ -243,4 +243,12 @@ class QueryAbstractModel(models.Model):
 
 
 class ExtractionQuery(MetaInformationAbstractModel, QueryAbstractModel):
+    # extractionQueryList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+        }
+    )
+
     name = models.CharField(verbose_name=_("Name"), max_length=128)

@@ -34,6 +34,7 @@ from utils.filters import (
     StringListFilter,
     generate_type_for_filter_set,
 )
+from utils.graphene.ordering import strip_direction
 
 
 class HouseholdSizeFilter(MultiWordSearchFilterSet):
@@ -111,7 +112,7 @@ class CountryFilter(MultiWordSearchFilterSet):
 
     def __init__(self, *args, ordering=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
+        self.ordering_fields = {strip_direction(field) for field in ordering.split(",") if field} if ordering else set()
 
     def noop(self, qs, name, value):
         return qs

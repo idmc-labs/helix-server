@@ -11,14 +11,30 @@ from graphene_django_extras.paginations.utils import _nonzero_int
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from utils.graphene.ordering import as_order_expressions, declared_ordering, leads_descending, orders_by_pk
-from utils.graphene.pagination import get_page_size, nulls_last_order_queryset
+from utils.graphene.ordering import (
+    as_order_expressions,
+    declared_ordering,
+    leads_descending,
+    orders_by_pk,
+    strip_direction,
+)
+from utils.graphene.pagination import (
+    _ordering_token_allowed,
+    get_page_size,
+    nulls_last_order_queryset,
+)
 
 
-def _ordering_expressions(ordering_param, kwargs):
+def _ordering_expressions(qs, ordering_param, kwargs):
     """Build the order_by expression list (DESC NULLS LAST / ASC NULLS LAST) for the
     given ordering kwargs, mirroring ``nulls_last_order_queryset`` so a window's row
-    numbering matches the order the paginated path would have sliced by."""
+    numbering matches the order the paginated path would have sliced by.
+
+    ``qs`` must be the filtered queryset the Window is annotated onto: the allowlist check
+    resolves annotation aliases out of ``qs.query.annotations``, and the ordering-gated ones
+    (event/crisis figure counts, user role flags, ...) exist only after the filterset has
+    been handed the ordering.
+    """
     order = kwargs.get(ordering_param) or ""
     order = order.strip(",").replace(" ", "").split(",") if order else []
     expressions = []
@@ -27,6 +43,15 @@ def _ordering_expressions(ordering_param, kwargs):
     for field in order:
         if not field:
             continue
+        # Third and last chokepoint turning a client `ordering` string into SQL. Without it a
+        # paginated nested list fed the raw token to the Window and Django's FieldError — which
+        # enumerates every ORM field on the model, including columns absent from the GraphQL
+        # schema — reached the caller, and tokens the top-level list refuses (to-many paths the
+        # sort was never tuned for) were accepted here. Same per-token check and same message as
+        # `nulls_last_order_queryset` / `OrderingOnlyArgumentPagination.paginate_queryset`.
+        token = strip_direction(field)
+        if not _ordering_token_allowed(qs, token):
+            raise ValueError(f"Invalid ordering field: {token}")
         if field[0] == "-":
             expressions.append(F(field[1:]).desc(nulls_last=True))
             explicit_fields.add(field[1:])
@@ -39,12 +64,10 @@ def _ordering_expressions(ordering_param, kwargs):
     existing = list(qs.query.order_by)
     if not expressions:
         # RowNumber needs a deterministic order, and with nothing requested that order is the
-        # child's own: `Meta.ordering`, else pk. The Prefetch this window replaced read the
-        # children through the child's default manager, so it carried `Meta.ordering` for
-        # free; stating only pk here made a nested list disagree with its own top-level list
-        # (report { comments } came back oldest-first while reportCommentList is newest-first).
-        # Same completion as the top-level fallback: the model's keys, then a pk tiebreaker
-        # following the leading key's direction.
+        # child's own: `Meta.ordering`, else pk, completed with a pk tiebreaker following the
+        # leading key's direction -- the same rule as the top-level fallback, so a nested list
+        # and its top-level counterpart agree. No model reachable through this window declares
+        # `Meta.ordering` today, so the branch is a guarantee rather than a live payload.
         declared = declared_ordering(qs)
         if orders_by_pk(declared, qs.model._meta.pk.name):
             return as_order_expressions(declared)
@@ -217,17 +240,14 @@ class OneToManyLoader(DataLoader):
         )
         offset = page_size * (page - 1)
 
-        base_qs = (
-            self._filtered_qs()
-            .filter(**{f"{reverse_related_name}__in": keys})
-            .annotate(
-                _dataloader_parent_id=F(reverse_related_name),
-                _dataloader_row=Window(
-                    RowNumber(),
-                    partition_by=F(reverse_related_name),
-                    order_by=_ordering_expressions(self.pagination.ordering_param, self.kwargs),
-                ),
-            )
+        filtered_qs = self._filtered_qs()
+        base_qs = filtered_qs.filter(**{f"{reverse_related_name}__in": keys}).annotate(
+            _dataloader_parent_id=F(reverse_related_name),
+            _dataloader_row=Window(
+                RowNumber(),
+                partition_by=F(reverse_related_name),
+                order_by=_ordering_expressions(filtered_qs, self.pagination.ordering_param, self.kwargs),
+            ),
         )
         # Select from the CTE. With.queryset() builds the CTE-reading query but wraps it in
         # the child's default queryset (not always CTE-capable, e.g. SoftDelete/plain

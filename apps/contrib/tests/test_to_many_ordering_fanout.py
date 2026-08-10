@@ -5,10 +5,10 @@ while `totalCount` -- computed on the filtered queryset *before* the ordering jo
 added -- never counts the duplicates. The parent then repeats inside a page and a client
 can page past the count.
 
-Each list therefore denormalises the sort key into a per-parent scalar (a whole-table CTE
-where the model has a CTEManager, a correlated Subquery where it does not) and aliases the
-annotation to the ordering token, so `order_by` binds to the scalar instead of
-re-traversing the M2M.
+Each list therefore denormalises the sort key into a per-parent scalar -- a whole-table CTE
+on the large lists, a correlated subquery on the small ones, whichever shape is cheaper for
+that table -- and aliases the annotation to the ordering token, so `order_by` binds to the
+scalar instead of re-traversing the M2M.
 
 The scalar also has to rank the parents the way the JOIN did: ascending, a parent sits at its
 alphabetically smallest child; descending, at its greatest. A concatenation of the children
@@ -22,6 +22,12 @@ Cardinality assertions are blind to all of it, so `TestToManyOrderingSequenceThr
 raw M2M path with the ORM and asserts the row count really does exceed the parent count,
 so a fixture that quietly stopped exercising the bug fails loudly instead of turning the
 rest of the file green for free.
+
+Not every to-many path is denormalised: a key no caller can reach carries no fan-out, so it
+carries no fix either. `eventList/countries__iso3` is the worked example --
+`TestEventCountriesIso3OrderingStaysRejected` pins the rejection that keeps it unreachable,
+on both the top-level and the nested route. The general guard is the allowlist registry
+test, which fails on any change to the permitted key sets.
 """
 
 import json
@@ -42,6 +48,7 @@ from utils.factories import (
     EventFactory,
     OrganizationFactory,
 )
+from utils.graphene.ordering import get_ordering_allowlist
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 LIST_QUERY = """
@@ -53,12 +60,28 @@ LIST_QUERY = """
     }
 """
 
+# The paginated nested-list route (OneToManyLoader + Window), the other place a sort key
+# can reach the ORM.
+NESTED_EVENTS_QUERY = """
+    query MyQuery($ordering: String) {
+      crisisList(pageSize: 10) {
+        results {
+          id
+          events(ordering: $ordering, pageSize: 100) {
+            totalCount
+            results { id }
+          }
+        }
+      }
+    }
+"""
+
 
 class TestToManyOrderingDoesNotFanOut(HelixGraphQLTestCase):
     """One row per parent for every to-many sort key a client can actually send.
 
     The ordering tokens exercised here are exactly the to-many entries of
-    ORDERING_ALLOWLIST (utils/graphene/ordering.py) -- everything else the allowlist
+    each model's ORDERING_ALLOWLIST -- everything else the allowlist
     rejects before it reaches the ORM.
     """
 
@@ -162,6 +185,65 @@ class TestToManyOrderingDoesNotFanOut(HelixGraphQLTestCase):
             with self.subTest(model=queryset.model.__name__, path=path):
                 rows = len(list(queryset.order_by(path).values_list("id", flat=True)))
                 self.assertEqual(rows, parents * per_parent, "%s no longer fans out on %s" % (queryset.model, path))
+
+
+class TestEventCountriesIso3OrderingStaysRejected(HelixGraphQLTestCase):
+    """`eventList` and every nested event list must keep rejecting `countries__iso3`.
+
+    Ordering events by the `countries` M2M path fans one event out into one row per country. No
+    denormalisation exists for it, because the token is unreachable: it is absent from
+    Event.ORDERING_ALLOWLIST, so all three chokepoints refuse it -- both pagination
+    classes for `eventList`, and `_ordering_expressions` (utils/graphene/dataloaders.py) for
+    the paginated nested list `crisisList { events(ordering: ...) }`, which was the last route
+    that could reach it.
+
+    IF YOU ADD `countries__iso3` TO Event.ORDERING_ALLOWLIST, WRITE THE
+    DENORMALISATION FIRST: aggregate the M2M into a per-event scalar and alias that annotation
+    to the ordering token, so `order_by` binds to the scalar instead of re-traversing the M2M.
+    The `countries__idmc_short_name` blocks in `EventFilter.qs` (apps/event/filters.py) and
+    `CrisisFilter.qs` (apps/crisis/filters.py) are the worked examples to copy.
+    Widening the allowlist without it makes the event lists return duplicate events inside a
+    page and lets a client page past its own totalCount, silently. This test going red IS that
+    warning; do not "fix" it by deleting the assertion.
+
+    The same reasoning applies to any *new* to-many token added for `event.Event`.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.countries = [
+            CountryFactory.create(idmc_short_name=name, iso3=iso3)
+            for name, iso3 in (("Alphaland", "AAA"), ("Betaland", "BBB"), ("Gammaland", "CCC"))
+        ]
+        cls.crisis = CrisisFactory.create(name="iso3-crisis")
+        cls.events = [EventFactory.create(crisis=cls.crisis, countries=cls.countries) for _ in range(2)]
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.force_login(create_user_with_role(USER_ROLE.ADMIN.name))
+
+    def test_countries_iso3_is_not_allowlisted_for_events(self):
+        self.assertNotIn("countries__iso3", get_ordering_allowlist(Event))
+
+    def test_event_list_rejects_countries_iso3_ordering(self):
+        for direction in ("", "-"):
+            with self.subTest(ordering=direction + "countries__iso3"):
+                response = self.query(LIST_QUERY % "eventList", variables={"ordering": direction + "countries__iso3"})
+                errors = json.loads(response.content)["errors"]
+                self.assertEqual([error["message"] for error in errors], ["Invalid ordering field: countries__iso3"])
+
+    def test_nested_event_list_rejects_countries_iso3_ordering(self):
+        # The route that used to bypass the allowlist entirely.
+        for direction in ("", "-"):
+            with self.subTest(ordering=direction + "countries__iso3"):
+                response = self.query(NESTED_EVENTS_QUERY, variables={"ordering": direction + "countries__iso3"})
+                errors = json.loads(response.content)["errors"]
+                self.assertEqual({error["message"] for error in errors}, {"Invalid ordering field: countries__iso3"})
+
+    def test_the_fixtures_can_actually_fan_out(self):
+        """Anti-vacuity: the raw M2M ordering the allowlist blocks really does duplicate rows."""
+        rows = len(list(Event.objects.order_by("countries__iso3").values_list("id", flat=True)))
+        self.assertEqual(rows, len(self.events) * len(self.countries))
 
 
 # One entry per parent, holding that parent's country `idmc_short_name`s. Every parent but one

@@ -41,6 +41,7 @@ from utils.filters import (
     StringListFilter,
     generate_type_for_filter_set,
 )
+from utils.graphene.ordering import strip_direction
 
 
 class EventFilter(MultiWordSearchFilterSet):
@@ -83,11 +84,11 @@ class EventFilter(MultiWordSearchFilterSet):
 
     def __init__(self, *args, ordering=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
+        self.ordering_fields = {strip_direction(field) for field in ordering.split(",") if field} if ordering else set()
         # A denormalised to-many sort key depends on the direction it is sorted in, which
         # `ordering_fields` has stripped off.
         self.descending_ordering_fields = (
-            {field[1:] for field in ordering.split(",") if field.startswith("-")} if ordering else set()
+            {strip_direction(field) for field in ordering.split(",") if field.startswith("-")} if ordering else set()
         )
 
     def noop(self, qs, name, value):

@@ -6,6 +6,7 @@ from django.db.models import Min
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio, User
 from utils.filters import IDFilter, IDListFilter, MultiWordSearchFilterSet, StringListFilter, generate_type_for_filter_set
+from utils.graphene.ordering import strip_direction
 
 
 class UserFilter(MultiWordSearchFilterSet):

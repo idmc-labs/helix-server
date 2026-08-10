@@ -19,6 +19,16 @@ logger = logging.getLogger(__name__)
 
 
 class User(AbstractUser):
+    # users
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "date_joined",
+            "full_name",
+            "id",
+            "is_active",
+        }
+    )
+
     email = models.EmailField(verbose_name=_("Email Address"), unique=True)
     username = models.CharField(
         verbose_name=_("Username"),

@@ -229,6 +229,20 @@ def bulk_operation_snapshot(instance, filename: str) -> str:
 
 
 class ExcelDownload(MetaInformationAbstractModel):
+    # excelExports
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "completed_at",
+            "created_at",
+            "download_type",
+            "file_size",
+            "id",
+            "modified_at",
+            "started_at",
+            "status",
+        }
+    )
+
     class EXCEL_GENERATION_STATUS(enum.Enum):
         PENDING = 0
         IN_PROGRESS = 1
@@ -336,6 +350,31 @@ class ExcelDownload(MetaInformationAbstractModel):
 
 
 class Client(MetaInformationAbstractModel):
+    # clientList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "acronym",
+            "code",
+            "contact_email",
+            "contact_name",
+            "contact_website",
+            "created_at",
+            "created_by",
+            "created_by__full_name",
+            "description",
+            "id",
+            "is_active",
+            "last_modified_by",
+            "last_modified_by__full_name",
+            "modified_at",
+            "name",
+            "opted_out_of_emails",
+            "other_notes",
+            "share_source",
+            "type",
+        }
+    )
+
     class CLIENT_TYPE(enum.Enum):
         ACADEMIA_THINK_TANK = 0
         ONG_INGO = 1
@@ -484,6 +523,19 @@ class Client(MetaInformationAbstractModel):
 
 
 class ClientTrackInfo(models.Model):
+    # clientTrackInformationList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "api_name",
+            "api_type",
+            "client__code",
+            "client__name",
+            "id",
+            "requests_per_day",
+            "tracked_date",
+        }
+    )
+
     from apps.entry.models import ExternalApiDump
 
     client = models.ForeignKey("Client", on_delete=models.CASCADE)
@@ -580,6 +632,20 @@ class ClientTrackInfo(models.Model):
 
 
 class BulkApiOperation(models.Model):
+    # bulkApiOperations
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "action",
+            "completed_at",
+            "created_at",
+            "failure_count",
+            "id",
+            "started_at",
+            "status",
+            "success_count",
+        }
+    )
+
     class BULK_OPERATION_ACTION(enum.Enum):
         FIGURE_ROLE = 0
         FIGURE_EVENT = 1

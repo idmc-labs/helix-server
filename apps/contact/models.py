@@ -14,6 +14,17 @@ User = get_user_model()
 
 
 class Contact(MetaInformationArchiveAbstractModel, models.Model):
+    # contactList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "countries_of_operation__idmc_short_name",
+            "created_at",
+            "full_name",
+            "id",
+            "organization__name",
+        }
+    )
+
     class DESIGNATION(enum.Enum):
         MR = 0
         MS = 1
@@ -141,6 +152,18 @@ class CommunicationMedium(models.Model):
 
 
 class Communication(MetaInformationArchiveAbstractModel, models.Model):
+    # communicationList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "country__idmc_short_name",
+            "created_at",
+            "date",
+            "id",
+            "medium",
+            "subject",
+        }
+    )
+
     class COMMUNICATION_MEDIUM(enum.Enum):
         # keeping for the sake of migrations, remove it when recreating all migrations
         pass
