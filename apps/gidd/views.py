@@ -46,7 +46,6 @@ from .rest_filters import (
 from .serializers import (
     ConflictSerializer,
     CountrySerializer,
-    DisaggregationSerializer,
     DisasterSerializer,
     DisplacementDataSerializer,
     PublicFigureAnalysisSerializer,
@@ -1061,12 +1060,14 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         )
 
 
-class DisaggregationViewSet(ListOnlyViewSetMixin):
+class DisaggregationViewSet(viewsets.GenericViewSet):
+    # Only the two export actions are routed (helix/external_urls.py). This was a
+    # ListOnlyViewSetMixin with pagination_class = None — an UNPAGINATED list over the whole
+    # GiddFigure table, unrouted but one router.register away from shipping; drop the list
+    # action instead of leaving the footgun.
     queryset = GiddFigure.objects.all()
-    serializer_class = DisaggregationSerializer
     filter_backends = (DjangoFilterBackend,)
     filterset_class = DisaggregationFilterSet
-    pagination_class = None
 
     def _generate_export_filename(self):
         filename_map = {

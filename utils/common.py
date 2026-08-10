@@ -165,6 +165,10 @@ def track_gidd(client_id, endpoint_type, viewset: viewsets.GenericViewSet = None
         raise PermissionDenied("Client is not registered.")
 
     client = Client.objects.filter(code=client_id).first()
+    if client is None:
+        # in the redis registry but the row is gone — treat as unregistered
+        # instead of AttributeError -> 500
+        raise PermissionDenied("Client is not registered.")
     if not client.is_active:
         raise PermissionDenied("Client is deactivated.")
 
