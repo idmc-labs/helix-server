@@ -111,7 +111,6 @@ class CountryFilter(MultiWordSearchFilterSet):
 
     def __init__(self, *args, ordering=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ordering = ordering
         self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
 
     def noop(self, qs, name, value):

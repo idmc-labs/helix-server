@@ -1,14 +1,15 @@
-"""The geolocations aggregate must concatenate in a declared order.
+"""The rendered geolocations string and the geolocations sort key are different values.
 
-`StringAgg` without `ordering=` emits its inputs in whatever order the plan produces them,
-so the SAME figure's `geolocations` string can differ between two runs, between two
-deployments, or after an index changes the chosen plan. That is a response value the client
-renders.
+`FigureType.geolocations` is rendered by `FigureGeoLocationLoader`
+(apps/entry/dataloaders.py) as a concatenation, and `StringAgg` without `ordering=` emits its
+inputs in whatever order the plan produces, so the SAME figure's string could differ between
+runs. That aggregate must stay ordered.
 
-Two independent aggregates build this string and both must stay ordered:
-  * `FigureGeoLocationLoader` (apps/entry/dataloaders.py) -> `FigureType.geolocations`
-  * the `figure_geolocations_agg` CTE in `FigureExtractionFilterSet.qs`
-    (apps/extraction/filters.py) -> the `geolocations` SORT KEY
+The `figure_geolocations_agg` CTE in `FigureExtractionFilterSet.qs`
+(apps/extraction/filters.py) is a SORT KEY only -- the explicit `resolve_geolocations`
+resolver means the annotation never reaches a response. It ranks a figure by its smallest
+location name ascending and its greatest descending, which is what ordering by a to-many path
+means; a concatenation would rank descending sorts by the smallest name reversed.
 """
 
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
@@ -38,26 +39,30 @@ class TestGeolocationAggregateOrdering(HelixTestCase):
         cls.other = FigureFactory.create(event=event, role=Figure.ROLE.RECOMMENDED)
         cls.other.geo_locations.add(FigureLocationFactory.create(display_name="alpha town"))
 
-    def _sort_keys(self):
-        return dict(FigureExtractionFilterSet(data={}, ordering="geolocations").qs.values_list("id", "geolocations"))
+    def _sort_keys(self, ordering):
+        return dict(FigureExtractionFilterSet(data={}, ordering=ordering).qs.values_list("id", "geolocations"))
 
     def test_loader_concatenates_display_names_alphabetically(self):
         loaded = FigureGeoLocationLoader().batch_load_fn([self.figure.id, self.other.id]).get()
         self.assertEqual(loaded[0], EXPECTED)
         self.assertEqual(loaded[1], "alpha town")
 
-    def test_sort_key_concatenates_display_names_alphabetically(self):
-        rows = self._sort_keys()
-        self.assertEqual(rows[self.figure.id], EXPECTED)
+    def test_sort_key_is_the_smallest_location_name_ascending(self):
+        rows = self._sort_keys("geolocations")
+        self.assertEqual(rows[self.figure.id], min(NAMES_IN_ATTACH_ORDER))
         self.assertEqual(rows[self.other.id], "alpha town")
 
-    def test_the_two_aggregates_agree(self):
-        """The sort key and the rendered value are built by different code.
+    def test_sort_key_is_the_greatest_location_name_descending(self):
+        rows = self._sort_keys("-geolocations")
+        self.assertEqual(rows[self.figure.id], max(NAMES_IN_ATTACH_ORDER))
+        self.assertEqual(rows[self.other.id], "alpha town")
 
-        A client sorting on `geolocations` and reading `geolocations` must not see the list
-        ordered by a string it is never shown.
+    def test_the_sort_key_is_not_the_rendered_string(self):
+        """They answer different questions, so they are deliberately not equal.
+
+        The rendered value lists every location; the sort key is the one name the figure ranks
+        at. Asserting they agree is what allowed a concatenation to stand in as a sort key.
         """
-        loaded = FigureGeoLocationLoader().batch_load_fn([self.figure.id, self.other.id]).get()
-        rows = self._sort_keys()
-        self.assertEqual(loaded[0], rows[self.figure.id])
-        self.assertEqual(loaded[1], rows[self.other.id])
+        loaded = FigureGeoLocationLoader().batch_load_fn([self.figure.id]).get()
+        self.assertEqual(loaded[0], EXPECTED)
+        self.assertNotEqual(self._sort_keys("geolocations")[self.figure.id], EXPECTED)

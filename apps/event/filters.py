@@ -2,8 +2,10 @@ import django_filters
 import graphene
 from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.db import models
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Min, Q
+from django.db.models.sql.constants import LOUTER
 from django.http import HttpRequest
+from django_cte import With
 
 from apps.common.enums import QA_RULE_TYPE
 from apps.crisis.models import Crisis
@@ -81,8 +83,12 @@ class EventFilter(MultiWordSearchFilterSet):
 
     def __init__(self, *args, ordering=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ordering = ordering
         self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
+        # A denormalised to-many sort key depends on the direction it is sorted in, which
+        # `ordering_fields` has stripped off.
+        self.descending_ordering_fields = (
+            {field[1:] for field in ordering.split(",") if field.startswith("-")} if ordering else set()
+        )
 
     def noop(self, qs, name, value):
         return qs
@@ -288,6 +294,30 @@ class EventFilter(MultiWordSearchFilterSet):
                     .values("count")[:1],
                     output_field=models.IntegerField(),
                 ),
+            )
+
+        # Ordering by `countries__idmc_short_name` (M2M) would JOIN-fan-out one event into
+        # one row per country. Denormalize the sort key into a per-event scalar via a
+        # whole-table CTE, LEFT JOIN by id, and order by that scalar — one row per event,
+        # deterministic, no global DISTINCT. Alias == the ordering token so
+        # order_by("countries__idmc_short_name") binds to this annotation, not the M2M path.
+        #
+        # The scalar is Min or Max of the country name, picked by the sort direction, because
+        # that is exactly where the fan-out join placed the event: sorting all its duplicated
+        # rows ascending, the event first appears at its alphabetically smallest country;
+        # descending, at its greatest. Any other reduction (a concatenation of all the names,
+        # say) changes the ranking — descending would rank by the smallest name reversed, and
+        # ascending would break ties between a name and a name that prefixes it.
+        if "countries__idmc_short_name" in self.ordering_fields:
+            sort_key = Max if "countries__idmc_short_name" in self.descending_ordering_fields else Min
+            cte = With(
+                Event.objects.values("id").annotate(countries_idmc_short_name=sort_key("countries__idmc_short_name")),
+                name="event_countries_name_agg",
+            )
+            queryset = (
+                cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
+                .with_cte(cte)
+                .annotate(**{"countries__idmc_short_name": cte.col.countries_idmc_short_name})
             )
 
         # NOTE: no prefetch_related("figures"): EventType excludes the `figures` field

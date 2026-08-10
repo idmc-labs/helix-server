@@ -215,7 +215,7 @@ class OneToManyLoader(DataLoader):
         # Select from the CTE. With.queryset() builds the CTE-reading query but wraps it in
         # the child's default queryset (not always CTE-capable, e.g. SoftDelete/plain
         # managers), so rebind it to a CTEQuerySet to attach the WITH clause.
-        cte = With(base_qs)
+        cte = With(base_qs, name="dataloader_page")
         cte_qs = cte.queryset()
         cte_qs = CTEQuerySet(cte_qs.model, query=cte_qs.query, using=cte_qs.db).with_cte(cte)
         page_rows = cte_qs.filter(

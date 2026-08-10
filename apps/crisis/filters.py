@@ -1,6 +1,8 @@
 import graphene
-from django.db.models import Count, Exists, OuterRef
+from django.db.models import Count, Exists, Max, Min, OuterRef
+from django.db.models.sql.constants import LOUTER
 from django.http import HttpRequest
+from django_cte import With
 
 from apps.crisis.models import Crisis
 from apps.event.models import Event
@@ -51,8 +53,12 @@ class CrisisFilter(MultiWordSearchFilterSet):
 
     def __init__(self, *args, ordering=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ordering = ordering
         self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
+        # A denormalised to-many sort key depends on the direction it is sorted in, which
+        # `ordering_fields` has stripped off.
+        self.descending_ordering_fields = (
+            {field[1:] for field in ordering.split(",") if field.startswith("-")} if ordering else set()
+        )
 
     def noop(self, qs, name, value):
         return qs
@@ -122,6 +128,23 @@ class CrisisFilter(MultiWordSearchFilterSet):
         review_figures_count = Crisis.annotate_review_figures_count()
         if self.ordering_fields & set(review_figures_count.keys()):
             queryset = queryset.annotate(**review_figures_count)
+
+        # Crisis never got the denormalisation EventFilter has, so ordering by this M2M path
+        # JOIN-fanned-out one crisis into one row per country. Denormalise the sort key into
+        # a per-crisis scalar and alias it to the ordering token, exactly as event/entry do.
+        # Min ascending / Max descending: that is the country the fan-out join sorted the
+        # crisis at (see EventFilter.qs for the full reasoning).
+        if "countries__idmc_short_name" in self.ordering_fields:
+            sort_key = Max if "countries__idmc_short_name" in self.descending_ordering_fields else Min
+            cte = With(
+                Crisis.objects.values("id").annotate(countries_idmc_short_name=sort_key("countries__idmc_short_name")),
+                name="crisis_countries_name_agg",
+            )
+            queryset = (
+                cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
+                .with_cte(cte)
+                .annotate(**{"countries__idmc_short_name": cte.col.countries_idmc_short_name})
+            )
 
         # event_count is resolved via EventCountLoader unless the list is ordered by it.
         if "event_count" in self.ordering_fields:
