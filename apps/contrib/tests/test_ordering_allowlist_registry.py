@@ -218,6 +218,7 @@ EXPECTED = {
     "gidd.Disaster": [
         "country_name",
         "event_codes",
+        "event_name",
         "hazard_category_name",
         "hazard_type_name",
         "new_displacement_rounded",
@@ -284,6 +285,9 @@ EXPECTED = {
         "full_name",
         "id",
         "is_active",
+        "is_admin",
+        "is_directors_office",
+        "is_reporting_team",
     ],
 }
 

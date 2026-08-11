@@ -10,6 +10,12 @@ from utils.graphene.ordering import strip_direction
 
 
 class UserFilter(MultiWordSearchFilterSet):
+    # The role booleans are computed per user from their portfolios (see
+    # UserPortfolioMetaDataLoader), so there is no column to ORDER BY. Take the active
+    # ordering so they can be annotated on demand — they are Exists subqueries, and the
+    # default user list has no reason to pay for three of them.
+    accepts_ordering = True
+
     id = IDFilter(field_name="id", lookup_expr="exact")
     email = django_filters.CharFilter(field_name="email", lookup_expr="iexact")
     role_in = StringListFilter(method="filter_role_in")
@@ -48,12 +54,33 @@ class UserFilter(MultiWordSearchFilterSet):
             return queryset
         return queryset.filter(groups__permissions__codename__in=value)
 
+    # Mirrors UserPortfolioMetaDataLoader: each flag is "does this user hold a portfolio with
+    # that role". Exists rather than a join so the annotation cannot multiply user rows on a
+    # list that already carries to-many portfolio filters.
+    ROLE_FLAG_ANNOTATIONS = {
+        "is_admin": USER_ROLE.ADMIN,
+        "is_directors_office": USER_ROLE.DIRECTORS_OFFICE,
+        "is_reporting_team": USER_ROLE.REPORTING_TEAM,
+    }
+
+    def __init__(self, *args, ordering=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ordering_fields = {strip_direction(field) for field in ordering.split(",") if field} if ordering else set()
+
     @property
     def qs(self):
         # No prefetch_related("portfolios"): UserType serves portfolios via its own resolver,
         # not off the instance, so the eager prefetch was a dead load. The .distinct() stays —
         # it is load-bearing for the to-many portfolio filters (see FUTURE_WORK).
-        return super().qs.distinct()
+        queryset = super().qs.distinct()
+        annotations = {
+            flag: models.Exists(Portfolio.objects.filter(user=models.OuterRef("pk"), role=role.value))
+            for flag, role in self.ROLE_FLAG_ANNOTATIONS.items()
+            if flag in self.ordering_fields
+        }
+        if annotations:
+            queryset = queryset.annotate(**annotations)
+        return queryset
 
 
 class PortfolioFilter(django_filters.FilterSet):

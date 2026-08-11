@@ -46,11 +46,12 @@ class Conflict(models.Model):
 
 class Disaster(models.Model):
     # giddPublicDisasters. Same unauthenticated route; keys are idmc-website-components'
-    # Gidd/EventsTable sortable columns.
+    # Gidd/EventsTable sortable columns (including the hand-written eventName column).
     ORDERING_ALLOWLIST = frozenset(
         {
             "country_name",
             "event_codes",
+            "event_name",
             "hazard_category_name",
             "hazard_type_name",
             "new_displacement_rounded",

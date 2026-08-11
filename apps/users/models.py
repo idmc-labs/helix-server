@@ -26,6 +26,9 @@ class User(AbstractUser):
             "full_name",
             "id",
             "is_active",
+            "is_admin",
+            "is_directors_office",
+            "is_reporting_team",
         }
     )
 
