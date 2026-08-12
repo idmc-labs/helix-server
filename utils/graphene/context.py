@@ -10,7 +10,7 @@ from apps.country.dataloaders import (
     CountryMonitoringExpertLoader,
     MonitoringSubRegionCountryCountLoader,
     MonitoringSubRegionRegionalCoordinatorLoader,
-    TotalFigureThisYearByCountryCategoryEventTypeLoader,
+    TotalFigureThisYearByCountryLoader,
 )
 from apps.crisis.dataloaders import (
     CrisisReviewCountLoader,
@@ -27,7 +27,6 @@ from apps.entry.dataloaders import (
     TotalIDPFigureByEntryLoader,
     TotalNDFigureByEntryLoader,
 )
-from apps.entry.models import Figure
 from apps.event.dataloaders import (
     EventEntryCountLoader,
     EventFigureTypologyLoader,
@@ -142,40 +141,10 @@ class GQLContext:
         return MaxStockIDPFigureEndDateByEventLoader()
 
     @cached_property
-    def country_country_this_year_idps_disaster_loader(self):
-        from apps.crisis.models import Crisis
-
-        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
-        )
-
-    @cached_property
-    def country_country_this_year_idps_conflict_loader(self):
-        from apps.crisis.models import Crisis
-
-        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
-        )
-
-    @cached_property
-    def country_country_this_year_nd_conflict_loader(self):
-        from apps.crisis.models import Crisis
-
-        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
-        )
-
-    @cached_property
-    def country_country_this_year_nd_disaster_loader(self):
-        from apps.crisis.models import Crisis
-
-        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
-        )
+    def country_country_this_year_figures_loader(self):
+        # One loader for the four (category, event type) totals: they share a query, so
+        # they must share the batch that runs it.
+        return TotalFigureThisYearByCountryLoader()
 
     @cached_property
     def monitoring_sub_region_country_count_loader(self):

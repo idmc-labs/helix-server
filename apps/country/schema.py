@@ -1,3 +1,5 @@
+from operator import itemgetter
+
 import graphene
 from graphene.types.utils import get_type
 from graphene_django_extras import (
@@ -204,28 +206,36 @@ class CountryType(RelationBatchedDjangoObjectType):
         value = getattr(root, Country.IDP_DISASTER_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_idps_disaster_loader.load(root.id)
+        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+            itemgetter(Country.IDP_DISASTER_ANNOTATE)
+        )
 
     def resolve_total_stock_conflict(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Country.IDP_CONFLICT_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_idps_conflict_loader.load(root.id)
+        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+            itemgetter(Country.IDP_CONFLICT_ANNOTATE)
+        )
 
     def resolve_total_flow_conflict(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Country.ND_CONFLICT_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_nd_conflict_loader.load(root.id)
+        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+            itemgetter(Country.ND_CONFLICT_ANNOTATE)
+        )
 
     def resolve_total_flow_disaster(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Country.ND_DISASTER_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_nd_disaster_loader.load(root.id)
+        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+            itemgetter(Country.ND_DISASTER_ANNOTATE)
+        )
 
     def resolve_geojson_url(root, info, **kwargs):
         return info.context.request.build_absolute_uri(Country.geojson_url(root.iso3))
