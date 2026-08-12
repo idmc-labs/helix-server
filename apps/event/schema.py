@@ -45,7 +45,9 @@ from utils.graphene.types import CustomDjangoListObjectType
 class ViolenceSubObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ViolenceSubType
-        exclude_fields = ("events", "violence")
+        # figures is unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureViolenceSubTypes}).
+        exclude_fields = ("events", "violence", "figures")
 
 
 class ViolenceSubObjectListType(CustomDjangoListObjectType):
@@ -57,7 +59,9 @@ class ViolenceSubObjectListType(CustomDjangoListObjectType):
 class ViolenceType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Violence
-        exclude_fields = ("events",)
+        # figures is unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureViolenceTypes}).
+        exclude_fields = ("events", "figures")
 
     sub_types = DjangoPaginatedListObjectField(
         ViolenceSubObjectListType,
@@ -87,7 +91,9 @@ class ActorListType(CustomDjangoListObjectType):
 class DisasterSubObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterSubType
-        exclude_fields = ("events", "type")
+        # figures is unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureDisasterSubTypes}).
+        exclude_fields = ("events", "type", "figures")
 
 
 class DisasterSubObjectListType(CustomDjangoListObjectType):
@@ -99,7 +105,9 @@ class DisasterSubObjectListType(CustomDjangoListObjectType):
 class DisasterTypeObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterType
-        exclude_fields = ("events", "disaster_sub_category")
+        # figures is unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureDisasterTypes}).
+        exclude_fields = ("events", "disaster_sub_category", "figures")
 
     sub_types = DjangoPaginatedListObjectField(
         DisasterSubObjectListType,
@@ -117,7 +125,9 @@ class DisasterTypeObjectListType(CustomDjangoListObjectType):
 class DisasterSubCategoryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterSubCategory
-        exclude_fields = ("events", "category")
+        # figures is unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureDisasterSubCategories}).
+        exclude_fields = ("events", "category", "figures")
 
     types = DjangoPaginatedListObjectField(
         DisasterTypeObjectListType,
@@ -135,7 +145,9 @@ class DisasterSubCategoryListType(CustomDjangoListObjectType):
 class DisasterCategoryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterCategory
-        exclude_fields = ("events",)
+        # figures is unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureDisasterCategories}).
+        exclude_fields = ("events", "figures")
 
     sub_categories = DjangoPaginatedListObjectField(
         DisasterSubCategoryListType,
@@ -163,6 +175,9 @@ class OsvSubObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = OsvSubType
         filterset_class = OsvSubTypeFilter
+        # figures is unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureOsvSubTypes}).
+        exclude_fields = ("figures",)
 
 
 class OsvSubTypeList(CustomDjangoListObjectType):
@@ -175,6 +190,9 @@ class OtherSubTypeObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = OtherSubType
         filterset_class = OtherSubTypeFilter
+        # figures is unbounded fan-out; figureList has no other-sub-type filter, so there is
+        # no bounded replacement for it.
+        exclude_fields = ("figures",)
 
 
 class OtherSubTypeList(CustomDjangoListObjectType):
@@ -275,6 +293,9 @@ class ContextOfViolenceType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ContextOfViolence
         filterset_class = ContextOfViolenceFilter
+        # figures is unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureContextOfViolence}).
+        exclude_fields = ("figures",)
 
 
 class ContextOfViolenceListType(CustomDjangoListObjectType):

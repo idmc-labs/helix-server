@@ -67,6 +67,9 @@ def convert_json_field_to_scalar(field, registry=None):
 class DisaggregatedAgeType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisaggregatedAge
+        # entry_figure_related is unbounded fan-out; figureList has no disaggregated-age
+        # filter, so there is no bounded replacement for it.
+        exclude_fields = ("entry_figure_related",)
 
     uuid = graphene.String(required=True)
     age_from = graphene.Field(graphene.Int)
@@ -90,6 +93,9 @@ class DisaggregatedStratumType(ObjectType):
 class FigureLocationType(RelationBatchedDjangoObjectType):
     class Meta:
         model = FigureLocation
+        # figures is unbounded fan-out; figureList has no geo-location filter, so there is
+        # no bounded replacement for it.
+        exclude_fields = ("figures",)
 
     accuracy = graphene.Field(AccuracyGrapheneEnum)
     accuracy_display = EnumDescription(source="get_accuracy_display")
@@ -108,6 +114,9 @@ class FigureLocationListType(CustomDjangoListObjectType):
 class FigureTagType(RelationBatchedDjangoObjectType):
     class Meta:
         model = FigureTag
+        # figure_set is unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureTags}).
+        exclude_fields = ("figure_set",)
 
 
 class FigureLastReviewCommentStatusType(ObjectType):

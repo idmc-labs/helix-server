@@ -553,7 +553,6 @@ type ContextOfViolenceType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  figures: [FigureType!]!
   events: [EventType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -1263,7 +1262,6 @@ type DisaggregatedAgeType {
   value: Int
   ageFrom: Int
   ageTo: Int
-  entryFigureRelated: [FigureType!]!
   reportReportRelated: [ReportType!]!
   sexDisplay: EnumDescription
 }
@@ -1288,7 +1286,6 @@ type DisasterCategoryListType {
 type DisasterCategoryType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   subCategories(filters: DisasterSubCategoryFilterDataInputType, ordering: String): DisasterSubCategoryListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -1319,7 +1316,6 @@ type DisasterSubCategoryListType {
 type DisasterSubCategoryType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   types(filters: DisasterTypeFilterDataInputType, ordering: String): DisasterTypeObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -1336,7 +1332,6 @@ type DisasterSubObjectListType {
 type DisasterSubObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
@@ -1360,7 +1355,6 @@ type DisasterTypeObjectListType {
 type DisasterTypeObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   subTypes(filters: DisasterSubTypeFilterDataInputType, ordering: String): DisasterSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -2189,7 +2183,6 @@ type FigureLocationType {
   geocoder: GEOCODER
   geocoderMetadata: JSONString
   geoLocationReviewComments: [UnifiedReviewCommentType!]!
-  figures: [FigureType!]!
   accuracyDisplay: EnumDescription
   identifierDisplay: EnumDescription
   geocoderDisplay: EnumDescription
@@ -2219,7 +2212,6 @@ type FigureTagType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  figureSet: [FigureType!]!
   contextualupdateSet: [ContextualUpdateType!]!
 }
 
@@ -3077,7 +3069,6 @@ type OrganizationType {
   organizationKind: OrganizationKindObjectType
   methodology: String
   parent: OrganizationType
-  sourcedFigures: [FigureType!]!
   publishedEntries: [EntryType!]!
   subOrganizations: [OrganizationType!]!
   contacts(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
@@ -3107,7 +3098,6 @@ input OrganizationUpdateInputType {
 type OsvSubObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   events: [EventType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -3143,7 +3133,6 @@ type OtherSubTypeObjectType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  figures: [FigureType!]!
   events: [EventType!]!
 }
 
@@ -4305,7 +4294,6 @@ type ViolenceSubObjectListType {
 type ViolenceSubObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
 }
@@ -4317,7 +4305,6 @@ input ViolenceSubTypeFilterDataInputType {
 type ViolenceType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   subTypes(filters: ViolenceSubTypeFilterDataInputType, ordering: String): ViolenceSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
