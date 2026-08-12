@@ -136,6 +136,12 @@ class SoftDeleteQueryset(models.QuerySet):
         # that live records still reference.
         self.update(deleted_on=timezone.now())
 
+    # Django marks its own QuerySet.delete this way and Manager.from_queryset honours it, so
+    # `Model.objects.delete()` does not exist. An override without the marker is copied onto
+    # the manager, where it archives every row in the table.
+    delete.alters_data = True
+    delete.queryset_only = True
+
 
 class SoftDeleteModel(models.Model):
     # `deleted_on` marks an archived row, not a removed one: the record stays readable and
