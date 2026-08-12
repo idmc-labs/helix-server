@@ -389,7 +389,7 @@ class Report(MetaInformationArchiveAbstractModel, QueryAbstractModel, FigureDisa
                     )
                 )
             )
-            .order_by("-created_at")
+            .order_by("-created_at", "-id")
             .first()
         )
 

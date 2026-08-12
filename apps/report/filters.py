@@ -59,8 +59,12 @@ class ReportFilter(MultiWordSearchFilterSet):
             return qs
         qs = (
             qs.annotate(
+                # The same "last" as Report.last_generation and ReportLastGenerationLoader:
+                # newest by creation time, pk breaking a tie. Ordering by created_by picked the
+                # generation belonging to the highest user id instead, so a report's review status
+                # was read off a generation the client is never shown.
                 _last_generation_id=Subquery(
-                    ReportGeneration.objects.filter(report=OuterRef("pk")).order_by("-created_by").values("pk")[:1]
+                    ReportGeneration.objects.filter(report=OuterRef("pk")).order_by("-created_at", "-id").values("pk")[:1]
                 )
             )
             .annotate(

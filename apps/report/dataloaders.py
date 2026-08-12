@@ -36,14 +36,14 @@ class ReportLastGenerationLoader(DataLoader):
     is_approved, ordered -created_at, first), so resolving it on a report list was
     an N+1 (see the FIXME on ReportType). This loads the latest generation for all
     batched reports in one query via DISTINCT ON (report_id), preserving the same
-    is_approved annotation and -created_at "latest" semantics.
+    is_approved annotation and "latest" rule (-created_at, pk breaking a tie).
     """
 
     def batch_load_fn(self, keys):
         qs = (
             ReportGeneration.objects.filter(report_id__in=keys)
             .annotate(is_approved=Exists(ReportApproval.objects.filter(generation=OuterRef("pk"), is_approved=True)))
-            .order_by("report_id", "-created_at")
+            .order_by("report_id", "-created_at", "-id")
             .distinct("report_id")
         )
         _map = {generation.report_id: generation for generation in qs}
