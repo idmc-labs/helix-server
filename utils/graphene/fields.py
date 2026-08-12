@@ -20,6 +20,8 @@ from graphene_django_extras.filters.filter import get_filterset_class
 from graphene_django_extras.paginations.pagination import BaseDjangoGraphqlPagination
 from graphene_django_extras.settings import graphql_api_settings
 from graphene_django_extras.utils import get_extra_filters
+from graphql.language.ast import Field as FieldNode
+from graphql.language.ast import FragmentSpread, InlineFragment
 from rest_framework import serializers
 
 from apps.gidd.filters import GIDD_API_TYPE_MAP
@@ -38,6 +40,43 @@ def path_has_list(info):
     e.g: ['countryList', 'results', 1, 'region']
     """
     return bool([each for each in info.path if str(each).isdigit()])
+
+
+def selects_field(info, field_name):
+    """Whether the selection set of the field being resolved asks for `field_name`.
+
+    Fragment spreads and inline fragments are followed. An alias is transparent: the
+    document's `total: totalCount` selects `totalCount`, and `totalCount: results`
+    does not. Anything unreadable — a spread whose definition is missing, a selection
+    node of an unknown kind — counts as asking, so a resolver gating work on this
+    skips the work only when the field is provably absent.
+    """
+    pending = []
+    for field_ast in info.field_asts:
+        if field_ast.selection_set is None:
+            return True
+        pending.extend(field_ast.selection_set.selections)
+    fragments = info.fragments or {}
+    visited_fragments = set()
+    while pending:
+        selection = pending.pop()
+        if isinstance(selection, FieldNode):
+            if selection.name.value == field_name:
+                return True
+        elif isinstance(selection, InlineFragment):
+            pending.extend(selection.selection_set.selections)
+        elif isinstance(selection, FragmentSpread):
+            name = selection.name.value
+            if name in visited_fragments:
+                continue
+            visited_fragments.add(name)
+            fragment = fragments.get(name)
+            if fragment is None:
+                return True
+            pending.extend(fragment.selection_set.selections)
+        else:
+            return True
+    return False
 
 
 class CustomDjangoListObjectBase(DjangoListObjectBase):
@@ -232,6 +271,25 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
 
         return _get_queryset(manager)
 
+    def nested_count(self, info, root, parent_class, child_class, loader_params, page):
+        """The total this document asks for on a nested list, or None when it asks for none.
+
+        A total nobody selected is a query nobody reads, so it is resolved only for
+        documents that select `totalCount`. `page` is the promise of the parent's child
+        rows, which answers the total on its own where it holds them all.
+        """
+        if not selects_field(info, self.type._meta.fields["count"].name):
+            return None
+        if not getattr(self.pagination, "page_size_query_param", None):
+            # Without page params the loader's batch holds every child row of the parent,
+            # so the group it returns already carries the total.
+            return page.then(len)
+        return info.context.get_count_loader(
+            parent_class.__name__,
+            child_class.__name__,
+            loader_params,
+        ).load(root.id)
+
     def list_resolver(self, manager, filterset_class, filtering_args, root, info, **kwargs):
         filter_kwargs = kwargs.get("filters", {})
 
@@ -273,11 +331,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 self.related_name,
                 loader_params,
             ).load(root.id)
-            count = info.context.get_count_loader(
-                parent_class.__name__,
-                child_class.__name__,
-                loader_params,
-            ).load(root.id)
+            count = self.nested_count(info, root, parent_class, child_class, loader_params, qs)
         else:
             accessor = self.accessor or self.related_name
             if accessor:

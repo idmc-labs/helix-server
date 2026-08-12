@@ -8,6 +8,7 @@ from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 from apps.users.enums import USER_ROLE
 from utils.factories import (
+    CountryFactory,
     CrisisFactory,
     EntryFactory,
     EventFactory,
@@ -375,3 +376,219 @@ class TestGenericDataLoaders(HelixGraphQLTestCase):
         vals = {e["id"]: e["totalStockIdpFigures"] for e in results}
         self.assertEqual(vals[str(hi.id)], 500)
         self.assertEqual(vals[str(lo.id)], 100)
+
+
+class TestNestedListTotalCountGating(HelixGraphQLTestCase):
+    """The count of a nested paginated list is resolved only for documents that select it.
+
+    ``totalCount`` is the GraphQL name of ``CustomDjangoListObjectType.count``; a
+    document reaches it directly, through an alias, or through a fragment, and each
+    form must yield the same total as the unbatched relation count. A document that
+    never names it must not pay for the grouped-count query.
+    """
+
+    def setUp(self) -> None:
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        Crisis.objects.all().delete()
+        self.crisis = CrisisFactory.create()
+        self.events = EventFactory.create_batch(3, crisis=self.crisis)
+        self.force_login(self.admin)
+
+    def _run_capturing(self, query):
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.query(query)
+            self.assertResponseNoErrors(response)
+        data = json.loads(response.content)["data"]
+        counts = [q for q in ctx.captured_queries if 'COUNT(*) AS "c"' in q["sql"]]
+        paged = [q for q in ctx.captured_queries if "ROW_NUMBER()" in q["sql"]]
+        return data, paged, counts
+
+    def _events_node(self, data, field="events"):
+        node = next(r for r in data["crisisList"]["results"] if r["id"] == str(self.crisis.id))
+        return node[field]
+
+    def test_total_count_selected_fires_one_count_query(self) -> None:
+        data, paged, counts = self._run_capturing(
+            """
+            query WithTotalCount {
+              crisisList(ordering: "id") {
+                results { id events(pageSize: 2) { totalCount results { id } } }
+              }
+            }
+            """
+        )
+        self.assertEqual(len(counts), 1, [q["sql"] for q in counts])
+        self.assertEqual(len(paged), 1, [q["sql"] for q in paged])
+        self.assertEqual(self._events_node(data)["totalCount"], 3)
+
+    def test_total_count_absent_fires_no_count_query(self) -> None:
+        data, paged, counts = self._run_capturing(
+            """
+            query WithoutTotalCount {
+              crisisList(ordering: "id") {
+                results { id events(pageSize: 2) { results { id } } }
+              }
+            }
+            """
+        )
+        self.assertEqual(counts, [], [q["sql"] for q in counts])
+        # The page itself is still loaded, so the saving is the count query alone.
+        self.assertEqual(len(paged), 1, [q["sql"] for q in paged])
+        self.assertEqual(len(self._events_node(data)["results"]), 2)
+
+    def test_total_count_through_alias(self) -> None:
+        data, _, counts = self._run_capturing(
+            """
+            query AliasedTotalCount {
+              crisisList(ordering: "id") {
+                results { id events(pageSize: 2) { total: totalCount results { id } } }
+              }
+            }
+            """
+        )
+        self.assertEqual(len(counts), 1, [q["sql"] for q in counts])
+        self.assertEqual(self._events_node(data)["total"], 3)
+
+    def test_response_key_totalcount_aliasing_another_field_fires_no_count_query(self) -> None:
+        # The document names `page`, not `totalCount`: the response key is irrelevant, the
+        # selected field decides.
+        data, _, counts = self._run_capturing(
+            """
+            query MisleadingAlias {
+              crisisList(ordering: "id") {
+                results { id events(pageSize: 2) { totalCount: page results { id } } }
+              }
+            }
+            """
+        )
+        self.assertEqual(counts, [], [q["sql"] for q in counts])
+        self.assertEqual(self._events_node(data)["totalCount"], 1)
+
+    def test_total_count_through_fragment(self) -> None:
+        data, _, counts = self._run_capturing(
+            """
+            query FragmentTotalCount {
+              crisisList(ordering: "id") {
+                results { id events(pageSize: 2) { ...Totals results { id } } }
+              }
+            }
+            fragment Totals on EventListType { totalCount }
+            """
+        )
+        self.assertEqual(len(counts), 1, [q["sql"] for q in counts])
+        self.assertEqual(self._events_node(data)["totalCount"], 3)
+
+    def test_total_count_through_nested_fragment(self) -> None:
+        data, _, counts = self._run_capturing(
+            """
+            query NestedFragmentTotalCount {
+              crisisList(ordering: "id") {
+                results { id events(pageSize: 2) { ...Outer results { id } } }
+              }
+            }
+            fragment Outer on EventListType { ...Inner }
+            fragment Inner on EventListType { renamed: totalCount }
+            """
+        )
+        self.assertEqual(len(counts), 1, [q["sql"] for q in counts])
+        self.assertEqual(self._events_node(data)["renamed"], 3)
+
+    def test_total_count_through_inline_fragment(self) -> None:
+        data, _, counts = self._run_capturing(
+            """
+            query InlineFragmentTotalCount {
+              crisisList(ordering: "id") {
+                results { id events(pageSize: 2) { ... on EventListType { totalCount } results { id } } }
+              }
+            }
+            """
+        )
+        self.assertEqual(len(counts), 1, [q["sql"] for q in counts])
+        self.assertEqual(self._events_node(data)["totalCount"], 3)
+
+    def test_selecting_and_not_selecting_agree_on_the_page(self) -> None:
+        # Equivalence: gating the count changes nothing else about the payload.
+        page_query = """
+            query Page {
+              crisisList(ordering: "id") {
+                results { id events(pageSize: 2) { %s results { id } page pageSize } }
+              }
+            }
+        """
+        with_count, _, _ = self._run_capturing(page_query % "totalCount")
+        without_count, _, _ = self._run_capturing(page_query % "")
+        counted = self._events_node(with_count)
+        uncounted = self._events_node(without_count)
+        self.assertEqual(counted["results"], uncounted["results"])
+        self.assertEqual((counted["page"], counted["pageSize"]), (uncounted["page"], uncounted["pageSize"]))
+
+
+class TestUnpaginatedNestedListTotalCount(HelixGraphQLTestCase):
+    """A nested list with no page params loads every child row of each parent, so its
+    total is the size of the loaded group and costs no query of its own."""
+
+    def setUp(self) -> None:
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.entry = EntryFactory.create()
+        self.event = EventFactory.create()
+        Figure.objects.all().delete()
+        self.figure = FigureFactory.create(entry=self.entry, event=self.event)
+        self.sources = OrganizationFactory.create_batch(3)
+        self.figure.sources.add(*self.sources)
+        # A source organization in two countries: a filter joining that M2M would fan the
+        # organization out into two rows, and the total must not follow.
+        self.countries = CountryFactory.create_batch(2)
+        self.sources[0].countries.add(*self.countries)
+        self.childless = FigureFactory.create(entry=self.entry, event=self.event)
+        self.force_login(self.admin)
+
+    def _run_capturing(self, query, variables=None):
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.query(query, variables=variables)
+            self.assertResponseNoErrors(response)
+        data = json.loads(response.content)["data"]
+        counts = [q for q in ctx.captured_queries if 'COUNT(*) AS "c"' in q["sql"]]
+        return data, counts
+
+    def _sources_node(self, data):
+        return next(r for r in data["figureList"]["results"] if r["id"] == str(self.figure.id))["sources"]
+
+    def test_total_count_needs_no_count_query(self) -> None:
+        data, counts = self._run_capturing(
+            """
+            query FigureSources {
+              figureList(ordering: "id") {
+                results { id sources { totalCount results { id } } }
+              }
+            }
+            """
+        )
+        node = self._sources_node(data)
+        self.assertEqual(node["totalCount"], 3)
+        self.assertEqual({s["id"] for s in node["results"]}, {str(s.id) for s in self.sources})
+        childless = next(r for r in data["figureList"]["results"] if r["id"] == str(self.childless.id))
+        self.assertEqual(childless["sources"]["totalCount"], 0)
+        self.assertEqual(childless["sources"]["results"], [])
+        self.assertEqual(counts, [], [q["sql"] for q in counts])
+
+    def test_total_count_matches_the_relation_count_under_a_filter(self) -> None:
+        # The filter selects the two-country organization; the total counts organizations,
+        # not the rows a joined M2M would have produced.
+        data, counts = self._run_capturing(
+            """
+            query FilteredFigureSources($countries: [ID!]) {
+              figureList(ordering: "id") {
+                results { id sources(filters: { countries: $countries }) { totalCount results { id } } }
+              }
+            }
+            """,
+            variables={"countries": [str(c.id) for c in self.countries]},
+        )
+        node = self._sources_node(data)
+        self.assertEqual(node["totalCount"], 1)
+        self.assertEqual([s["id"] for s in node["results"]], [str(self.sources[0].id)])
+        self.assertEqual(
+            node["totalCount"],
+            self.figure.sources.filter(countries__in=self.countries).distinct().count(),
+        )
+        self.assertEqual(counts, [], [q["sql"] for q in counts])
