@@ -269,9 +269,10 @@ class EventFilter(MultiWordSearchFilterSet):
         # nd/idp totals are annotated only when needed: aggregate_figures set, or sorting by them
         # (else resolvers read the default dataloaders). We need BOTH a subquery and a CTE; a CTE
         # alone can't do it — it is fixed to the default unfiltered scope, so aggregate_figures'
-        # filtered values must come from the parametrized subquery. The CTE is just the faster
-        # set-based path for the default values when sorting (big win on event; crisis/country are
-        # low-cardinality, so ~neutral there, kept for parity).
+        # filtered values must come from the parametrized subquery. When sorting, the CTE is much
+        # the cheaper of the two: its cost is one grouped pass over the figure table, while the
+        # subquery's is per event row. The same holds on crisis and country, where the row count is
+        # small but each row still drives its own aggregation over the whole figure table.
         # TODO: move aggregate_figures onto dataloaders -> the subquery arm goes away.
         figure_disaggregation = Event._total_figure_disaggregation_subquery(
             figures=figure_qs,
