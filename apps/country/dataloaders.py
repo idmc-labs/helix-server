@@ -43,7 +43,8 @@ class MonitoringSubRegionCountryCountLoader(DataLoader):
             .annotate(country_count=models.Count("countries", distinct=True))
             .values("id", "country_count")
         )
-        return Promise.resolve([item["country_count"] for item in qs])
+        _map = {item["id"]: item["country_count"] for item in qs}
+        return Promise.resolve([_map.get(key, 0) for key in keys])
 
 
 # --- N+1 fixes for countryList per-object resolvers (coverage follow-up) ---
