@@ -1,4 +1,4 @@
-from django.db.models import Exists, OuterRef, Prefetch
+from django.db.models import Exists, OuterRef, Prefetch, prefetch_related_objects
 from promise import Promise
 from promise.dataloader import DataLoader
 
@@ -53,25 +53,30 @@ class ReportLastGenerationLoader(DataLoader):
 class ReportTotalDisaggregationLoader(DataLoader):
     """Batch ReportType.total_disaggregation across a report list.
 
-    total_disaggregation per report = get_filter_kwargs (one query per filter M2M) +
-    a Sum aggregate over the report's filtered figures. Resolved per-row it was an N+1
-    of ~19 queries/report. The per-report aggregate cannot be merged (each report has a
-    distinct figure filter), but the ~18 M2M filter reads CAN: prefetch them (id-only)
-    for the whole batch so get_filter_kwargs reads ids from cache. That collapses the
-    query count from ~19*N to ~18 + N (one aggregate per report), cutting DB round-trips
-    sharply (the dominant win over the network).
+    total_disaggregation per report = get_filter_kwargs + a Sum aggregate over the
+    report's filtered figures. The per-report aggregate cannot be merged (each report has
+    a distinct figure filter), but the ~18 M2M filter reads CAN: one id-only eager load
+    covers the whole batch, so get_filter_kwargs reads ids from a prefetch cache instead
+    of a query per relation per report.
+
+    That eager load is for the reports whose kwargs the cache misses: a cached report
+    resolves without touching a single filter relation.
     """
 
     def batch_load_fn(self, keys):
-        reports = Report.objects.filter(id__in=keys).prefetch_related(
-            *[
-                Prefetch(
-                    field,
-                    queryset=Report._meta.get_field(field).related_model._default_manager.only("id"),
-                )
-                for field in _REPORT_FILTER_M2M_FIELDS
-            ]
-        )
+        reports = list(Report.objects.filter(id__in=keys))
+        uncached = Report.with_uncached_filter_kwargs(reports)
+        if uncached:
+            prefetch_related_objects(
+                uncached,
+                *[
+                    Prefetch(
+                        field,
+                        queryset=Report._meta.get_field(field).related_model._default_manager.only("id"),
+                    )
+                    for field in _REPORT_FILTER_M2M_FIELDS
+                ],
+            )
         _map = {report.id: report.total_disaggregation for report in reports}
         return Promise.resolve([_map.get(key) for key in keys])
 
