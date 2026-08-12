@@ -253,39 +253,31 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 raise NotImplementedError(f"Dataloader error: fetching without dataloader. {info.path}")
             parent_class = root._meta.model
             child_class = manager.model
+            # The loader instance is selected by these arguments (see GQLContext.get_dataloader),
+            # so every argument that changes the rows a batch returns is passed here.
+            loader_params = dict(
+                parent=parent_class,
+                child=child_class,
+                accessor=self.accessor,
+                related_name=self.related_name,
+                reverse_related_name=self.reverse_related_name,
+                pagination=self.pagination,
+                filterset_class=filterset_class,
+                filter_kwargs=filter_kwargs,
+                request=info.context.request,
+                **kwargs,
+            )
             # TODO: qs should be executed only when we access the results node in the future
             qs = info.context.get_dataloader(
                 parent_class.__name__,
                 self.related_name,
-            ).load(
-                root.id,
-                parent=parent_class,
-                child=child_class,
-                accessor=self.accessor,
-                related_name=self.related_name,
-                reverse_related_name=self.reverse_related_name,
-                pagination=self.pagination,
-                filterset_class=filterset_class,
-                filter_kwargs=filter_kwargs,
-                request=info.context.request,
-                **kwargs,
-            )
+                loader_params,
+            ).load(root.id)
             count = info.context.get_count_loader(
                 parent_class.__name__,
                 child_class.__name__,
-            ).load(
-                root.id,
-                parent=parent_class,
-                child=child_class,
-                accessor=self.accessor,
-                related_name=self.related_name,
-                reverse_related_name=self.reverse_related_name,
-                pagination=self.pagination,
-                filterset_class=filterset_class,
-                filter_kwargs=filter_kwargs,
-                request=info.context.request,
-                **kwargs,
-            )
+                loader_params,
+            ).load(root.id)
         else:
             accessor = self.accessor or self.related_name
             if accessor:

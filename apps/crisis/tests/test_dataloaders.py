@@ -217,6 +217,125 @@ class TestGenericDataLoaders(HelixGraphQLTestCase):
             f"{multi_parent_queries} for 3.",
         )
 
+    def test_aliased_page_sizes_each_get_their_own_page(self) -> None:
+        # Two aliases of one field are two resolutions with different arguments. A loader
+        # resolves its batch with one argument set and caches promises by parent id, so the
+        # aliases must not share an instance.
+        query = """
+            query CrisisEventPages {
+              crisisList(ordering: "id") {
+                results {
+                  id
+                  small: events(pageSize: 1) { totalCount results { id } }
+                  big: events(pageSize: 3) { totalCount results { id } }
+                }
+              }
+            }
+        """
+        data = self._run(query)
+        node = next(r for r in data["crisisList"]["results"] if r["id"] == str(self.crisis.id))
+
+        self.assertEqual(len(node["small"]["results"]), 1)
+        self.assertEqual(len(node["big"]["results"]), 3)
+        # Both aliases count the same (unpaged) related set.
+        self.assertEqual(node["small"]["totalCount"], 3)
+        self.assertEqual(node["big"]["totalCount"], 3)
+
+    def test_filtered_alias_does_not_narrow_its_unfiltered_sibling(self) -> None:
+        # Own crisis, so the event types under it are exactly these two.
+        Crisis.objects.all().delete()
+        crisis = CrisisFactory.create()
+        conflict = EventFactory.create(crisis=crisis, event_type=Crisis.CRISIS_TYPE.CONFLICT)
+        disaster = EventFactory.create(crisis=crisis, event_type=Crisis.CRISIS_TYPE.DISASTER)
+        query = """
+            query CrisisEventFilters {
+              crisisList(ordering: "id") {
+                results {
+                  id
+                  everything: events(pageSize: 50) { totalCount results { id } }
+                  conflicts: events(pageSize: 50, filters: { eventTypes: ["CONFLICT"] }) {
+                    totalCount
+                    results { id }
+                  }
+                }
+              }
+            }
+        """
+        data = self._run(query)
+        node = next(r for r in data["crisisList"]["results"] if r["id"] == str(crisis.id))
+
+        everything = {e["id"] for e in node["everything"]["results"]}
+        conflicts = {e["id"] for e in node["conflicts"]["results"]}
+
+        self.assertEqual(everything, {str(conflict.id), str(disaster.id)})
+        self.assertEqual(node["everything"]["totalCount"], 2)
+        self.assertEqual(conflicts, {str(conflict.id)})
+        self.assertEqual(node["conflicts"]["totalCount"], 1)
+
+    def test_aliased_roots_do_not_leak_into_each_other(self) -> None:
+        # Same nested field under two aliased top-level lists: separate argument sets again.
+        query = """
+            query TwoCrisisRoots {
+              first: crisisList(ordering: "id") {
+                results { id events(pageSize: 1) { results { id } } }
+              }
+              second: crisisList(ordering: "id") {
+                results { id events(pageSize: 3) { results { id } } }
+              }
+            }
+        """
+        data = self._run(query)
+        first = next(r for r in data["first"]["results"] if r["id"] == str(self.crisis.id))
+        second = next(r for r in data["second"]["results"] if r["id"] == str(self.crisis.id))
+
+        self.assertEqual(len(first["events"]["results"]), 1)
+        self.assertEqual(len(second["events"]["results"]), 3)
+
+    def _paged_and_count_queries(self, captured):
+        # The window-CTE page query and the grouped-count query the two loaders emit.
+        paged = [q for q in captured if "ROW_NUMBER()" in q["sql"]]
+        counts = [q for q in captured if 'COUNT(*) AS "c"' in q["sql"]]
+        return paged, counts
+
+    def test_one_query_per_argument_set_across_all_parents(self) -> None:
+        # Batching contract: every parent of one argument set shares a single page query and a
+        # single count query, and a second page size adds one page query, not one per parent.
+        Crisis.objects.all().delete()
+        for _ in range(4):
+            EventFactory.create_batch(3, crisis=CrisisFactory.create())
+
+        one_arg_set = """
+            query OneArgSet {
+              crisisList(pageSize: 50, ordering: "id") {
+                results { id events(pageSize: 5) { totalCount results { id } } }
+              }
+            }
+        """
+        with CaptureQueriesContext(connection) as ctx:
+            data = self._run(one_arg_set)
+        self.assertEqual(len(data["crisisList"]["results"]), 4)
+        paged, counts = self._paged_and_count_queries(ctx.captured_queries)
+        self.assertEqual(len(paged), 1, [q["sql"] for q in paged])
+        self.assertEqual(len(counts), 1, [q["sql"] for q in counts])
+
+        two_arg_sets = """
+            query TwoArgSets {
+              crisisList(pageSize: 50, ordering: "id") {
+                results {
+                  id
+                  small: events(pageSize: 1) { totalCount results { id } }
+                  big: events(pageSize: 5) { totalCount results { id } }
+                }
+              }
+            }
+        """
+        with CaptureQueriesContext(connection) as ctx:
+            self._run(two_arg_sets)
+        paged, counts = self._paged_and_count_queries(ctx.captured_queries)
+        self.assertEqual(len(paged), 2, [q["sql"] for q in paged])
+        # A total is pagination-independent, so both aliases are counted by one loader.
+        self.assertEqual(len(counts), 1, [q["sql"] for q in counts])
+
     def test_nested_list_ordered_by_gated_figure_count_annotation(self) -> None:
         # Regression guard: a nested paginated list ordered by a GATED figure-count annotation
         # (total_stock_idp_figures) must not FieldError. The annotation is added only when the

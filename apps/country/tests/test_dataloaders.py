@@ -2,7 +2,7 @@ import json
 
 from apps.country.dataloaders import MonitoringSubRegionCountryCountLoader
 from apps.users.enums import USER_ROLE
-from utils.factories import CountryFactory, MonitoringSubRegionFactory
+from utils.factories import ContactFactory, CountryFactory, MonitoringSubRegionFactory
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
@@ -47,3 +47,39 @@ class TestMonitoringSubRegionCountryCountLoader(HelixGraphQLTestCase):
         self.assertEqual(counts[str(self.region_two.id)], 2)
         self.assertEqual(counts[str(self.region_three.id)], 3)
 
+
+class TestTwoRelationsToTheSameChild(HelixGraphQLTestCase):
+    """Country.contacts and Country.operatingContacts both count Contact rows for the same
+    parent id, and count different ones: each needs its own CountLoader.
+    """
+
+    def setUp(self) -> None:
+        self.country = CountryFactory.create()
+        other_country = CountryFactory.create()
+
+        # 1 contact whose country is self.country ...
+        ContactFactory.create(country=self.country)
+        # ... and 2 contacts operating in it (their own country is elsewhere).
+        for contact in ContactFactory.create_batch(2, country=other_country):
+            contact.countries_of_operation.set([self.country])
+
+        self.force_login(create_user_with_role(USER_ROLE.ADMIN.name))
+
+    def test_each_relation_reports_its_own_count(self) -> None:
+        response = self.query(
+            """
+            query { countryList(ordering: "id") { results {
+              id
+              contacts(pageSize: 10) { totalCount results { id } }
+              operatingContacts(pageSize: 10) { totalCount results { id } }
+            } } }
+            """
+        )
+        self.assertResponseNoErrors(response)
+        results = {row["id"]: row for row in json.loads(response.content)["data"]["countryList"]["results"]}
+        node = results[str(self.country.id)]
+
+        self.assertEqual(node["contacts"]["totalCount"], 1)
+        self.assertEqual(len(node["contacts"]["results"]), 1)
+        self.assertEqual(node["operatingContacts"]["totalCount"], 2)
+        self.assertEqual(len(node["operatingContacts"]["results"]), 2)

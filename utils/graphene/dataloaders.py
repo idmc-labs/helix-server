@@ -1,3 +1,4 @@
+import hashlib
 from collections import defaultdict
 
 from django.db.models import (
@@ -108,10 +109,45 @@ class DataLoaderException(Exception):
     """
 
 
-class CountLoader(DataLoader):
-    def load(
+def _stable_repr(value):
+    """Order-independent, type-aware string for a loader argument.
+
+    Dict and set ordering carries no meaning to a filterset, so it must not change the
+    string. Values are tagged with their type so `1`, `"1"` and `True` stay distinct.
+    """
+    if isinstance(value, dict):
+        items = sorted(value.items(), key=lambda item: str(item[0]))
+        return "{" + ",".join(f"{_stable_repr(k)}={_stable_repr(v)}" for k, v in items) + "}"
+    if isinstance(value, (list, tuple)):
+        return "[" + ",".join(_stable_repr(item) for item in value) + "]"
+    if isinstance(value, (set, frozenset)):
+        return "s[" + ",".join(sorted(_stable_repr(item) for item in value)) + "]"
+    if isinstance(value, type):
+        return f"{value.__module__}.{value.__qualname__}"
+    return f"{type(value).__name__}:{value!r}"
+
+
+def call_signature(params):
+    """Hash of the arguments one nested-list resolution passes to its loader.
+
+    A loader instance resolves its whole batch with a single set of arguments and caches
+    promises by parent id alone, so two resolutions may share an instance only when this
+    hash matches. `request` is excluded: it is fixed for the lifetime of a `GQLContext`,
+    which is the lifetime of the loader registry.
+    """
+    signature = {key: value for key, value in params.items() if key != "request"}
+    if "pagination" in signature:
+        # A pagination instance belongs to a field definition and holds no per-call state; its
+        # class is what decides whether the paginated or unpaginated batch path runs.
+        signature["pagination"] = type(signature["pagination"])
+    return hashlib.sha1(_stable_repr(signature).encode()).hexdigest()
+
+
+class RelationCallLoader(DataLoader):
+    """Holds the arguments of one nested-list resolution for its whole batch."""
+
+    def __init__(
         self,
-        key,
         parent,
         child,
         related_name=None,
@@ -123,6 +159,7 @@ class CountLoader(DataLoader):
         request=None,
         **kwargs,
     ):
+        super().__init__()
         self.parent = parent
         self.child = child
         self.related_name = related_name
@@ -134,7 +171,20 @@ class CountLoader(DataLoader):
         self.request = request
         # kwargs carries pagination kwargs
         self.kwargs = kwargs
-        return super().load(key)
+
+
+class CountLoader(RelationCallLoader):
+    # The arguments a count batch is resolved with: the relation, the filters and the
+    # requesting user. Pagination is not among them - a total counts the unpaged set.
+    CALL_PARAMS = (
+        "parent",
+        "child",
+        "related_name",
+        "reverse_related_name",
+        "filterset_class",
+        "filter_kwargs",
+        "request",
+    )
 
     def batch_load_fn(self, keys):
         # queryset by related names
@@ -160,34 +210,7 @@ class CountLoader(DataLoader):
         return Promise.resolve([related_objects_by_parent.get(key) or 0 for key in keys])
 
 
-class OneToManyLoader(DataLoader):
-    def load(
-        self,
-        key,
-        parent,
-        child,
-        related_name=None,
-        reverse_related_name=None,
-        accessor=None,
-        pagination=None,
-        filterset_class=None,
-        filter_kwargs=None,
-        request=None,
-        **kwargs,
-    ):
-        self.parent = parent
-        self.child = child
-        self.related_name = related_name
-        self.reverse_related_name = reverse_related_name
-        self.accessor = accessor
-        self.pagination = pagination
-        self.filterset_class = filterset_class
-        self.filter_kwargs = filter_kwargs
-        self.request = request
-        # kwargs carries pagination kwargs
-        self.kwargs = kwargs
-        return super().load(key)
-
+class OneToManyLoader(RelationCallLoader):
     def _filtered_qs(self):
         # Forward ordering to filtersets that opt in, so the (gated) figure-count annotations the
         # ordering references actually get added — mirrors the top-level path in
