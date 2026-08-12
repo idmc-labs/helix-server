@@ -116,6 +116,12 @@ ENUM_SPECS: List[EnumSpec] = [
         set(),
     ),
     (
+        "PCODE_ACCURACY",
+        "FigureLocation.PCODE_ACCURACY",
+        FigureLocation.PCODE_ACCURACY,
+        set(),
+    ),
+    (
         "ATTACHMENT_FOR_CHOICES",
         "Attachment.FOR_CHOICES",
         Attachment.FOR_CHOICES,

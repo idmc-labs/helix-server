@@ -238,6 +238,25 @@ class FIGURE_LOCATION_ACCURACY(enum.Enum):
     }
 
 
+# Clone of FigureLocation.PCODE_ACCURACY
+class PCODE_ACCURACY(enum.Enum):
+    ADM0 = 0
+    ADM1 = 1
+    ADM2 = 2
+    ADM3 = 3
+    ADM4 = 4
+    ADM5 = 5
+
+    __labels__ = {
+        ADM0: _("ADM0"),
+        ADM1: _("ADM1"),
+        ADM2: _("ADM2"),
+        ADM3: _("ADM3"),
+        ADM4: _("ADM4"),
+        ADM5: _("ADM5"),
+    }
+
+
 # Clone of Attachment.FOR_CHOICES
 class ATTACHMENT_FOR_CHOICES(enum.Enum):
     ENTRY = 0

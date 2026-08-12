@@ -16,6 +16,7 @@ from .constants import (
     FIGURE_TERMS,
     FIGURE_UNIT,
     HULK_BULK_IMPORT_STATUS,
+    PCODE_ACCURACY,
 )
 from .parsers import enum_parser, json_parser
 
@@ -36,5 +37,7 @@ FigureDisplacementOccurredType = Annotated[FIGURE_DISPLACEMENT_OCCURRED, enum_pa
 FigureLocationIdentifierType = Annotated[FIGURE_LOCATION_IDENTIFIER, enum_parser(FIGURE_LOCATION_IDENTIFIER)]
 FigureLocationGeocoderType = Annotated[FIGURE_LOCATION_GEOCODER, enum_parser(FIGURE_LOCATION_GEOCODER)]
 FigureLocationAccuracyType = Annotated[FIGURE_LOCATION_ACCURACY, enum_parser(FIGURE_LOCATION_ACCURACY)]
+
+FigureLocationPcodeAccuracyType = Annotated[PCODE_ACCURACY, enum_parser(PCODE_ACCURACY)]
 
 HulkBulkImportStatusField = Annotated[HULK_BULK_IMPORT_STATUS, enum_parser(HULK_BULK_IMPORT_STATUS)]

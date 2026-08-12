@@ -389,6 +389,12 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
                         geocoder=loc_geocoder,
                         latitude=loc_latitude,
                         longitude=loc_longitude,
+                        # p-code fields (optional). This example has no gazetteer, so
+                        # these are illustrative: pcode_source is free text, and
+                        # pcode_accuracy is one of PCODE_ACCURACY (ADM0..ADM5).
+                        pcode=f"{country_iso2}-SAMPLE",
+                        pcode_source="OCHA_COD",
+                        pcode_accuracy="ADM0",
                     )
                     for (
                         loc_uuid,
