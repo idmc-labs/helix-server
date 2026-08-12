@@ -194,7 +194,9 @@ class HulkFigureImportLocation(HulkBaseModel, pyhelix_models.HulkFigureImportLoc
             "geocoder": self.geocoder.name,
             "lat": self.latitude,
             "lon": self.longitude,
-            # TODO: Other fields?
+            "pcode": self.pcode,
+            "pcodeSource": self.pcode_source,
+            "pcodeAccuracy": self.pcode_accuracy.name if self.pcode_accuracy else None,
         }
 
 
