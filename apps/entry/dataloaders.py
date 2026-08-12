@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
-from django.db.models import Case, CharField, F, Q, When
+from django.db.models import Case, CharField, F, When
 from promise import Promise
 from promise.dataloader import DataLoader
 
@@ -85,13 +85,11 @@ class FigureLastReviewCommentStatusLoader(DataLoader):
     def batch_load_fn(self, keys):
         review_comment_qs = (
             UnifiedReviewComment.objects.filter(
-                Q(figure__in=keys)
-                and Q(
-                    comment_type__in=[
-                        UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN,
-                        UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED,
-                    ]
-                )
+                figure__in=keys,
+                comment_type__in=[
+                    UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN,
+                    UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED,
+                ],
             )
             .order_by(
                 "figure_id",
