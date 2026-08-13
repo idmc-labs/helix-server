@@ -1583,6 +1583,7 @@ input EventFilterDataInputType {
   eventTypes: [String!]
   countries: [ID!]
   osvSubTypeByIds: [ID!]
+  otherSubTypes: [ID!]
   disasterSubTypes: [ID!]
   violenceTypes: [ID!]
   violenceSubTypes: [ID!]

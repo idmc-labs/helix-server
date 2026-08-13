@@ -14,12 +14,14 @@ from utils.factories import (
     EventFactory,
     FigureFactory,
     FigureLocationFactory,
+    OtherSubtypeFactory,
 )
 from utils.graphene.pagination import nulls_last_order_queryset
 from utils.tests import HelixTestCase
 
 CONFLICT = Crisis.CRISIS_TYPE.CONFLICT
 DISASTER = Crisis.CRISIS_TYPE.DISASTER
+OTHER = Crisis.CRISIS_TYPE.OTHER
 
 
 class TestEventFilter(HelixTestCase):
@@ -39,6 +41,26 @@ class TestEventFilter(HelixTestCase):
         expected = [e2]
 
         self.assertQuerySetEqual(expected, obtained)
+
+    def test_other_sub_types_filter(self):
+        # Same pass-through shape as the violence/disaster sub-type filters: an event of another
+        # type is not narrowed by a sub-type that cannot apply to it. `OtherSubTypeObjectType`
+        # no longer exposes its events, so pairing this with `event_types` is how one
+        # sub-type's events are read.
+        sub_type = OtherSubtypeFactory.create()
+        other_sub_type = OtherSubtypeFactory.create()
+        matching = EventFactory.create(event_type=OTHER, other_sub_type=sub_type)
+        EventFactory.create(event_type=OTHER, other_sub_type=other_sub_type)
+        conflict = EventFactory.create(event_type=CONFLICT)
+
+        obtained = self.filter_class(data=dict(other_sub_types=[str(sub_type.id)])).qs
+        self.assertQuerySetEqual([matching, conflict], obtained)
+
+        obtained = self.filter_class(data=dict(event_types=[OTHER.name], other_sub_types=[str(sub_type.id)])).qs
+        self.assertQuerySetEqual([matching], obtained)
+
+        # No value must not narrow anything.
+        self.assertEqual(self.filter_class(data=dict(other_sub_types=[])).qs.count(), 3)
 
     def test_crisis_filter(self):
         c1 = CrisisFactory.create()

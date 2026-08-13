@@ -50,6 +50,7 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     countries = IDListFilter(method="filter_countries")
 
     osv_sub_type_by_ids = IDListFilter(method="filter_osv_sub_types")
+    other_sub_types = IDListFilter(method="filter_other_sub_types")
     # used in report entry table
     disaster_sub_types = IDListFilter(method="filter_disaster_sub_types")
     violence_types = IDListFilter(method="filter_violence_types")
@@ -159,6 +160,14 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
         if value:
             return qs.filter(~Q(violence__name=OSV) | Q(osv_sub_type__in=value))
         return qs
+
+    def filter_other_sub_types(self, qs, name, value):
+        if not value:
+            return qs
+        # Same shape as the violence/disaster sub-type filters: an event of another type is not
+        # narrowed by a sub-type that cannot apply to it. Pair with `event_types` to read one
+        # sub-type's events, which is how `OtherSubTypeObjectType.events` is replaced.
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.OTHER.value) | Q(other_sub_type__in=value))
 
     def filter_qa_rule(self, qs, name, value):
         if QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name == value:
