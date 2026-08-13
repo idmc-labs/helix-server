@@ -19,6 +19,16 @@ fx generated/helix-import.jsonl
 >
 > fx -> https://github.com/antonmedv/fx
 
+## Dataset
+
+`dataset/` holds a Peru INDECI export plus six rows (one per country) whose
+`location` display name, `analysis_text` and `source_excerpt_text` carry
+characters cp1252 cannot represent — Arabic/Persian script (Afghanistan),
+U+2017 (Haiti), a combining cedilla (Iraq), Devanagari transliteration
+diacritics (Nepal), Arabic transliteration diacritics (Palestine) and
+hamza/ayin modifiers (Yemen). They keep the example honest about non-Latin
+place names, which the real datasets are full of.
+
 ## Troubleshooting
 
 ### Using local running helix-server

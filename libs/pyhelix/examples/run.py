@@ -19,6 +19,7 @@ import json
 import logging
 import logging.config
 import pathlib
+import sys
 import typing
 import uuid
 
@@ -87,6 +88,15 @@ LOGGING_CONFIG = {
 
 
 logging.config.dictConfig(LOGGING_CONFIG)
+
+# The dataset carries place names and narratives in any script. A console whose
+# encoding cannot represent them (cp1252 on a default Windows install) turns
+# every log line quoting one into a logging error, so force UTF-8 output and
+# degrade unrepresentable characters instead of failing.
+for _stream in (sys.stdout, sys.stderr):
+    _reconfigure = getattr(_stream, "reconfigure", None)
+    if _reconfigure is not None:
+        _reconfigure(encoding="utf-8", errors="backslashreplace")
 
 
 class Settings(BaseSettings):
@@ -161,7 +171,7 @@ def parse_main_trigger(context: ImportContext, cause: CRISIS_TYPE, main_trigger)
 
 
 def import_entry(hulk_handler: HulkDataHandler, context: ImportContext):
-    with ENTRY_RAW_FILE.open("r") as fp:
+    with ENTRY_RAW_FILE.open("r", encoding="utf-8") as fp:
         entry_data = json.load(fp)
 
     for hulk_import_type in [
