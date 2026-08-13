@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from django.db.models import Count
+
 from apps.common.enums import QA_RULE_TYPE
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
@@ -302,13 +304,21 @@ class TestEventFilter(HelixTestCase):
 class TestEventReviewCountAggregation(HelixTestCase):
     """The review counts must count figures, not the rows a co-annotated join multiplies.
 
-    `filter_qa_rule(HAS_NO_RECOMMENDED_FIGURES)` annotates an aggregate over
-    `figures__geo_locations`, and Django reuses the `figures` join, so an un-distincted Count
-    counted one row per (figure, geolocation). The list then sorted on numbers that contradicted
-    the `reviewCount` values it rendered, which come from EventReviewCountLoader.
+    An aggregate whose filter spans `figures__geo_locations` puts the geolocation join in the outer
+    FROM, and Django reuses the `figures` join, so an un-distincted Count over `figures` counts one
+    row per (figure, geolocation). The list then sorted on numbers that contradicted the
+    `reviewCount` values it rendered, which come from EventReviewCountLoader.
+
+    `filter_qa_rule(HAS_NO_RECOMMENDED_FIGURES)` was the filter that widened the join; it is an
+    `Exists` now, so nothing in `EventFilter` widens it and the filter alone proves nothing. The
+    widening aggregate is therefore co-annotated here directly, which is what
+    `Event.annotate_review_figures_count`'s missing `distinct` is documented as being safe against.
     """
 
     filter_class = EventFilter
+
+    # 4 figures x 3 geolocations: the row count the `figures` join carries once widened.
+    FANOUT_ROWS = 12
 
     def setUp(self) -> None:
         # ignore_qa=True keeps the event inside the HAS_NO_RECOMMENDED_FIGURES filter (its
@@ -348,8 +358,19 @@ class TestEventReviewCountAggregation(HelixTestCase):
     )
 
     def _counts(self, **data):
+        """The six counts as the list's sort path computes them, with the `figures` join widened.
+
+        `_fanout` is an aggregate over `figures__geo_locations`, so the geolocation join sits in the
+        same FROM the review counts aggregate over -- the exact shape a distinct-less Count over
+        `figures` triples. It is selected, not merely annotated, so that the join is provably there.
+        """
         qs = self.filter_class(data=data, ordering="review_not_started_count").qs
-        return qs.filter(id=self.event.id).values(*self.KEYS).first()
+        row = qs.filter(id=self.event.id).annotate(_fanout=Count("figures__geo_locations")).values("_fanout", *self.KEYS)
+        row = row.first()
+        if row is None:
+            return None
+        self.assertEqual(row.pop("_fanout"), self.FANOUT_ROWS, "the co-annotated join no longer widens `figures`")
+        return row
 
     def test_every_count_survives_the_qa_rule_join(self):
         for figure in self.figures.values():
@@ -508,13 +529,23 @@ class TestEventSortAnnotationsMatchAPythonRecount(HelixTestCase):
 
     def test_the_sort_path_and_the_dataloader_path_agree(self):
         """`EventReviewCountLoader` keeps the id-scoped aggregate; the list sorts on the CTE. The
-        two must not disagree, or the table sorts on numbers it does not render."""
+        two must not disagree, or the table sorts on numbers it does not render.
+
+        Each is checked against the Python recount rather than against the other: comparing the two
+        shapes alone is satisfied by using one shape for both, which is exactly the confusion this
+        test exists to catch.
+        """
         keys = sorted(Event.REVIEW_FIGURES_COUNT_ANNOTATIONS)
+        expected = {
+            event.id: {"id": event.id, **self._python_review_counts(event)}
+            for event in (self.triangulated, self.recommended_only, self.figureless)
+        }
         from_cte = self._annotated("review_not_started_count", keys)
         from_aggregate = {
             row["id"]: row for row in Event.objects.annotate(**Event.annotate_review_figures_count()).values("id", *keys)
         }
-        self.assertEqual(from_cte, from_aggregate)
+        self.assertEqual(from_aggregate, expected)
+        self.assertEqual(from_cte, expected)
 
     def test_entry_count_counts_distinct_entries_and_leaves_figureless_events_null(self):
         annotated = self._annotated("entry_count", ["entry_count"])

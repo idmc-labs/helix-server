@@ -643,11 +643,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         `annotate_review_figures_count_via_cte` scans every figure (6ms -> 74ms on 50 ids).
 
         No `distinct`: these counts are only correct while nothing widens the `figures` join they
-        share. Every EventFilter path that touches a deeper to-many uses Exists or id__in, so the
-        join carries one row per figure. COUNT(DISTINCT) forbids hash aggregation, which is worth
-        avoiding on a 186k-row table -- the guard is
-        `apps/event/tests/test_filters.py::TestEventReviewCountAggregation`, which gives each
-        figure several geolocations and fails if any filter starts multiplying the rows.
+        share, and what keeps that true is the caller, not the filterset -- both live callers pass
+        a single id, and the list's sort path goes through
+        `annotate_review_figures_count_via_cte` instead, which groups inside the CTE and cannot
+        be widened from outside. COUNT(DISTINCT) forbids hash aggregation, which is worth avoiding
+        on a 186k-row table. `apps/event/tests/test_filters.py::TestEventReviewCountAggregation`
+        pins the property by co-annotating a geolocation join and asserting the counts hold, so
+        routing a multi-row queryset through this aggregate fails there.
         """
         return {
             **{
