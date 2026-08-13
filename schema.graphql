@@ -553,8 +553,6 @@ type ContextOfViolenceType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
 }
 
 input ContextOfViolenceUpdateInputType {
@@ -767,7 +765,6 @@ type CountryType {
   contextualAnalyses(filters: ContextualAnalysisFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContextualAnalysisListType
   summaries(filters: CountrySummaryFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): SummaryListType
   householdSizes: [CountryHouseholdSizeType!]!
-  organizations: [OrganizationType!]!
   operatingContacts(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
   contacts(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
   communications: [CommunicationType!]!
@@ -1261,7 +1258,6 @@ type DisaggregatedAgeType {
   value: Int
   ageFrom: Int
   ageTo: Int
-  reportReportRelated: [ReportType!]!
   sexDisplay: EnumDescription
 }
 
@@ -1286,8 +1282,6 @@ type DisasterCategoryType {
   id: ID!
   name: String!
   subCategories(filters: DisasterSubCategoryFilterDataInputType, ordering: String): DisasterSubCategoryListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
 }
 
@@ -1316,8 +1310,6 @@ type DisasterSubCategoryType {
   id: ID!
   name: String!
   types(filters: DisasterTypeFilterDataInputType, ordering: String): DisasterTypeObjectListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
 }
 
@@ -1331,8 +1323,6 @@ type DisasterSubObjectListType {
 type DisasterSubObjectType {
   id: ID!
   name: String!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
 }
 
@@ -1355,8 +1345,6 @@ type DisasterTypeObjectType {
   id: ID!
   name: String!
   subTypes(filters: DisasterSubTypeFilterDataInputType, ordering: String): DisasterSubObjectListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
 }
 
@@ -1648,8 +1636,6 @@ type EventType {
   notifications: [GenericNotificationType!]!
   eventReviews: [UnifiedReviewCommentType!]!
   eventCode: [EventCodeType!]!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   eventTypeDisplay: EnumDescription
   totalStockIdpFigures: Int
   stockIdpFiguresMaxEndDate: Date
@@ -2287,7 +2273,6 @@ type FigureType {
   reviewStatus: FIGURE_REVIEW_STATUS
   notifications: [GenericNotificationType!]!
   figureReviewComments: [UnifiedReviewCommentType!]!
-  reportSet: [ReportType!]!
   getQuantifier: EnumDescription
   unitDisplay: EnumDescription
   roleDisplay: EnumDescription
@@ -3069,14 +3054,9 @@ type OrganizationType {
   organizationKind: OrganizationKindObjectType
   methodology: String
   parent: OrganizationType
-  subOrganizations: [OrganizationType!]!
   contacts(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
-  sourcedExtractionquery: [ExtractionQueryObjectType!]!
-  publishedExtractionquery: [ExtractionQueryObjectType!]!
   sourcedContextualUpdates: [ContextualUpdateType!]!
   publishedContextualUpdates: [ContextualUpdateType!]!
-  sourcedReport: [ReportType!]!
-  publishedReport: [ReportType!]!
   categoryDisplay: EnumDescription
 }
 
@@ -3097,8 +3077,6 @@ input OrganizationUpdateInputType {
 type OsvSubObjectType {
   id: ID!
   name: String!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
 }
 
 input OsvSubTypeFilterDataInputType {
@@ -4291,8 +4269,6 @@ type ViolenceSubObjectListType {
 type ViolenceSubObjectType {
   id: ID!
   name: String!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
 }
 
 input ViolenceSubTypeFilterDataInputType {
@@ -4303,8 +4279,6 @@ type ViolenceType {
   id: ID!
   name: String!
   subTypes(filters: ViolenceSubTypeFilterDataInputType, ordering: String): ViolenceSubObjectListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
 }
 
 type VisualizationFigureType {

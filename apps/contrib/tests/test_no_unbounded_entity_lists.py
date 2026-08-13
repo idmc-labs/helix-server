@@ -1,6 +1,6 @@
-"""No nested list may hand back a whole Event/Crisis/Entry/Figure set.
+"""No nested list may hand back a whole Event/Crisis/Entry/Figure/Report/Organization/ExtractionQuery set.
 
-These four carry the heaviest rows and the widest reverse fan-out in the schema, so a list
+These seven carry the heaviest rows and the widest reverse fan-out in the schema, so a list
 field over them with no page argument is a request the caller cannot bound and the server
 cannot refuse: `disasterCategoryList{results{figures}}` was 22.8s and 125,113 Figure
 instances before it was dropped, and one organization publishes 3321 entries.
@@ -24,17 +24,32 @@ HEAVY_TYPES = {
     "CrisisType",
     "EntryType",
     "FigureType",
+    "ReportType",
+    "OrganizationType",
+    "ExtractionQueryObjectType",
 }
 
 # Bounded by the caller's own input rather than by paging, with the measured worst case on
 # the production-shaped dump.
 ALLOWED = {
-    # A report's hand-picked filter selections, rendered as filter chips (max 57 events, 1 crisis).
+    # A report's hand-picked filter selections, rendered as filter chips (max 57 events, 1 crisis,
+    # 0 sources, 0 publishers over 2800 reports).
     "ReportType.filterFigureEvents",
     "ReportType.filterFigureCrises",
-    # The same selections on a saved extraction query (none exceed a handful).
+    "ReportType.filterFigureSources",
+    "ReportType.filterEntryPublishers",
+    # The same selections on a saved extraction query (max 2 sources, 17 publishers over 23 queries).
     "ExtractionQueryObjectType.filterFigureEvents",
     "ExtractionQueryObjectType.filterFigureCrises",
+    "ExtractionQueryObjectType.filterFigureSources",
+    "ExtractionQueryObjectType.filterEntryPublishers",
+    # Attribution on a single row, bounded by how many organizations one document names
+    # (max 10 publishers on an entry, 24 sources on a figure, 15 publishers and 19 sources on a
+    # contextual update).
+    "EntryType.publishers",
+    "FigureType.sources",
+    "ContextualUpdateType.sources",
+    "ContextualUpdateType.publishers",
     # A mutation echoing back the rows the request itself submitted.
     "BulkUpdateFigures.result",
     "BulkUpdateFigures.deletedResult",
@@ -75,7 +90,7 @@ class TestNoUnboundedEntityLists(SimpleTestCase):
         self.assertEqual(
             offenders,
             [],
-            "these expose a whole Event/Crisis/Entry/Figure set with no page argument; "
+            "these expose a whole heavy-entity set with no page argument; "
             "paginate them, exclude them, or justify them in ALLOWED",
         )
 

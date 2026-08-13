@@ -117,15 +117,18 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
     # ------------------------------------------------------------------ #
     # Reverse-FK list  ->  ReverseFKListLoader
     # ------------------------------------------------------------------ #
-    def test_reverse_fk_list_organization_sub_organizations(self) -> None:
-        parent = OrganizationFactory.create()
-        child_a = OrganizationFactory.create(parent=parent)
-        child_b = OrganizationFactory.create(parent=parent)
+    def test_reverse_fk_list_country_parked_items(self) -> None:
+        # CountryType.parkedItems (ParkedItem.country) is a plain, non-paginated reverse-FK list,
+        # so it resolves through ReverseFKListLoader rather than a paginated field's queryset.
+        country = CountryFactory.create()
+        item_a = ParkingLotFactory.create(country=country)
+        item_b = ParkingLotFactory.create(country=country)
+        empty_country = CountryFactory.create()
 
-        data = self._run('query { organizationList(ordering: "id") { results { id subOrganizations { id } } } }')
-        by_id = {r["id"]: {o["id"] for o in r["subOrganizations"]} for r in data["organizationList"]["results"]}
-        self.assertEqual(by_id[str(parent.id)], {str(child_a.id), str(child_b.id)})
-        self.assertEqual(by_id[str(child_a.id)], set())
+        data = self._run('query { countryList(ordering: "id") { results { id parkedItems { id } } } }')
+        by_id = {r["id"]: {p["id"] for p in r["parkedItems"]} for r in data["countryList"]["results"]}
+        self.assertEqual(by_id[str(country.id)], {str(item_a.id), str(item_b.id)})
+        self.assertEqual(by_id[str(empty_country.id)], set())
 
     def test_sibling_reverse_fk_fields_sharing_child_fk_name_stay_separate(self) -> None:
         # EventType exposes two reverse-FK lists whose child FKs are both named `event`:
@@ -272,7 +275,7 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
         # Floors, not exact counts: legitimate additions must not fail, while a drop means a
         # type lost the auto-wiring base.
         self.assertGreaterEqual(fk_count, 126, "auto-wired forward-FK resolvers regressed")
-        self.assertGreaterEqual(list_count, 94, "auto-wired reverse-FK/M2M resolvers regressed")
+        self.assertGreaterEqual(list_count, 87, "auto-wired reverse-FK/M2M resolvers regressed")
 
         # Spot-check critical FigureType fields are loader-wired by name.
         from apps.entry.schema import FigureType
@@ -333,7 +336,7 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
                 ref_to_specs[ref].add(spec)
                 checked += 1
 
-        self.assertGreater(checked, 90, "list-relation field walk shrank unexpectedly")
+        self.assertGreaterEqual(checked, 87, "list-relation field walk shrank unexpectedly")
         collisions = {ref: specs for ref, specs in ref_to_specs.items() if len(specs) > 1}
         self.assertFalse(
             collisions,

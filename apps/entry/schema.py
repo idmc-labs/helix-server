@@ -67,9 +67,10 @@ def convert_json_field_to_scalar(field, registry=None):
 class DisaggregatedAgeType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisaggregatedAge
-        # entry_figure_related is unbounded fan-out; figureList has no disaggregated-age
-        # filter, so there is no bounded replacement for it.
-        exclude_fields = ("entry_figure_related",)
+        # entry_figure_related and report_report_related are unbounded fan-out. figureList has no
+        # disaggregated-age filter, and reportList cannot filter on a report's stored age
+        # disaggregation, so neither has a bounded replacement.
+        exclude_fields = ("entry_figure_related", "report_report_related")
 
     uuid = graphene.String(required=True)
     age_from = graphene.Field(graphene.Int)
@@ -115,7 +116,8 @@ class FigureTagType(RelationBatchedDjangoObjectType):
     class Meta:
         model = FigureTag
         # figure_set is unbounded fan-out; figures are read via
-        # figureList(filters: {filterFigureTags}).
+        # figureList(filters: {filterFigureTags: [id]}), a strict membership test that reproduces
+        # the removed set exactly (895 figures on the widest tag).
         exclude_fields = ("figure_set",)
 
 
@@ -127,7 +129,9 @@ class FigureLastReviewCommentStatusType(ObjectType):
 
 class FigureType(RelationBatchedDjangoObjectType):
     class Meta:
-        exclude_fields = ("figure_reviews",)
+        # report_set is unbounded fan-out: the reports that pinned this figure into their figure
+        # set. reportList cannot filter by a member figure, so it has no bounded replacement.
+        exclude_fields = ("figure_reviews", "report_set")
         model = Figure
 
     quantifier = graphene.Field(QuantifierGrapheneEnum)

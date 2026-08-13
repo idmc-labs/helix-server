@@ -133,8 +133,14 @@ class TestSoftDeletedOrganizationVisibility(HelixGraphQLTestCase):
         self.assertIsNotNone(content["data"]["contact"]["organization"], content)
         self.assertEqual(content["data"]["contact"]["organization"]["id"], str(org.id), content)
 
-    def test_m2m_traversal_still_shows_an_archived_organization(self):
-        """A plain relation traversal reports the real association, archived or not."""
+    def test_a_country_filtered_list_still_shows_an_archived_organization(self):
+        """Reading a country's organizations reports the real association, archived or not.
+
+        Via `organizationList(filters: {countries: ...})`: `CountryType.organizations` was an
+        unbounded nested list (max 420 organizations on one country) and is gone. The filter is
+        strict membership over the M2M through table, so it selects the same rows the traversal
+        did, and only `excludeDeleted: true` drops the archived one.
+        """
         country = CountryFactory.create()
         visible = OrganizationFactory.create(name="visible-org")
         removed = OrganizationFactory.create(name="removed-org")
@@ -144,15 +150,33 @@ class TestSoftDeletedOrganizationVisibility(HelixGraphQLTestCase):
 
         response = self.query(
             """
-            query MyQuery($id: ID!) { country(id: $id) { id organizations { id name } } }
+            query MyQuery($id: ID!) {
+                organizationList(filters: {countries: [$id]}) { results { id name } }
+            }
             """,
             variables={"id": str(country.id)},
         )
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
-        ids = [o["id"] for o in content["data"]["country"]["organizations"]]
+        ids = [o["id"] for o in content["data"]["organizationList"]["results"]]
         self.assertIn(str(visible.id), ids, content)
         self.assertIn(str(removed.id), ids, content)
+
+        # ...and asking for them to be hidden is what hides them.
+        response = self.query(
+            """
+            query MyQuery($id: ID!) {
+                organizationList(filters: {countries: [$id], excludeDeleted: true}) {
+                    results { id name }
+                }
+            }
+            """,
+            variables={"id": str(country.id)},
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        ids = [o["id"] for o in content["data"]["organizationList"]["results"]]
+        self.assertEqual(ids, [str(visible.id)], content)
 
 
 class TestArchivedOrganizationProvenance(HelixGraphQLTestCase):
