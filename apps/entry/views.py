@@ -96,6 +96,8 @@ def get_idu_data(filters=None):
             disaster_sub_category_name=F("disaster_sub_category__name"),
             disaster_type_name=F("disaster_sub_type__type__name"),
             disaster_sub_type_name=F("disaster_sub_type__name"),
+            violence_name=F("violence__name"),
+            violence_sub_type_name=F("violence_sub_type__name"),
             figure_term_label=Case(
                 When(term=0, then=Lower(Value(Figure.FIGURE_TERMS.EVACUATED.label))),
                 When(term=1, then=Lower(Value(Figure.FIGURE_TERMS.DISPLACED.label))),
@@ -356,6 +358,8 @@ def get_idu_data_excel(filters=None):
             "LocationsType",
             "DisplacementOccurred",
             "CreatedAt",
+            "ViolenceType",
+            "ViolenceSubtype",
         ]
     )
 
@@ -404,6 +408,8 @@ def get_idu_data_excel(filters=None):
                 item["locations_type"],
                 item["displacement_occurred"],
                 item["created_at"],
+                item["violence_type"],
+                item["violence_subtype"],
             ]
         )
 
@@ -488,6 +494,8 @@ def get_idu_data_geojson(filters=None):
                     "locations_type": item["locations_type"],
                     "displacement_occurred": item["displacement_occurred"],
                     "created_at": item["created_at"],
+                    "violence_type": item["violence_type"],
+                    "violence_subtype": item["violence_subtype"],
                 }
             ),
         }
