@@ -8,7 +8,6 @@ import graphene
 from django.core.exceptions import FieldError as DjFieldError
 from django.db.models import QuerySet
 from graphene import NonNull
-from graphene.types.structures import Structure
 from graphene.utils.str_converters import to_snake_case
 from graphene_django.registry import get_global_registry
 from graphene_django.rest_framework.serializer_converter import get_graphene_type_from_serializer_field
@@ -16,7 +15,6 @@ from graphene_django.utils import is_valid_django_model, maybe_queryset
 from graphene_django_extras import DjangoFilterPaginateListField
 from graphene_django_extras.base_types import DjangoListObjectBase
 from graphene_django_extras.fields import DjangoListField
-from graphene_django_extras.filters.filter import get_filterset_class
 from graphene_django_extras.paginations.pagination import BaseDjangoGraphqlPagination
 from graphene_django_extras.settings import graphql_api_settings
 from graphene_django_extras.utils import get_extra_filters
@@ -122,80 +120,6 @@ class CustomDjangoListField(DjangoListField):
             self.list_resolver,
             object_type,
             parent_resolver,
-        )
-
-
-class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
-    """
-    For non-model (or custom queryset) pagination and filtering
-    """
-
-    def __init__(
-        self,
-        _type,
-        pagination=None,
-        extra_filter_meta=None,
-        filterset_class=None,
-        *args,
-        **kwargs,
-    ):
-        kwargs.setdefault("args", {})
-
-        # -- NOTE: This doesn't uses nested filters args
-        # Currently arguments aren't used for this
-        filterset_class = filterset_class or _type._meta.filterset_class
-        self.filterset_class = get_filterset_class(filterset_class)
-        self.filtering_args = get_filtering_args_from_non_model_filterset(self.filterset_class)
-        # -- NOTE: This doesn't uses nested filters args
-        kwargs["args"].update(self.filtering_args)
-
-        pagination = pagination or OrderingOnlyArgumentPagination()
-
-        if pagination is not None:
-            assert isinstance(pagination, BaseDjangoGraphqlPagination), (
-                'You need to pass a valid DjangoGraphqlPagination in DjangoFilterPaginateListField, received "{}".'
-            ).format(pagination)
-
-            pagination_kwargs = pagination.to_graphql_fields()
-
-            self.pagination = pagination
-            kwargs.update(**pagination_kwargs)
-
-        self.accessor = kwargs.pop("accessor", None)
-        super(DjangoFilterPaginateListField, self).__init__(_type, *args, **kwargs)
-
-    def list_resolver(self, filterset_class, filtering_args, root, info, **kwargs):
-        filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
-        qs = getattr(root, self.accessor)
-        if hasattr(qs, "all"):
-            qs = qs.all()
-        qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context.request).qs
-        count = qs.count()
-
-        if getattr(self, "pagination", None):
-            ordering = kwargs.pop(self.pagination.ordering_param, None) or self.pagination.ordering
-            ordering = ",".join([to_snake_case(each) for each in ordering.strip(",").replace(" ", "").split(",")])
-            kwargs[self.pagination.ordering_param] = ordering
-            qs = self.pagination.paginate_queryset(qs, **kwargs)
-
-        return CustomDjangoListObjectBase(
-            count=count,
-            results=maybe_queryset(qs),
-            results_field_name=self.type._meta.results_field_name,
-            page=kwargs.get("page", 1) if hasattr(self.pagination, "page") else None,
-            pageSize=kwargs.get("pageSize", graphql_api_settings.DEFAULT_PAGE_SIZE)
-            if hasattr(self.pagination, "page")
-            else None,
-        )
-
-    def get_resolver(self, parent_resolver):
-        current_type = self.type
-        while isinstance(current_type, Structure):
-            current_type = current_type.of_type
-        return partial(
-            self.list_resolver,
-            self.filterset_class,
-            self.filtering_args,
         )
 
 
