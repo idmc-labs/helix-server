@@ -10,6 +10,7 @@ from apps.country.models import Country
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.entry.enums import FigureCategoryTypeEnum
 from apps.entry.models import ExternalApiDump
+from apps.event.models import Violence
 from utils.common import round_and_remove_zero, track_gidd
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
@@ -275,6 +276,11 @@ class GiddHazardSubCategoryType(graphene.ObjectType):
     name = graphene.String(required=True)
 
 
+class GiddViolenceType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
 class GiddDisplacementDataType(DjangoObjectType):
     class Meta:
         model = DisplacementData
@@ -376,6 +382,10 @@ class Query(graphene.ObjectType):
     )
     gidd_public_hazard_types = graphene.List(
         GiddHazardType,
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_conflict_types = graphene.List(
+        GiddViolenceType,
         client_id=graphene.String(required=True),
     )
     gidd_public_figure_analysis_list = DjangoPaginatedListObjectField(
@@ -689,6 +699,20 @@ class Query(graphene.ObjectType):
             for hazard in Disaster.objects.values("hazard_type__id", "hazard_type__name").distinct(
                 "hazard_type__id", "hazard_type__name"
             )
+        ]
+
+    @staticmethod
+    def resolve_gidd_public_conflict_types(parent, info, **kwargs):
+        # Track
+        client_id = kwargs.pop("client_id")
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_CONFLICT_TYPES_GRAPHQL)
+
+        return [
+            GiddViolenceType(
+                id=violence["id"],
+                name=violence["name"],
+            )
+            for violence in Violence.objects.values("id", "name").order_by("name")
         ]
 
     @staticmethod

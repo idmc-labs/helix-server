@@ -552,6 +552,7 @@ GRAPHENE_NODES_WHITELIST = (
     "giddPublicFigureAnalysisList",
     "giddPublicYear",
     "giddPublicReleaseMetaData",
+    "giddPublicConflictTypes",
     # __ double underscore nodes
     "__schema",
     "__type",

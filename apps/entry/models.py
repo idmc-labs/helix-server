@@ -1706,6 +1706,7 @@ class ExternalApiDump(models.Model):
         GIDD_COMBINED_STAT_GRAPHQL = "gidd-combined-stat-graphql", _("query.giddPublicCombinedStatistics")
         GIDD_RELEASE_META_DATA_GRAPHQL = "gidd-release-meta-data-graphql", _("query.giddPublicReleaseMetaData")
         GIDD_PUBLIC_COUNTRIES_GRAPHQL = "gidd-public-countries-graphql", _("query.giddPublicCountries")
+        GIDD_CONFLICT_TYPES_GRAPHQL = "gidd-conflict-types-graphql", _("query.giddPublicConflictTypes")
 
     class Status(models.IntegerChoices):
         PENDING = 0, "Pending"
@@ -1975,6 +1976,12 @@ class ExternalApiDump(models.Model):
             example_request="",
         ),
         ExternalApiType.GIDD_PUBLIC_COUNTRIES_GRAPHQL: Metadata(
+            response_type="GraphQL - JSON",
+            usage=(lambda _, client_code: "IDMC Website" if client_code == IDMC_WEBSITE_CLIENT_CODE else "IDMC Widgets"),
+            description="",
+            example_request="",
+        ),
+        ExternalApiType.GIDD_CONFLICT_TYPES_GRAPHQL: Metadata(
             response_type="GraphQL - JSON",
             usage=(lambda _, client_code: "IDMC Website" if client_code == IDMC_WEBSITE_CLIENT_CODE else "IDMC Widgets"),
             description="",

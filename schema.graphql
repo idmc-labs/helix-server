@@ -1869,6 +1869,7 @@ enum ExternalApiType {
   GIDD_COMBINED_STAT_GRAPHQL
   GIDD_RELEASE_META_DATA_GRAPHQL
   GIDD_PUBLIC_COUNTRIES_GRAPHQL
+  GIDD_CONFLICT_TYPES_GRAPHQL
 }
 
 input ExtractionQueryFilterDataInputType {
@@ -2688,6 +2689,11 @@ type GiddUpdateReleaseMetaData {
   result: GiddReleaseMetadataType
 }
 
+type GiddViolenceType {
+  id: ID!
+  name: String!
+}
+
 type GiddYearType {
   year: Int!
 }
@@ -3265,6 +3271,7 @@ type Query {
   giddReleaseMetaData: GiddReleaseMetadataType
   giddPublicCountries(clientId: String!): [GiddPublicCountryType!]
   giddPublicHazardTypes(clientId: String!): [GiddHazardType]
+  giddPublicConflictTypes(clientId: String!): [GiddViolenceType]
   giddPublicFigureAnalysisList(filters: PublicFigureAnalysisFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
   giddPublicDisplacements(filters: DisplacementDataFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
   giddPublicYear(releaseEnvironment: String!, clientId: String!): GiddYearType!
