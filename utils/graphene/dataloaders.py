@@ -16,6 +16,7 @@ from utils.graphene.ordering import (
     as_order_expressions,
     declared_ordering,
     leads_descending,
+    normalise_ordering_token,
     orders_by_pk,
     strip_direction,
 )
@@ -37,13 +38,15 @@ def _ordering_expressions(qs, ordering_param, kwargs):
     been handed the ordering.
     """
     order = kwargs.get(ordering_param) or ""
-    order = order.strip(",").replace(" ", "").split(",") if order else []
+    # Empty tokens are not a request, exactly as `nulls_last_order_queryset` reads them: without
+    # the filter, `ordering=" ,-created_at"` leaves a leading "" that makes the tiebreaker read
+    # ascending here and descending there for one input.
+    order = [token for token in order.strip(",").replace(" ", "").split(",") if token] if order else []
+    order = [normalise_ordering_token(qs, token) for token in order]
     expressions = []
     explicit_fields = set()
-    primary_descending = order[0].startswith("-") if order and order[0] else False
+    primary_descending = order[0].startswith("-") if order else False
     for field in order:
-        if not field:
-            continue
         # Third and last chokepoint turning a client `ordering` string into SQL. Without it a
         # paginated nested list fed the raw token to the Window and Django's FieldError — which
         # enumerates every ORM field on the model, including columns absent from the GraphQL
@@ -169,6 +172,9 @@ class FilteredRelationLoader(DataLoader):
         self.child = child
         self.related_name = related_name
         self.reverse_related_name = reverse_related_name
+        # Read by no loader: it is here because it is part of the loader's identity. Two
+        # fields on one parent that differ only by `accessor` read different parent
+        # attributes, so they must not share a batch.
         self.accessor = accessor
         self.pagination = pagination
         self.filterset_class = filterset_class
@@ -234,7 +240,6 @@ class FilteredRelationListLoader(FilteredRelationLoader):
         return self.filterset_class(**fkw).qs
 
     def batch_load_fn(self, keys):
-        self.related_name or get_related_name(self.parent, self.child)
         reverse_related_name = self.reverse_related_name or get_related_name(self.child, self.parent)
 
         related_objects_by_parent = defaultdict(list)
