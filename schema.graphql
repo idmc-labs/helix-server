@@ -553,7 +553,6 @@ type ContextOfViolenceType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  events: [EventType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
 }
@@ -3070,7 +3069,6 @@ type OrganizationType {
   organizationKind: OrganizationKindObjectType
   methodology: String
   parent: OrganizationType
-  publishedEntries: [EntryType!]!
   subOrganizations: [OrganizationType!]!
   contacts(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
   sourcedExtractionquery: [ExtractionQueryObjectType!]!
@@ -3099,7 +3097,6 @@ input OrganizationUpdateInputType {
 type OsvSubObjectType {
   id: ID!
   name: String!
-  events: [EventType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
 }
@@ -3134,7 +3131,6 @@ type OtherSubTypeObjectType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  events: [EventType!]!
 }
 
 enum PARKING_LOT_SOURCE {

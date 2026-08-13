@@ -175,9 +175,10 @@ class OsvSubObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = OsvSubType
         filterset_class = OsvSubTypeFilter
-        # figures is unbounded fan-out; figures are read via
-        # figureList(filters: {filterFigureOsvSubTypes}).
-        exclude_fields = ("figures",)
+        # figures and events are unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureOsvSubTypes}) and events via
+        # eventList(filters: {violenceTypes, osvSubTypeByIds}).
+        exclude_fields = ("figures", "events")
 
 
 class OsvSubTypeList(CustomDjangoListObjectType):
@@ -190,9 +191,10 @@ class OtherSubTypeObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = OtherSubType
         filterset_class = OtherSubTypeFilter
-        # figures is unbounded fan-out; figureList has no other-sub-type filter, so there is
-        # no bounded replacement for it.
-        exclude_fields = ("figures",)
+        # figures and events are unbounded fan-out; events are read via
+        # eventList(filters: {eventTypes, otherSubTypes}). figureList has no other-sub-type
+        # filter, so figures have no bounded replacement.
+        exclude_fields = ("figures", "events")
 
 
 class OtherSubTypeList(CustomDjangoListObjectType):
@@ -293,9 +295,10 @@ class ContextOfViolenceType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ContextOfViolence
         filterset_class = ContextOfViolenceFilter
-        # figures is unbounded fan-out; figures are read via
-        # figureList(filters: {filterFigureContextOfViolence}).
-        exclude_fields = ("figures",)
+        # figures and events are unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureContextOfViolence}) and events via
+        # eventList(filters: {contextOfViolences}).
+        exclude_fields = ("figures", "events")
 
 
 class ContextOfViolenceListType(CustomDjangoListObjectType):

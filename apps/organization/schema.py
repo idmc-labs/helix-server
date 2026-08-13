@@ -16,9 +16,11 @@ from utils.graphene.types import CustomDjangoListObjectType
 class OrganizationType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Organization
-        # sourced_figures is unbounded fan-out; figures are read via
-        # figureList(filters: {filterFigureSources}).
-        exclude_fields = ("sourced_figures",)
+        # sourced_figures and published_entries are unbounded fan-out (one organization
+        # publishes up to 3321 entries); read them via
+        # figureList(filters: {filterFigureSources}) and
+        # entryList(filters: {filterEntryPublishers}).
+        exclude_fields = ("sourced_figures", "published_entries")
 
     category = graphene.Field(OrganizationCategoryTypeGrapheneEnum)
     category_display = EnumDescription(source="get_category_display")

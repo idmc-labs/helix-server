@@ -272,7 +272,7 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
         # Floors, not exact counts: legitimate additions must not fail, while a drop means a
         # type lost the auto-wiring base.
         self.assertGreaterEqual(fk_count, 126, "auto-wired forward-FK resolvers regressed")
-        self.assertGreaterEqual(list_count, 98, "auto-wired reverse-FK/M2M resolvers regressed")
+        self.assertGreaterEqual(list_count, 94, "auto-wired reverse-FK/M2M resolvers regressed")
 
         # Spot-check critical FigureType fields are loader-wired by name.
         from apps.entry.schema import FigureType
