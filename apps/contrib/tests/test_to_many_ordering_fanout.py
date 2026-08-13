@@ -15,8 +15,10 @@ alphabetically smallest child; descending, at its greatest. A concatenation of t
 cannot express that -- it ranks every parent by its smallest child in both directions, so
 descending reads the smallest child backwards, and a parent whose smallest child is extended by
 another parent's child loses to that parent because the separator sorts against the extension.
-Cardinality assertions are blind to all of it, so `TestToManyOrderingSequenceThroughCte` and
-`TestToManyOrderingSequenceThroughSubquery` pin the exact id SEQUENCE on both shapes.
+Cardinality assertions are blind to all of it, so the four `ToManySortKeySequenceMixin` classes
+pin the exact id SEQUENCE for every list and every key: both denormalisation shapes (whole-table
+CTE, correlated subquery) and both directions of each key, since ascending reduces with Min and
+descending with Max and the two arms are written separately per list.
 
 `test_the_fixtures_can_actually_fan_out` is the anti-vacuity guard: it orders through the
 raw M2M path with the ORM and asserts the row count really does exceed the parent count,
@@ -246,32 +248,36 @@ class TestEventCountriesIso3OrderingStaysRejected(HelixGraphQLTestCase):
         self.assertEqual(rows, len(self.events) * len(self.countries))
 
 
-# One entry per parent, holding that parent's country `idmc_short_name`s. Every parent but one
-# owns several children whose alphabetically first and last differ, because a single-child parent
-# ranks identically under all three candidate keys and so discriminates nothing:
+# One entry per parent, holding that parent's child names. Every parent but one owns several
+# children whose alphabetically first and last differ, because a single-child parent ranks
+# identically under all three candidate keys and so discriminates nothing:
 #
 #   parent  children                    smallest                   greatest      concatenation
-#   0       Congo, Zimbabwe             Congo                      Zimbabwe      "Congo; Zimbabwe"
-#   1       Congo Democratic Republic   Congo Democratic Republic  (same)        "Congo Democratic Republic"
-#   2       Ecuador, Yemen              Ecuador                    Yemen         "Ecuador; Yemen"
-#   3       Guinea, Honduras            Guinea                     Honduras      "Guinea; Honduras"
+#   0       Ecuador, Yemen              Ecuador                    Yemen         "Ecuador; Yemen"
+#   1       Congo, Zimbabwe             Congo                      Zimbabwe      "Congo; Zimbabwe"
+#   2       Guinea, Honduras            Guinea                     Honduras      "Guinea; Honduras"
+#   3       Congo Democratic Republic   Congo Democratic Republic  (same)        "Congo Democratic Republic"
 #
-# Parent 1's only child extends parent 0's smallest child, so ascending the concatenation ranks
-# parent 1 first -- past the shared "Congo" parent 0's concatenation carries on into "Zimbabwe",
-# which loses to "Democratic" -- while the smallest child ranks parent 0 first, "Congo" being a
-# prefix of parent 1's child: the ascending discriminator.
-# Parent 0 owns both the greatest child overall and the smallest, so ranking by the greatest child
+# Parent 3's only child extends parent 1's smallest child, so ascending the concatenation ranks
+# parent 3 first -- past the shared "Congo" parent 1's concatenation carries on into "Zimbabwe",
+# which loses to "Democratic" -- while the smallest child ranks parent 1 first, "Congo" being a
+# prefix of parent 3's child: the ascending discriminator.
+# Parent 1 owns both the greatest child overall and the smallest, so ranking by the greatest child
 # is neither the ascending order reversed nor the concatenation reversed: the descending one.
+#
+# This tuple's order is also the parents' CREATION order, hence their pk order, and it is neither
+# expected sequence: a sort key that stops discriminating falls back to the pk tiebreaker, so
+# expectations that happened to match pk order would pass against no sort key at all.
 TO_MANY_SORT_GROUPS = (
-    ("Congo", "Zimbabwe"),
-    ("Congo Democratic Republic",),
     ("Ecuador", "Yemen"),
+    ("Congo", "Zimbabwe"),
     ("Guinea", "Honduras"),
+    ("Congo Democratic Republic",),
 )
 
 # Indices into TO_MANY_SORT_GROUPS: by smallest child ascending, by greatest child descending.
-ASCENDING_PARENTS = (0, 1, 2, 3)
-DESCENDING_PARENTS = (0, 2, 3, 1)
+ASCENDING_PARENTS = (1, 3, 0, 2)
+DESCENDING_PARENTS = (1, 0, 2, 3)
 
 
 class ToManySortKeySequenceMixin:
@@ -295,8 +301,16 @@ class ToManySortKeySequenceMixin:
         }
 
     @classmethod
-    def children_of(cls, countries, index):
-        return [countries[name] for name in TO_MANY_SORT_GROUPS[index]]
+    def create_sort_key_organizations(cls):
+        """An organization per distinct name in TO_MANY_SORT_GROUPS, keyed by that name."""
+        return {
+            name: OrganizationFactory.create(name=name)
+            for name in sorted({name for group in TO_MANY_SORT_GROUPS for name in group})
+        }
+
+    @classmethod
+    def children_of(cls, children_by_name, index):
+        return [children_by_name[name] for name in TO_MANY_SORT_GROUPS[index]]
 
     def assert_id_sequence(self, list_field, ordering, expected_parents):
         response = self.query(LIST_QUERY % list_field, variables={"ordering": ordering})
@@ -318,8 +332,18 @@ class ToManySortKeySequenceMixin:
         The expected sequences are only worth asserting while a concatenated key would produce
         different ones; a fixture edit that flattens the three orders into one turns both sequence
         assertions green against the bug.
+
+        Neither sequence may be the parents' pk order either. TO_MANY_SORT_GROUPS is iterated to
+        create them, so its index IS the pk order: an expectation equal to it -- or to its reverse
+        -- is reproduced by the pk tiebreaker alone, i.e. by a sort key that discriminates nothing.
         """
         indices = range(len(TO_MANY_SORT_GROUPS))
+        pk_order = tuple(indices)
+        self.assertNotEqual(ASCENDING_PARENTS, pk_order)
+        self.assertNotEqual(DESCENDING_PARENTS, pk_order)
+        self.assertNotEqual(ASCENDING_PARENTS, tuple(reversed(pk_order)))
+        self.assertNotEqual(DESCENDING_PARENTS, tuple(reversed(pk_order)))
+
         concatenations = [EXTERNAL_ARRAY_SEPARATOR.join(sorted(group)) for group in TO_MANY_SORT_GROUPS]
         by_smallest = tuple(sorted(indices, key=lambda index: min(TO_MANY_SORT_GROUPS[index])))
         by_greatest_desc = tuple(sorted(indices, key=lambda index: max(TO_MANY_SORT_GROUPS[index]), reverse=True))
@@ -403,3 +427,65 @@ class TestToManyOrderingSequenceThroughSubquery(ToManySortKeySequenceMixin, Heli
 
     def test_contact_list_descends_by_greatest_country_of_operation_name(self):
         self.assert_descends_by_greatest_child("contactList", "countries_of_operation__idmc_short_name", self.contacts)
+
+
+class TestEntryToManyOrderingSequence(ToManySortKeySequenceMixin, HelixGraphQLTestCase):
+    """`entryList` ranks each entry at its extreme publisher, not at a concatenation.
+
+    `publishers__name` (apps/extraction/filters.py) denormalises through the same whole-table CTE
+    the event/crisis lists use, and picks Min or Max by direction. Only these sequences separate
+    that from a key pinned to one aggregate in both directions, which returns the ascending order
+    reversed -- a shape the cardinality assertions above cannot see.
+
+    A separate class from the event/crisis one because the publisher organizations are named after
+    the sort-key groups, which `organizationList`'s own sequence assertions would then include.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.organizations = cls.create_sort_key_organizations()
+        cls.entries = []
+        for index in range(len(TO_MANY_SORT_GROUPS)):
+            entry = EntryFactory.create()
+            entry.publishers.set(cls.children_of(cls.organizations, index))
+            cls.entries.append(entry)
+
+    def test_entry_list_ascends_by_smallest_publisher_name(self):
+        self.assert_ascends_by_smallest_child("entryList", "publishers__name", self.entries)
+
+    def test_entry_list_descends_by_greatest_publisher_name(self):
+        self.assert_descends_by_greatest_child("entryList", "publishers__name", self.entries)
+
+
+class TestContextualUpdateToManyOrderingSequence(ToManySortKeySequenceMixin, HelixGraphQLTestCase):
+    """All three `contextualUpdateList` to-many sort keys, on the correlated-subquery shape.
+
+    `countries__idmc_short_name`, `publishers__name` and `sources__name`
+    (apps/contextualupdate/filters.py) each get their own per-row subquery, so each direction of
+    each key is its own arm; the same group is attached to all three relations per update, so one
+    pair of expected sequences pins all six.
+    """
+
+    TOKENS = ("countries__idmc_short_name", "publishers__name", "sources__name")
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.countries = cls.create_sort_key_countries()
+        cls.organizations = cls.create_sort_key_organizations()
+        cls.updates = []
+        for index in range(len(TO_MANY_SORT_GROUPS)):
+            update = ContextualUpdate.objects.create(article_title="update-%d" % index)
+            update.countries.set(cls.children_of(cls.countries, index))
+            update.publishers.set(cls.children_of(cls.organizations, index))
+            update.sources.set(cls.children_of(cls.organizations, index))
+            cls.updates.append(update)
+
+    def test_contextual_update_list_ascends_by_smallest_related_name(self):
+        for token in self.TOKENS:
+            with self.subTest(ordering=token):
+                self.assert_ascends_by_smallest_child("contextualUpdateList", token, self.updates)
+
+    def test_contextual_update_list_descends_by_greatest_related_name(self):
+        for token in self.TOKENS:
+            with self.subTest(ordering="-" + token):
+                self.assert_descends_by_greatest_child("contextualUpdateList", token, self.updates)

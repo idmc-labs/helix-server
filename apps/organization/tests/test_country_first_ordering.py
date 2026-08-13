@@ -56,27 +56,49 @@ class TestOrderCountryFirstSurvivesASort(HelixGraphQLTestCase):
     def test_rows_inside_a_bucket_are_pageable(self):
         """The bucket alone leaves every row in it tied, which is not a pageable order.
 
-        Two identical executions of one plan agree even without a tiebreaker, so comparing
-        them proves nothing. Walk the list one row per page instead: without the pk
-        completion the pages overlap or skip.
+        Two identical executions of one plan agree even without a tiebreaker, so comparing them
+        proves nothing, and neither does walking a handful of rows: a table small enough to sort
+        whole is sorted the same way for every page. The instability needs a table big enough that
+        `LIMIT page_size OFFSET n` switches the sort to a top-(n + page_size) heap, whose choice
+        among tied rows then depends on the page being asked for -- measured here as 20 rows over
+        four-row pages, where the bucket alone puts four rows on two pages each and loses four
+        entirely.
         """
+        page_size = 4
+        bulk = [OrganizationFactory.create(name=f"org-{index:02d}") for index in range(17)]
+        # Two fillers join the bucket, so it holds 3 rows: a page boundary falls INSIDE each
+        # bucket, leaving both sides of the sort tied across a page edge.
+        for organization in bulk[:2]:
+            organization.countries.add(self.country)
+        expected = {"mike-org", "alpha-org", "zulu-org", *[organization.name for organization in bulk]}
+        self.assertEqual(len(expected), 20)
+        bucketed = {"mike-org", *[organization.name for organization in bulk[:2]]}
+
         paged = []
-        for page in (1, 2, 3):
+        for page in (1, 2, 3, 4, 5):
             response = self.query(
                 """
-                query MyQuery($filters: OrganizationFilterDataInputType, $page: Int!) {
-                  organizationList(filters: $filters, page: $page, pageSize: 1) {
+                query MyQuery($filters: OrganizationFilterDataInputType, $page: Int!, $pageSize: Int!) {
+                  organizationList(filters: $filters, page: $page, pageSize: $pageSize) {
                     results { id name }
                   }
                 }
                 """,
-                variables={"filters": {"orderCountryFirst": [str(self.country.id)]}, "page": page},
+                variables={
+                    "filters": {"orderCountryFirst": [str(self.country.id)]},
+                    "page": page,
+                    "pageSize": page_size,
+                },
             )
             content = json.loads(response.content)
             self.assertResponseNoErrors(response)
             paged += [organization["name"] for organization in content["data"]["organizationList"]["results"]]
-        self.assertEqual(paged[0], "mike-org", paged)
-        self.assertEqual(sorted(paged), ["alpha-org", "mike-org", "zulu-org"], f"pages overlap or skip: {paged}")
+
+        self.assertEqual(len(paged), len(expected), f"a page came back short: {paged}")
+        self.assertEqual(len(paged), len(set(paged)), f"a row came back on more than one page: {paged}")
+        self.assertEqual(set(paged), expected, f"paging skipped a row: {sorted(paged)}")
+        # And the bucket still leads across the page boundary that splits it.
+        self.assertEqual(set(paged[: len(bucketed)]), bucketed, paged)
 
     def test_the_single_object_route_keeps_the_bucket_too(self):
         """`entry(id:) { publishers(...) }` is served by OrderingOnlyArgumentPagination.

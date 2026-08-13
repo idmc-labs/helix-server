@@ -20,13 +20,9 @@ def _figure_ids(data):
 
 
 def _ordered_filterset_qs(ordering):
-    """Newer code annotates the expensive sort keys only when the client
-    orders by them (passed as a constructor kwarg); older code has no such
-    kwarg and always annotates. Support both."""
-    try:
-        return FigureExtractionFilterSet(data={}, ordering=ordering).qs
-    except TypeError:
-        return FigureExtractionFilterSet(data={}).qs
+    """The sort keys are annotated only for the tokens the client actually orders by, so the
+    ordering is a constructor kwarg."""
+    return FigureExtractionFilterSet(data={}, ordering=ordering).qs
 
 
 class TestFigureExtractionRowSets(HelixTestCase):
@@ -45,7 +41,9 @@ class TestFigureExtractionRowSets(HelixTestCase):
         cls.disaster_event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER)
 
         # NOTE: the crisis-type filter matches on the figure's own cause
-        # (figure_cause), not the event's type — keep both aligned here.
+        # (figure_cause), NOT its event's type. `conflict_on_disaster_event`
+        # below is where the two disagree, so a filter reading the event's
+        # type instead returns a different row set.
         # Real figures always carry both dates (older listing rules exclude
         # flow figures without an end date, newer ones do not — keep the
         # fixtures inside the invariant both agree on).
@@ -74,7 +72,23 @@ class TestFigureExtractionRowSets(HelixTestCase):
             role=Figure.ROLE.RECOMMENDED,
             **dates,
         )
-        cls.all_ids = {cls.conflict_idps.id, cls.conflict_nd.id, cls.disaster_nd.id}
+        # A figure whose cause contradicts its event's type. Without it every fixture has
+        # country, cause and event type moving together, so the row sets below cannot tell
+        # `figure_cause` from `event__event_type` — nor either from the country filter.
+        cls.conflict_on_disaster_event = FigureFactory.create(
+            country=cls.country2,
+            event=cls.disaster_event,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            role=Figure.ROLE.RECOMMENDED,
+            **dates,
+        )
+        cls.all_ids = {
+            cls.conflict_idps.id,
+            cls.conflict_nd.id,
+            cls.disaster_nd.id,
+            cls.conflict_on_disaster_event.id,
+        }
 
     def test_no_filter_returns_everything(self):
         self.assertEqual(_figure_ids({}), self.all_ids)
@@ -86,13 +100,15 @@ class TestFigureExtractionRowSets(HelixTestCase):
         )
         self.assertEqual(
             _figure_ids({"filter_figure_countries": [self.country2.id]}),
-            {self.disaster_nd.id},
+            {self.disaster_nd.id, self.conflict_on_disaster_event.id},
         )
 
     def test_crisis_type_filter(self):
+        # `conflict_on_disaster_event` is the discriminating row: it is CONFLICT by cause and
+        # DISASTER by event, so it belongs to the CONFLICT set and not the DISASTER one.
         self.assertEqual(
             _figure_ids({"filter_figure_crisis_types": [Crisis.CRISIS_TYPE.CONFLICT]}),
-            {self.conflict_idps.id, self.conflict_nd.id},
+            {self.conflict_idps.id, self.conflict_nd.id, self.conflict_on_disaster_event.id},
         )
         self.assertEqual(
             _figure_ids({"filter_figure_crisis_types": [Crisis.CRISIS_TYPE.DISASTER]}),
@@ -110,8 +126,14 @@ class TestFigureExtractionRowSets(HelixTestCase):
         )
         self.assertEqual(
             _figure_ids({"filter_figure_categories": [Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT]}),
-            {self.conflict_nd.id, self.disaster_nd.id},
+            {self.conflict_nd.id, self.disaster_nd.id, self.conflict_on_disaster_event.id},
         )
+
+    def test_the_fixture_decorrelates_cause_from_event_type(self):
+        """Guards the row set above: if this figure ever stops disagreeing with its event, the
+        crisis-type assertions silently stop distinguishing the two columns."""
+        self.assertEqual(self.conflict_on_disaster_event.figure_cause, Crisis.CRISIS_TYPE.CONFLICT)
+        self.assertEqual(self.conflict_on_disaster_event.event.event_type, Crisis.CRISIS_TYPE.DISASTER)
 
     def test_filters_combine_as_and(self):
         self.assertEqual(
