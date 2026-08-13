@@ -25,6 +25,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             "end_date",
             "event_count",
             "id",
+            "modified_at",
             "name",
             "progress",
             "review_approved_count",

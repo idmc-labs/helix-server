@@ -68,6 +68,7 @@ class Report(MetaInformationArchiveAbstractModel, QueryAbstractModel, FigureDisa
             "filter_figure_end_before",
             "filter_figure_start_after",
             "id",
+            "modified_at",
             "name",
         }
     )
@@ -440,6 +441,7 @@ class ReportComment(MetaInformationArchiveAbstractModel, models.Model):
         {
             "created_at",
             "id",
+            "modified_at",
         }
     )
 
@@ -454,6 +456,16 @@ class ReportComment(MetaInformationArchiveAbstractModel, models.Model):
 
 
 class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
+    # reportGeneration.approvals
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "is_approved",
+            "modified_at",
+        }
+    )
+
     generation = models.ForeignKey(
         "ReportGeneration", verbose_name=_("Report"), related_name="approvals", on_delete=models.CASCADE
     )
@@ -483,7 +495,9 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     # generations (nested on report)
     ORDERING_ALLOWLIST = frozenset(
         {
+            "created_at",
             "id",
+            "modified_at",
         }
     )
 

@@ -197,6 +197,14 @@ class User(AbstractUser):
 
 
 class Portfolio(models.Model):
+    # portfolios
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "role",
+        }
+    )
+
     user = models.ForeignKey("User", verbose_name=_("User"), related_name="portfolios", on_delete=models.CASCADE)
     role = enum.EnumField(USER_ROLE, verbose_name=_("Role"), default=USER_ROLE.GUEST, blank=False)
     monitoring_sub_region = models.ForeignKey(

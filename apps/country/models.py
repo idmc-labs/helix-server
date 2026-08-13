@@ -648,6 +648,7 @@ class ContextualAnalysis(MetaInformationArchiveAbstractModel, models.Model):
         {
             "created_at",
             "id",
+            "modified_at",
         }
     )
 
@@ -665,6 +666,7 @@ class Summary(MetaInformationArchiveAbstractModel, models.Model):
         {
             "created_at",
             "id",
+            "modified_at",
         }
     )
 
@@ -677,7 +679,9 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
     ORDERING_ALLOWLIST = frozenset(
         {
             "country",
+            "created_at",
             "id",
+            "modified_at",
             "reference_date",
             "size",
             "year",

@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.db.models import Case, F, When
 from django.db.models.functions import Lower
 from django.test import SimpleTestCase
@@ -182,13 +184,20 @@ class TestOrderingAllowlist(HelixTestCase):
         with self.assertRaisesMessage(ValueError, "Invalid ordering field: unit"):
             nulls_last_order_queryset(Figure.objects.all(), "ordering", ordering="role,unit")
 
-    def test_unmapped_model_falls_back_to_resolvability(self):
-        self.assertIsNone(get_ordering_allowlist(Violence))
-        # Not allowlisted anywhere, yet accepted because it resolves...
-        nulls_last_order_queryset(Violence.objects.all(), "ordering", ordering="name").exists()
-        # ...while junk is still refused by the fallback check.
-        with self.assertRaisesMessage(ValueError, "Invalid ordering field: zzz__nope"):
-            nulls_last_order_queryset(Violence.objects.all(), "ordering", ordering="zzz__nope")
+    def test_a_model_with_no_allowlist_falls_back_to_resolvability(self):
+        """The fallback still has to refuse junk, for a model reached without a declared bound.
+
+        Every model a list is built on declares one (`TestEveryPaginatedListIsGated` enforces
+        that), so the absence is set up here rather than sampled: `get_ordering_allowlist` reads
+        the attribute off the model's own `__dict__`, and `None` is how "not declared" arrives.
+        """
+        with mock.patch.object(Violence, "ORDERING_ALLOWLIST", None):
+            self.assertIsNone(get_ordering_allowlist(Violence))
+            # Accepted because it resolves, with no set to consult...
+            nulls_last_order_queryset(Violence.objects.all(), "ordering", ordering="name").exists()
+            # ...while junk is still refused by the fallback check.
+            with self.assertRaisesMessage(ValueError, "Invalid ordering field: zzz__nope"):
+                nulls_last_order_queryset(Violence.objects.all(), "ordering", ordering="zzz__nope")
 
     def test_junk_after_a_resolvable_hop_is_refused(self):
         """An unresolvable hop refuses the token wherever it sits, not just at the first.
@@ -198,21 +207,22 @@ class TestOrderingAllowlist(HelixTestCase):
         ORM field on the joined model -- the leak the guard exists to prevent, on exactly the
         unbounded lists that have nothing else in front of them.
         """
-        self.assertIsNone(get_ordering_allowlist(ViolenceSubType))
-        # The first hop really does resolve, so this is not rejected for the trivial reason.
-        nulls_last_order_queryset(ViolenceSubType.objects.all(), "ordering", ordering="violence__name").exists()
-        with self.assertRaisesMessage(ValueError, "Invalid ordering field: violence__bogus"):
-            nulls_last_order_queryset(ViolenceSubType.objects.all(), "ordering", ordering="violence__bogus")
+        with mock.patch.object(ViolenceSubType, "ORDERING_ALLOWLIST", None):
+            self.assertIsNone(get_ordering_allowlist(ViolenceSubType))
+            # The first hop really does resolve, so this is not rejected for the trivial reason.
+            nulls_last_order_queryset(ViolenceSubType.objects.all(), "ordering", ordering="violence__name").exists()
+            with self.assertRaisesMessage(ValueError, "Invalid ordering field: violence__bogus"):
+                nulls_last_order_queryset(ViolenceSubType.objects.all(), "ordering", ordering="violence__bogus")
 
 
 class TestOrderingOnlyArgumentPaginationGuard(HelixTestCase):
-    """The SECOND ordering chokepoint.
+    """`OrderingOnlyArgumentPagination` must reach the shared ordering rule, not its own.
 
-    `OrderingOnlyArgumentPagination` serves the lists that take no page arguments
-    (violenceList, disasterTypeList, contextOfViolenceList, ...) and reaches `order_by()` by
-    its own route, never through `nulls_last_order_queryset`. It must apply the same guard,
-    or a junk token still returns Django's raw `FieldError` — which enumerates every field on
-    the model. The two implementations must not drift, so they are pinned side by side.
+    It serves the lists that take no page arguments (violenceList, disasterTypeList,
+    contextOfViolenceList, ...) and delegates to `nulls_last_order_queryset`, so those lists get
+    the allowlist refusal, NULLS LAST and the pk tiebreaker like every other list. What is pinned
+    here is that delegation: resolving ordering locally again would return Django's raw
+    `FieldError`, which enumerates every field on the model.
     """
 
     def setUp(self) -> None:
@@ -319,9 +329,10 @@ class TestNestedListOrderingGuard(HelixTestCase):
             [str(F("role").asc()), str(F("created_at").desc(nulls_last=True)), str(F("pk").desc())],
         )
 
-    def test_unmapped_model_falls_back_to_resolvability(self):
-        self.assertIsNone(get_ordering_allowlist(Violence))
-        _ordering_expressions(Violence.objects.all(), "ordering", {"ordering": "name"})
-        with self.assertRaises(ValueError) as ctx:
-            _ordering_expressions(Violence.objects.all(), "ordering", {"ordering": "zzz__nope"})
+    def test_a_model_with_no_allowlist_falls_back_to_resolvability(self):
+        with mock.patch.object(Violence, "ORDERING_ALLOWLIST", None):
+            self.assertIsNone(get_ordering_allowlist(Violence))
+            _ordering_expressions(Violence.objects.all(), "ordering", {"ordering": "name"})
+            with self.assertRaises(ValueError) as ctx:
+                _ordering_expressions(Violence.objects.all(), "ordering", {"ordering": "zzz__nope"})
         self.assertEqual(str(ctx.exception), "Invalid ordering field: zzz__nope")

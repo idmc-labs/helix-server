@@ -64,6 +64,20 @@ CANNOT_UPDATE_MESSAGE = _("You cannot sign off the entry.")
 
 
 class FigureLocation(UUIDAbstractModel, models.Model):
+    # figure.geoLocations
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "city",
+            "country",
+            "country_code",
+            "display_name",
+            "id",
+            "identifier",
+            "name",
+            "state",
+        }
+    )
+
     class ACCURACY(enum.Enum):
         ADM0 = 0
         ADM1 = 1
@@ -191,6 +205,17 @@ class FigureDisaggregationAbstractModel(models.Model):
 
 
 class DisaggregatedAge(models.Model):
+    # figure.disaggregationAge
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "age_from",
+            "age_to",
+            "id",
+            "sex",
+            "value",
+        }
+    )
+
     sex = enum.EnumField(enum=GENDER_TYPE, verbose_name=_("Sex"))
     uuid = models.UUIDField(verbose_name="UUID", blank=True, default=uuid4)
     value = models.PositiveIntegerField(blank=True, null=True, verbose_name=_("Value"))
@@ -217,6 +242,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             "flow_start_date",
             "geolocations",
             "id",
+            "modified_at",
             "role",
             "sources_reliability",
             "stock_date",
@@ -1395,6 +1421,7 @@ class FigureTag(MetaInformationAbstractModel):
             "created_at",
             "created_by__full_name",
             "id",
+            "modified_at",
             "name",
         }
     )
@@ -1475,6 +1502,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             "created_at",
             "created_by__full_name",
             "id",
+            "modified_at",
             "publish_date",
             "publishers__name",
         }

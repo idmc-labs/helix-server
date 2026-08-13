@@ -46,6 +46,17 @@ HULK_BULK_RESOURCES = (
 
 
 class HulkBulkImport(models.Model):
+    # hulkBulkImports
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "completed_at",
+            "created_at",
+            "id",
+            "started_at",
+            "status",
+        }
+    )
+
     WAIT_TIME_THRESHOLD_IN_MINUTES = 5
     """
     Maximum wait time (in minutes) for the bulk import to start.

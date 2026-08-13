@@ -268,6 +268,7 @@ class ExtractionQuery(MetaInformationAbstractModel, QueryAbstractModel):
         {
             "created_at",
             "id",
+            "modified_at",
         }
     )
 

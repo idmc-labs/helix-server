@@ -21,6 +21,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
             "created_at",
             "full_name",
             "id",
+            "modified_at",
             "organization__name",
         }
     )
@@ -145,6 +146,14 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
 
 
 class CommunicationMedium(models.Model):
+    # communicationMediumList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
+
     name = models.CharField(verbose_name=_("Name"), max_length=256)
 
     def __str__(self):
@@ -160,6 +169,7 @@ class Communication(MetaInformationArchiveAbstractModel, models.Model):
             "date",
             "id",
             "medium",
+            "modified_at",
             "subject",
         }
     )

@@ -14,6 +14,7 @@ from utils.graphene.ordering import (
     declared_ordering,
     get_ordering_allowlist,
     leads_descending,
+    normalise_ordering_token,
     orders_by_pk,
     strip_direction,
 )
@@ -79,6 +80,7 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
     # Empty tokens are not a request: `ordering=","` must read as "nothing asked for", or the
     # fallback below is skipped and the model's declared ordering is dropped.
     order = [token for token in order.strip(",").replace(" ", "").split(",") if token] if order else []
+    order = [normalise_ordering_token(qs, token) for token in order]
 
     pk_name = qs.model._meta.pk.name
 
@@ -101,11 +103,6 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
         tiebreaker = F(pk_name).desc() if leads_descending(existing) else F(pk_name).asc()
         return qs.order_by(*existing, tiebreaker)
 
-    # Append a deterministic tiebreaker (the primary key) to `mod_ordering` so
-    # paginated results are stable when rows tie on the sort key. Without it, ties
-    # come back in plan-dependent physical order, so a row can appear on two pages
-    # or be skipped across requests (and count-ordered lists reorder tied/NULL rows
-    # vs the pre-optimization order).
     # Reject disallowed sort keys before they reach the ORM. `ordering` is a free-form
     # string, so a junk token otherwise raises Django's FieldError deep in query compilation
     # and the raw exception text — which enumerates every field on the model, including
@@ -203,10 +200,15 @@ class GatedPageGraphqlPagination(PageGraphqlPagination):
     yields no rows.
     """
 
-    def paginate_queryset(self, qs, **kwargs):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         # The library method re-applies `self.ordering` raw over whatever ordering the queryset
-        # arrives with, which would drop the completion below.
-        assert not self.ordering, "GatedPageGraphqlPagination takes its ordering from the request"
+        # arrives with, which would drop the completion in `paginate_queryset`. A bare `assert`
+        # would not survive `python -O`, and its absence restores the defect this class prevents.
+        if self.ordering:
+            raise TypeError("GatedPageGraphqlPagination takes its ordering from the request")
+
+    def paginate_queryset(self, qs, **kwargs):
         ordering = kwargs.pop(self.ordering_param, None)
         qs = nulls_last_order_queryset(qs, self.ordering_param, **{self.ordering_param: ordering})
         return super().paginate_queryset(qs, **kwargs)

@@ -14,7 +14,19 @@ from apps.entry.models import Entry, Figure
 class Conflict(models.Model):
     # giddPublicConflicts. Unauthenticated and no client sends `ordering`, so every token is
     # refused: an empty set is a bound, not an absent one.
-    ORDERING_ALLOWLIST = frozenset()
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "country_name",
+            "created_at",
+            "id",
+            "iso3",
+            "new_displacement",
+            "new_displacement_rounded",
+            "total_displacement",
+            "total_displacement_rounded",
+            "year",
+        }
+    )
 
     country = models.ForeignKey(
         "country.Country", related_name="country_conflict", on_delete=models.PROTECT, verbose_name=_("Country")
@@ -50,10 +62,12 @@ class Disaster(models.Model):
     ORDERING_ALLOWLIST = frozenset(
         {
             "country_name",
+            "created_at",
             "event_codes",
             "event_name",
             "hazard_category_name",
             "hazard_type_name",
+            "id",
             "new_displacement_rounded",
             "start_date",
             "year",
@@ -270,7 +284,17 @@ class ReleaseMetadata(models.Model):
 
 class PublicFigureAnalysis(models.Model):
     # giddPublicFigureAnalysisList. Unauthenticated and no client sends `ordering`.
-    ORDERING_ALLOWLIST = frozenset()
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "figure_category",
+            "figure_cause",
+            "figures",
+            "figures_rounded",
+            "id",
+            "iso3",
+            "year",
+        }
+    )
 
     iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
     figure_cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_("Figure Cause"))
@@ -298,6 +322,7 @@ class DisplacementData(models.Model):
             "country_name",
             "disaster_new_displacement_rounded",
             "disaster_total_displacement_rounded",
+            "id",
             "year",
         }
     )

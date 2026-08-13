@@ -127,16 +127,32 @@ class TestClientNestedOrderingUsages(HelixGraphQLTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.report = ReportFactory.create(name="ordering-report")
-        cls.comments = ReportCommentFactory.create_batch(3, report=cls.report)
+        cls.comments = cls.tie_first_two_created_at(ReportCommentFactory.create_batch(3, report=cls.report))
         cls.country = CountryFactory.create(idmc_short_name="Alphaland", iso3="AAA")
-        cls.summaries = SummaryFactory.create_batch(3, country=cls.country)
-        cls.analyses = ContextualAnalysisFactory.create_batch(3, country=cls.country)
+        cls.summaries = cls.tie_first_two_created_at(SummaryFactory.create_batch(3, country=cls.country))
+        cls.analyses = cls.tie_first_two_created_at(ContextualAnalysisFactory.create_batch(3, country=cls.country))
 
     def setUp(self) -> None:
         super().setUp()
         self.user = create_user_with_role(USER_ROLE.ADMIN.name)
         self.force_login(self.user)
         self.generations = [ReportGeneration.objects.create(report=self.report, created_by=self.user) for _ in range(3)]
+
+    @staticmethod
+    def tie_first_two_created_at(rows):
+        """Give the first two rows one shared `created_at`, and reread every row.
+
+        `auto_now_add` hands every row a distinct timestamp, under which the pk tiebreaker never
+        decides anything and an expectation carrying the wrong pk direction ranks identically to
+        the right one. A real tie is what makes the direction observable, so it is written
+        straight to the column (`update` bypasses `auto_now_add`) and the rows reread, because the
+        expectations sort the in-memory objects.
+        """
+        model = type(rows[0])
+        shared = model.objects.values_list("created_at", flat=True).get(pk=rows[0].pk)
+        model.objects.filter(pk__in=[rows[0].pk, rows[1].pk]).update(created_at=shared)
+        reread = model.objects.in_bulk([row.pk for row in rows])
+        return [reread[row.pk] for row in rows]
 
     def assert_ordered(self, query, path, ordering, expected_ids):
         response = self.query(query, variables={"ordering": ordering})
@@ -146,6 +162,23 @@ class TestClientNestedOrderingUsages(HelixGraphQLTestCase):
         for key in path:
             node = node[key]
         self.assertEqual([row["id"] for row in node["results"]], expected_ids, content)
+
+    def assert_ordered_both_directions(self, query, path, field, rows):
+        """`field` ascending then descending, with the pk tiebreaker following the leading key.
+
+        `_ordering_expressions` appends the pk in the direction of the FIRST ordering token, so
+        ascending ranks a tie by pk ASC and descending by pk DESC -- the descending expectation is
+        built from that rule, not from the ascending one, so a wrong tiebreaker cannot cancel out
+        across the two arms.
+        """
+        keys = {getattr(row, field) for row in rows}
+        self.assertLess(len(keys), len(rows), "the fixture no longer ties, so the tiebreaker is unobservable")
+
+        def sequence(reverse):
+            return [str(row.id) for row in sorted(rows, key=lambda row: (getattr(row, field), row.id), reverse=reverse)]
+
+        self.assert_ordered(query, path, field, sequence(reverse=False))
+        self.assert_ordered(query, path, "-" + field, sequence(reverse=True))
 
     def test_report_comments_ordering_created_at(self):
         query = (
@@ -159,9 +192,7 @@ class TestClientNestedOrderingUsages(HelixGraphQLTestCase):
         """
             % self.report.id
         )
-        ascending = [str(comment.id) for comment in sorted(self.comments, key=lambda c: (c.created_at, -c.id))]
-        self.assert_ordered(query, ("report", "comments"), "created_at", ascending)
-        self.assert_ordered(query, ("report", "comments"), "-created_at", list(reversed(ascending)))
+        self.assert_ordered_both_directions(query, ("report", "comments"), "created_at", self.comments)
 
     def test_report_generations_ordering_id(self):
         query = (
@@ -191,9 +222,7 @@ class TestClientNestedOrderingUsages(HelixGraphQLTestCase):
         """
             % self.country.id
         )
-        ascending = [str(summary.id) for summary in sorted(self.summaries, key=lambda s: (s.created_at, -s.id))]
-        self.assert_ordered(query, ("country", "summaries"), "created_at", ascending)
-        self.assert_ordered(query, ("country", "summaries"), "-created_at", list(reversed(ascending)))
+        self.assert_ordered_both_directions(query, ("country", "summaries"), "created_at", self.summaries)
 
     def test_country_contextual_analyses_ordering_created_at(self):
         query = (
@@ -207,6 +236,4 @@ class TestClientNestedOrderingUsages(HelixGraphQLTestCase):
         """
             % self.country.id
         )
-        ascending = [str(analysis.id) for analysis in sorted(self.analyses, key=lambda a: (a.created_at, -a.id))]
-        self.assert_ordered(query, ("country", "contextualAnalyses"), "created_at", ascending)
-        self.assert_ordered(query, ("country", "contextualAnalyses"), "-created_at", list(reversed(ascending)))
+        self.assert_ordered_both_directions(query, ("country", "contextualAnalyses"), "created_at", self.analyses)

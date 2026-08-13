@@ -11,6 +11,7 @@ class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
         {
             "created_at",
             "id",
+            "modified_at",
         }
     )
 

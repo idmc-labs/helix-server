@@ -20,6 +20,7 @@ class ParkedItem(MetaInformationAbstractModel):
             "created_at",
             "created_by__full_name",
             "id",
+            "modified_at",
             "status",
             "title",
             "url",

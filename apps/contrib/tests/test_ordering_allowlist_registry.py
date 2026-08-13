@@ -14,6 +14,8 @@ happen without this snapshot changing.
 To add a key: change the model, run the suite, and update EXPECTED below in the same commit.
 """
 
+from unittest import mock
+
 from django.apps import apps
 from django.test import SimpleTestCase, TestCase
 
@@ -22,6 +24,10 @@ from utils.factories import ClientFactory
 from utils.graphene.ordering import get_ordering_allowlist
 from utils.graphene.pagination import GatedPageGraphqlPagination, nulls_last_order_queryset
 
+# Measured, not guessed: see test_no_list_field_uses_an_unguarded_pagination_class.
+SEEN_FLOOR = 71
+DYNAMIC_FLOOR = 6
+
 EXPECTED = {
     "contact.Communication": [
         "country__idmc_short_name",
@@ -29,13 +35,19 @@ EXPECTED = {
         "date",
         "id",
         "medium",
+        "modified_at",
         "subject",
+    ],
+    "contact.CommunicationMedium": [
+        "id",
+        "name",
     ],
     "contact.Contact": [
         "countries_of_operation__idmc_short_name",
         "created_at",
         "full_name",
         "id",
+        "modified_at",
         "organization__name",
     ],
     "contextualupdate.ContextualUpdate": [
@@ -43,6 +55,7 @@ EXPECTED = {
         "countries__idmc_short_name",
         "created_at",
         "id",
+        "modified_at",
         "publish_date",
         "publishers__name",
         "sources__name",
@@ -100,6 +113,7 @@ EXPECTED = {
     "country.ContextualAnalysis": [
         "created_at",
         "id",
+        "modified_at",
     ],
     "country.Country": [
         "geographical_group__name",
@@ -121,7 +135,9 @@ EXPECTED = {
     ],
     "country.HouseholdSize": [
         "country",
+        "created_at",
         "id",
+        "modified_at",
         "reference_date",
         "size",
         "year",
@@ -133,6 +149,7 @@ EXPECTED = {
     "country.Summary": [
         "created_at",
         "id",
+        "modified_at",
     ],
     "crisis.Crisis": [
         "countries__idmc_short_name",
@@ -142,6 +159,7 @@ EXPECTED = {
         "end_date",
         "event_count",
         "id",
+        "modified_at",
         "name",
         "progress",
         "review_approved_count",
@@ -153,11 +171,19 @@ EXPECTED = {
         "total_flow_nd_figures",
         "total_stock_idp_figures",
     ],
+    "entry.DisaggregatedAge": [
+        "age_from",
+        "age_to",
+        "id",
+        "sex",
+        "value",
+    ],
     "entry.Entry": [
         "article_title",
         "created_at",
         "created_by__full_name",
         "id",
+        "modified_at",
         "publish_date",
         "publishers__name",
     ],
@@ -174,6 +200,7 @@ EXPECTED = {
         "flow_start_date",
         "geolocations",
         "id",
+        "modified_at",
         "role",
         "sources_reliability",
         "stock_date",
@@ -181,22 +208,51 @@ EXPECTED = {
         "term",
         "total_figures",
     ],
+    "entry.FigureLocation": [
+        "city",
+        "country",
+        "country_code",
+        "display_name",
+        "id",
+        "identifier",
+        "name",
+        "state",
+    ],
     "entry.FigureTag": [
         "created_at",
         "created_by__full_name",
         "id",
+        "modified_at",
         "name",
     ],
     "event.Actor": [
         "country__idmc_short_name",
         "created_at",
         "id",
+        "modified_at",
         "name",
         "torg",
     ],
     "event.ContextOfViolence": [
         "created_at",
         "created_by__full_name",
+        "id",
+        "modified_at",
+        "name",
+    ],
+    "event.DisasterCategory": [
+        "id",
+        "name",
+    ],
+    "event.DisasterSubCategory": [
+        "id",
+        "name",
+    ],
+    "event.DisasterSubType": [
+        "id",
+        "name",
+    ],
+    "event.DisasterType": [
         "id",
         "name",
     ],
@@ -209,6 +265,7 @@ EXPECTED = {
         "entry_count",
         "event_type",
         "id",
+        "modified_at",
         "name",
         "progress",
         "review_approved_count",
@@ -220,17 +277,48 @@ EXPECTED = {
         "total_flow_nd_figures",
         "total_stock_idp_figures",
     ],
+    "event.OsvSubType": [
+        "id",
+        "name",
+    ],
+    "event.OtherSubType": [
+        "created_at",
+        "id",
+        "modified_at",
+        "name",
+    ],
+    "event.Violence": [
+        "id",
+        "name",
+    ],
+    "event.ViolenceSubType": [
+        "id",
+        "name",
+    ],
     "extraction.ExtractionQuery": [
         "created_at",
         "id",
+        "modified_at",
     ],
-    "gidd.Conflict": [],
+    "gidd.Conflict": [
+        "country_name",
+        "created_at",
+        "id",
+        "iso3",
+        "new_displacement",
+        "new_displacement_rounded",
+        "total_displacement",
+        "total_displacement_rounded",
+        "year",
+    ],
     "gidd.Disaster": [
         "country_name",
+        "created_at",
         "event_codes",
         "event_name",
         "hazard_category_name",
         "hazard_type_name",
+        "id",
         "new_displacement_rounded",
         "start_date",
         "year",
@@ -241,12 +329,28 @@ EXPECTED = {
         "country_name",
         "disaster_new_displacement_rounded",
         "disaster_total_displacement_rounded",
+        "id",
         "year",
     ],
-    "gidd.PublicFigureAnalysis": [],
+    "gidd.PublicFigureAnalysis": [
+        "figure_category",
+        "figure_cause",
+        "figures",
+        "figures_rounded",
+        "id",
+        "iso3",
+        "year",
+    ],
     "gidd.StatusLog": [
         "id",
         "triggered_at",
+    ],
+    "hulk.HulkBulkImport": [
+        "completed_at",
+        "created_at",
+        "id",
+        "started_at",
+        "status",
     ],
     "notification.Notification": [
         "created_at",
@@ -257,9 +361,17 @@ EXPECTED = {
         "countries__idmc_short_name",
         "created_at",
         "id",
+        "modified_at",
         "name",
         "organization_kind__name",
         "short_name",
+    ],
+    "organization.OrganizationKind": [
+        "created_at",
+        "id",
+        "modified_at",
+        "name",
+        "reliability",
     ],
     "parking_lot.ParkedItem": [
         "assigned_to__full_name",
@@ -267,6 +379,7 @@ EXPECTED = {
         "created_at",
         "created_by__full_name",
         "id",
+        "modified_at",
         "status",
         "title",
         "url",
@@ -277,18 +390,33 @@ EXPECTED = {
         "filter_figure_end_before",
         "filter_figure_start_after",
         "id",
+        "modified_at",
         "name",
+    ],
+    "report.ReportApproval": [
+        "created_at",
+        "id",
+        "is_approved",
+        "modified_at",
     ],
     "report.ReportComment": [
         "created_at",
         "id",
+        "modified_at",
     ],
     "report.ReportGeneration": [
+        "created_at",
         "id",
+        "modified_at",
     ],
     "review.UnifiedReviewComment": [
         "created_at",
         "id",
+        "modified_at",
+    ],
+    "users.Portfolio": [
+        "id",
+        "role",
     ],
     "users.User": [
         "date_joined",
@@ -342,16 +470,20 @@ class TestOrderingAllowlistRegistry(SimpleTestCase):
                 if "ORDERING_ALLOWLIST" in vars(base) and "ORDERING_ALLOWLIST" not in vars(model):
                     self.fail(f"{model._meta.label} would inherit ORDERING_ALLOWLIST from {base.__name__}")
 
-    def test_empty_sets_are_bounds_not_omissions(self):
-        """An empty frozenset must survive as a bound, distinguishable from no attribute."""
-        from apps.gidd.models import Conflict
+    def test_an_empty_set_is_a_bound_not_an_omission(self):
+        """An empty frozenset must read as "nothing is sortable", not as "no bound declared".
 
-        self.assertEqual(get_ordering_allowlist(Conflict), frozenset())
-        self.assertIsNotNone(get_ordering_allowlist(Conflict))
-        # And the bound has to bite: `allowed is not None` rather than a truthiness check is what
-        # keeps an empty set from reading as "no bound at all".
-        with self.assertRaisesMessage(ValueError, "Invalid ordering field: year"):
-            nulls_last_order_queryset(Conflict.objects.all(), "ordering", ordering="year")
+        No model ships an empty set today, so this is set up rather than sampled: the property
+        belongs to `_ordering_token_allowed`, which tests `allowed is not None` instead of
+        truthiness. A truthiness check would silently downgrade a fully closed model to the
+        resolvability fallback, which accepts any real column.
+        """
+        self.assertIsNotNone(get_ordering_allowlist(Client))
+        with mock.patch.object(Client, "ORDERING_ALLOWLIST", frozenset()):
+            self.assertEqual(get_ordering_allowlist(Client), frozenset())
+            # `name` is a real, ordinarily-allowed column, so only the bound can refuse it.
+            with self.assertRaisesMessage(ValueError, "Invalid ordering field: name"):
+                nulls_last_order_queryset(Client.objects.all(), "ordering", ordering="name")
 
 
 class TestEveryPaginatedListIsGated(SimpleTestCase):
@@ -404,19 +536,31 @@ class TestEveryPaginatedListIsGated(SimpleTestCase):
                 return field.get_type()
             return field
 
-        seen, unguarded = 0, []
+        seen, dynamic_seen, unguarded, unbounded = 0, 0, [], []
         for holder in holders:
             for attr, declared in vars(holder).items():
                 field = unwrap(declared)
                 if not isinstance(field, (DjangoPaginatedListObjectField, DjangoFilterPaginateListField)):
                     continue
                 seen += 1
+                if isinstance(declared, graphene.Dynamic):
+                    dynamic_seen += 1
+                where = f"{holder.__module__}.{holder.__name__}.{attr}"
                 if not isinstance(getattr(field, "pagination", None), guarded):
-                    unguarded.append(f"{holder.__module__}.{holder.__name__}.{attr}")
-        # A floor, so a walk that silently sees nothing cannot pass. `helix.schema` above makes
-        # the count independent of which modules the test session imported first.
-        self.assertGreater(seen, 60, f"the walk saw only {seen} list fields")
+                    unguarded.append(where)
+                model = getattr(getattr(field.type, "_meta", None), "model", None)
+                if model is not None and vars(model).get("ORDERING_ALLOWLIST") is None:
+                    unbounded.append(f"{where} -> {model._meta.label}")
+        # Floors, so a walk that silently sees less than the schema holds cannot pass. The Dynamic
+        # count is separate because `unwrap` is the only reason those fields are visible at all:
+        # without it they vanish from the walk while the total stays above any loose floor.
+        self.assertGreaterEqual(seen, SEEN_FLOOR, f"the walk saw only {seen} list fields")
+        self.assertGreaterEqual(dynamic_seen, DYNAMIC_FLOOR, f"the unwrap found only {dynamic_seen}")
         self.assertEqual(sorted(unguarded), [], "these lists bypass every ordering chokepoint")
+        # The bound is mandatory, not opt-in: a model with no ORDERING_ALLOWLIST is bounded only
+        # by resolvability, which accepts to-many paths (the parent fans out, so rows repeat
+        # inside a page) and relation hops onto columns the target model's own set excludes.
+        self.assertEqual(sorted(unbounded), [], "these list-backing models declare no allowlist")
 
 
 class TestGatedPaginationCompletesTheSortKey(TestCase):
@@ -467,9 +611,11 @@ class TestGatedPaginationCompletesTheSortKey(TestCase):
         self.assertEqual(set(seen), {c.pk for c in self.clients}, "paging skipped a row")
 
     def test_a_disallowed_token_is_still_refused(self):
+        # A real Client column that the allowlist omits, so only the allowlist arm can refuse it
+        # -- an unresolvable token would be refused by the fallback whatever the allowlist says.
         with self.assertRaises(ValueError) as cm:
-            self.order_by_sql(ordering="password")
-        self.assertEqual(str(cm.exception), "Invalid ordering field: password")
+            self.order_by_sql(ordering="use_cases")
+        self.assertEqual(str(cm.exception), "Invalid ordering field: use_cases")
 
     def test_the_library_page_arithmetic_survives(self):
         # A negative page is a full page counted back from the end, not the remainder.

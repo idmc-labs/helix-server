@@ -15,6 +15,7 @@ class ContextualUpdate(MetaInformationArchiveAbstractModel, models.Model):
             "countries__idmc_short_name",
             "created_at",
             "id",
+            "modified_at",
             "publish_date",
             "publishers__name",
             "sources__name",

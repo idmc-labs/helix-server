@@ -45,11 +45,27 @@ class Violence(NameAttributedModels):
     Holds the possible violence choices
     """
 
+    # violenceList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
+
 
 class ViolenceSubType(NameAttributedModels):
     """
     Holds the possible violence sub types
     """
+
+    # violence.subTypes
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
 
     violence = models.ForeignKey("Violence", related_name="sub_types", on_delete=models.CASCADE)
 
@@ -65,6 +81,7 @@ class ContextOfViolence(MetaInformationAbstractModel, NameAttributedModels):
             "created_at",
             "created_by__full_name",
             "id",
+            "modified_at",
             "name",
         }
     )
@@ -108,6 +125,16 @@ class OtherSubType(MetaInformationAbstractModel, NameAttributedModels):
     Holds the other sub type
     """
 
+    # otherSubTypeList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "modified_at",
+            "name",
+        }
+    )
+
 
 class Actor(MetaInformationAbstractModel, NameAttributedModels):
     """
@@ -120,6 +147,7 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
             "country__idmc_short_name",
             "created_at",
             "id",
+            "modified_at",
             "name",
             "torg",
         }
@@ -169,11 +197,27 @@ class DisasterCategory(NameAttributedModels):
     Holds the possible hazard category choices
     """
 
+    # disasterCategoryList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
+
 
 class DisasterSubCategory(NameAttributedModels):
     """
     Holds the possible hazard sub categories
     """
+
+    # disasterSubCategoryList, disasterCategory.subCategories
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
 
     category = models.ForeignKey(
         "DisasterCategory", verbose_name=_("Hazard Category"), related_name="sub_categories", on_delete=models.CASCADE
@@ -185,6 +229,14 @@ class DisasterType(NameAttributedModels):
     Holds the possible hazard types
     """
 
+    # disasterTypeList, disasterSubCategory.types
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
+
     disaster_sub_category = models.ForeignKey(
         "DisasterSubCategory", verbose_name=_("Hazard Sub Category"), related_name="types", on_delete=models.CASCADE
     )
@@ -194,6 +246,14 @@ class DisasterSubType(NameAttributedModels):
     """
     Holds the possible hazard sub types
     """
+
+    # disasterSubTypeList, disasterType.subTypes
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
 
     type = models.ForeignKey(
         "DisasterType", verbose_name=_("Hazard Type"), related_name="sub_types", on_delete=models.CASCADE
@@ -212,6 +272,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             "entry_count",
             "event_type",
             "id",
+            "modified_at",
             "name",
             "progress",
             "review_approved_count",
@@ -823,3 +884,11 @@ class OsvSubType(NameAttributedModels):
     """
     Holds the possible OSV sub types
     """
+
+    # osvSubTypeList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
