@@ -828,9 +828,16 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
     subcategory = serializers.CharField(
         source="disaster_sub_category_name", help_text="Hazard category based on the CRED EM-DAT classification."
     )
-    type = serializers.CharField(source="disaster_type_name", help_text="Hazard type as categorized by CRED EM-DAT.")
+    type = serializers.CharField(
+        source="type_name",
+        help_text="Cause-dependent classification. For disaster displacement, the hazard type as categorized by "
+        "CRED EM-DAT. For conflict/violence displacement, the type of violence that triggered it "
+        "(e.g. International armed conflict (IAC), Non-International armed conflict (NIAC)).",
+    )
     subtype = serializers.CharField(
-        source="disaster_sub_type_name", help_text="Specific sub-type of the hazard based on the CRED EM-DAT."
+        source="subtype_name",
+        help_text="Cause-dependent classification. For disaster displacement, the specific hazard sub-type based on "
+        "CRED EM-DAT. For conflict/violence displacement, the sub-type of violence that triggered it.",
     )
     year = serializers.IntegerField(help_text="Year in which the displacement occurred.")
     standard_popup_text = serializers.CharField(help_text="Standard text from the IDMC website for the data entry.")
