@@ -24,12 +24,20 @@ class BaseImportCommand(BaseCommand):
     validated through DRF serializers, all-or-nothing within a single transaction.
 
     Subclasses set: model, create_serializer, update_serializer, lookups.
+
+    Set ``update_only = True`` for importers that only patch existing rows
+    (e.g. backfills): a blank ``id`` is then rejected instead of creating a
+    row, and ``create_serializer`` may be left unset.
     """
 
     model = None
     create_serializer = None
     update_serializer = None
     lookups: typing.List[BaseLookup] = []
+
+    #: When True, rows without an ``id`` are rejected (no create path). The
+    #: template and column derivation fall back to ``update_serializer``.
+    update_only = False
 
     DATA_SHEET = "Data"
 
@@ -89,7 +97,7 @@ class BaseImportCommand(BaseCommand):
         Importable columns = writable fields of the create and update serializers,
         without EXCLUDED_FIELDS.
         """
-        create_fields = self._writable_fields(self.create_serializer)
+        create_fields = [] if self.update_only else self._writable_fields(self.create_serializer)
         update_fields = self._writable_fields(self.update_serializer)
         excluded = self.excluded_fields
 
@@ -104,6 +112,9 @@ class BaseImportCommand(BaseCommand):
     def required_create_columns(self) -> typing.Set[str]:
         """Importable columns that required by create serializer."""
         importable = set(self.import_columns())
+        if self.update_only:
+            # No create path; id is the only column an operator must supply.
+            return {"id"} & importable
         serializer = self.create_serializer()
         return {name for name, field in serializer.fields.items() if field.required and name in importable}
 
@@ -119,8 +130,10 @@ class BaseImportCommand(BaseCommand):
     }
 
     def _scalar_field(self, column: str):
-        create_fields = self.create_serializer().fields
         update_fields = self.update_serializer().fields
+        if self.update_only:
+            return update_fields.get(column)
+        create_fields = self.create_serializer().fields
         return create_fields.get(column) or update_fields.get(column)
 
     def column_types(self) -> typing.Dict[str, str]:
@@ -203,6 +216,8 @@ class BaseImportCommand(BaseCommand):
                 row_errors["id"] = f"no {self.model.__name__} found with id {raw_id}"
             else:
                 serializer = self.update_serializer(instance=instance, data=data, partial=True, context={"request": request})
+        elif self.update_only:
+            row_errors["id"] = f"id is required; this importer only updates existing {self.model.__name__} rows"
         else:
             data.pop("id", None)
             serializer = self.create_serializer(data=data, context={"request": request})

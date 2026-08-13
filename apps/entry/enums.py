@@ -5,6 +5,7 @@ __all__ = [
     "AccuracyGrapheneEnum",
     "IdentifierGrapheneEnum",
     "GeocoderGrapheneEnum",
+    "PcodeAccuracyGrapheneEnum",
 ]
 
 import graphene
@@ -30,6 +31,7 @@ FigureSourcesReliabilityEnum = graphene.Enum.from_enum(Figure.SOURCES_RELIABILIT
 FigureReviewStatusEnum = graphene.Enum.from_enum(Figure.FIGURE_REVIEW_STATUS, description=enum_description)
 ExternalApiTypeEnum = graphene.Enum.from_enum(ExternalApiDump.ExternalApiType, description=enum_description)
 GeocoderGrapheneEnum = graphene.Enum.from_enum(FigureLocation.GEOCODER, description=enum_description)
+PcodeAccuracyGrapheneEnum = graphene.Enum.from_enum(FigureLocation.PCODE_ACCURACY, description=enum_description)
 
 
 enum_map = dict(
@@ -41,6 +43,7 @@ enum_map = dict(
     ACCURACY=AccuracyGrapheneEnum,
     GEOCODER=GeocoderGrapheneEnum,
     IDENTIFIER=IdentifierGrapheneEnum,
+    PCODE_ACCURACY=PcodeAccuracyGrapheneEnum,
     FIGURE_CATEGORY_TYPES=FigureCategoryTypeEnum,
     FIGURE_TERMS=FigureTermsEnum,
     SOURCES_RELIABILITY=FigureSourcesReliabilityEnum,

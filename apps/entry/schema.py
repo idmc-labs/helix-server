@@ -23,6 +23,7 @@ from apps.entry.enums import (
     GenderTypeGrapheneEnum,
     GeocoderGrapheneEnum,
     IdentifierGrapheneEnum,
+    PcodeAccuracyGrapheneEnum,
     QuantifierGrapheneEnum,
     RoleGrapheneEnum,
     UnitGrapheneEnum,
@@ -104,6 +105,8 @@ class FigureLocationType(RelationBatchedDjangoObjectType):
     identifier_display = EnumDescription(source="get_identifier_display")
     geocoder = graphene.Field(GeocoderGrapheneEnum)
     geocoder_display = EnumDescription(source="get_geocoder_display")
+    pcode_accuracy = graphene.Field(PcodeAccuracyGrapheneEnum)
+    pcode_accuracy_display = EnumDescription(source="get_pcode_accuracy_display")
 
 
 class FigureLocationListType(CustomDjangoListObjectType):

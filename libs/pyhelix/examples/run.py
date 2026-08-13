@@ -179,9 +179,11 @@ def import_entry(hulk_handler: HulkDataHandler, context: ImportContext):
 
         source_preview_uuid = None
         attachment_uuid = None
+        url = None
         if hulk_import_type == HulkEntryImportTypeEnum.URL:
             # TODO: Use separate uuid for source_preview to avoid conflict?
             source_preview_uuid = entry_data["uuid"]
+            url = entry_data["url"]
             try:
                 source_preview_import = HulkSourcePreviewImport(
                     uuid=source_preview_uuid,
@@ -212,6 +214,7 @@ def import_entry(hulk_handler: HulkDataHandler, context: ImportContext):
                 hulk_import_type=hulk_import_type,
                 source_preview_uuid=source_preview_uuid,
                 attachment_uuid=attachment_uuid,
+                url=url,
                 entry_title=entry_data["entry_title"],
                 is_confidential=entry_data["confidential_source"] == 1,
                 publish_date=entry_data["publication_date"],
@@ -389,6 +392,12 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
                         geocoder=loc_geocoder,
                         latitude=loc_latitude,
                         longitude=loc_longitude,
+                        # p-code fields (optional). This example has no gazetteer, so
+                        # these are illustrative: pcode_source is free text, and
+                        # pcode_accuracy is one of PCODE_ACCURACY (ADM0..ADM5).
+                        pcode=f"{country_iso2}-SAMPLE",
+                        pcode_source="OCHA_COD",
+                        pcode_accuracy="ADM0",
                     )
                     for (
                         loc_uuid,

@@ -34,6 +34,7 @@ from .types import (
     FigureLocationAccuracyType,
     FigureLocationGeocoderType,
     FigureLocationIdentifierType,
+    FigureLocationPcodeAccuracyType,
     FigureQuantifierType,
     FigureRoleType,
     FigureTermType,
@@ -224,6 +225,11 @@ class HulkFigureImportLocation(BaseModel):
 
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
+
+    # p-code fields (optional; source is free text since the set is not finalized).
+    pcode: typing.Optional[str] = Field(default=None, max_length=64)
+    pcode_source: typing.Optional[str] = Field(default=None, max_length=256)
+    pcode_accuracy: typing.Optional[FigureLocationPcodeAccuracyType] = None
 
     # TODO: We should also add the metadata field to store raw information that can be later used to fill gazetteer
 

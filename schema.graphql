@@ -2132,6 +2132,9 @@ input FigureLocationInputType {
   alternativeNames: String
   accuracy: ACCURACY!
   moved: Boolean
+  pcode: String
+  pcodeSource: String
+  pcodeAccuracy: PCODE_ACCURACY
 }
 
 type FigureLocationListType {
@@ -2171,10 +2174,14 @@ type FigureLocationType {
   moved: Boolean!
   geocoder: GEOCODER
   geocoderMetadata: JSONString
+  pcode: String
+  pcodeSource: String
+  pcodeAccuracy: PCODE_ACCURACY
   geoLocationReviewComments: [UnifiedReviewCommentType!]!
   accuracyDisplay: EnumDescription
   identifierDisplay: EnumDescription
   geocoderDisplay: EnumDescription
+  pcodeAccuracyDisplay: EnumDescription
 }
 
 input FigureTagCreateInputType {
@@ -3125,6 +3132,15 @@ enum PARKING_LOT_STATUS {
   TO_BE_REVIEWED
   REVIEWED
   ON_GOING
+}
+
+enum PCODE_ACCURACY {
+  ADM0
+  ADM1
+  ADM2
+  ADM3
+  ADM4
+  ADM5
 }
 
 enum PERMISSION_ACTION {

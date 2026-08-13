@@ -117,6 +117,24 @@ class FigureLocation(UUIDAbstractModel, models.Model):
             ORIGIN_AND_DESTINATION: _("Origin and destination"),
         }
 
+    # NOTE: Distinct from ACCURACY; this is the admin level a p-code resolves to.
+    class PCODE_ACCURACY(enum.Enum):
+        ADM0 = 0
+        ADM1 = 1
+        ADM2 = 2
+        ADM3 = 3
+        ADM4 = 4
+        ADM5 = 5
+
+        __labels__ = {
+            ADM0: _("ADM0"),
+            ADM1: _("ADM1"),
+            ADM2: _("ADM2"),
+            ADM3: _("ADM3"),
+            ADM4: _("ADM4"),
+            ADM5: _("ADM5"),
+        }
+
     # default unique behaviour is removed
     uuid = models.UUIDField(verbose_name="UUID", blank=True, default=uuid4)
     # external API fields
@@ -150,6 +168,11 @@ class FigureLocation(UUIDAbstractModel, models.Model):
     # geocoder related fields
     geocoder = enum.EnumField(enum=GEOCODER, verbose_name=_("Geocoder"), default=GEOCODER.CUSTOM_SOURCE)
     geocoder_metadata = models.JSONField(default=dict, null=True, blank=True)
+    # p-code fields
+    pcode = models.CharField(verbose_name=_("P-Code"), max_length=64, blank=True, null=True)
+    # NOTE: Free text; the set of sources (OCHA_COD, GADM, ...) is not finalized, so stored verbatim.
+    pcode_source = models.CharField(verbose_name=_("P-Code Source"), max_length=256, blank=True, null=True)
+    pcode_accuracy = enum.EnumField(enum=PCODE_ACCURACY, verbose_name=_("P-Code Accuracy"), null=True, blank=True)
 
     class Meta:
         indexes = [
