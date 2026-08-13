@@ -37,9 +37,14 @@ from apps.event.dataloaders import (
     TotalNDFigureByEventLoader,
 )
 from apps.hulk.dataloaders import (
+    AttachmentHulkLoader,
+    EntryHulkLoader,
+    EventHulkLoader,
+    FigureHulkLoader,
     HulkBulkImportDatasetsLoader,
     HulkBulkImportFailureCountLoader,
     HulkBulkImportSuccessCountLoader,
+    SourcePreviewHulkLoader,
 )
 from apps.report.dataloaders import (
     ReportGenerationApprovedLoader,
@@ -168,6 +173,26 @@ class GQLContext:
     @cached_property
     def event_entry_count_dataloader(self):
         return EventEntryCountLoader()
+
+    @cached_property
+    def event_hulk_dataloader(self):
+        return EventHulkLoader()
+
+    @cached_property
+    def figure_hulk_dataloader(self):
+        return FigureHulkLoader()
+
+    @cached_property
+    def entry_hulk_dataloader(self):
+        return EntryHulkLoader()
+
+    @cached_property
+    def attachment_hulk_dataloader(self):
+        return AttachmentHulkLoader()
+
+    @cached_property
+    def source_preview_hulk_dataloader(self):
+        return SourcePreviewHulkLoader()
 
     @cached_property
     def event_typology_dataloader(self):

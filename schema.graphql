@@ -96,6 +96,7 @@ type AttachmentType {
   encoding: String
   filetypeDetail: String
   attachmentForDisplay: EnumDescription
+  hulkUuid: UUID
 }
 
 enum BULK_OPERATION_ACTION {
@@ -1483,6 +1484,7 @@ type EntryType {
   idmcAnalysis: String
   isConfidential: Boolean!
   notifications: [GenericNotificationType!]!
+  hulkUuid: UUID
 }
 
 input EntryUpdateInputType {
@@ -1651,6 +1653,7 @@ type EventType {
   reviewCount: EventReviewCountType
   eventCodes: [EventCodeType!]
   crisisId: ID!
+  hulkUuid: UUID
 }
 
 input EventUpdateInputType {
@@ -2293,6 +2296,7 @@ type FigureType {
   lastReviewCommentStatus: [FigureLastReviewCommentStatusType!]
   eventId: ID!
   entryId: ID!
+  hulkUuid: UUID
 }
 
 input FigureUpdateInputType {
@@ -3881,6 +3885,7 @@ type SourcePreviewType {
   remark: String
   contextualUpdate: [ContextualUpdateType!]!
   statusDisplay: EnumDescription
+  hulkUuid: UUID
 }
 
 input SummaryCreateInputType {

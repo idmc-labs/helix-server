@@ -161,9 +161,14 @@ class AttachmentType(RelationBatchedDjangoObjectType):
 
     attachment_for = graphene.Field(AttachmentForGrapheneEnum)
     attachment_for_display = EnumDescription(source="get_attachment_for_display")
+    # See apps.entry.schema.FigureType.hulk_uuid.
+    hulk_uuid = graphene.UUID()
 
     def resolve_attachment(root, info, **kwargs):
         return info.context.request.build_absolute_uri(root.attachment.url)
+
+    def resolve_hulk_uuid(root, info, **kwargs):
+        return info.context.attachment_hulk_dataloader.load(root.id).then(lambda row: row.uuid if row else None)
 
 
 class BulkApiOperationFilterType(graphene.ObjectType):

@@ -178,6 +178,13 @@ class FigureType(RelationBatchedDjangoObjectType):
     event_id = graphene.ID(required=True, source="event_id")
     entry = graphene.Field("apps.entry.schema.EntryType", required=True)
     entry_id = graphene.ID(required=True, source="entry_id")
+    # UUID of the hulk relation row, or null if the entity was not created
+    # through the pyhelix (hulk/bulk) interface. Presence flags a hulk import;
+    # the value tallies against the bulk-import input dataset.
+    hulk_uuid = graphene.UUID()
+
+    def resolve_hulk_uuid(root, info, **kwargs):
+        return info.context.figure_hulk_dataloader.load(root.id).then(lambda row: row.uuid if row else None)
 
     def resolve_stock_date(root, info, **kwargs):
         if root.category in Figure.stock_list():
@@ -245,6 +252,11 @@ class EntryType(RelationBatchedDjangoObjectType):
         reverse_related_name="published_entries",
     )
     preview = graphene.Field("apps.entry.schema.SourcePreviewType")
+    # See FigureType.hulk_uuid.
+    hulk_uuid = graphene.UUID()
+
+    def resolve_hulk_uuid(root, info, **kwargs):
+        return info.context.entry_hulk_dataloader.load(root.id).then(lambda row: row.uuid if row else None)
 
     # document + preview (forward FKs) are auto-wired via RelationBatchedDjangoObjectType ->
     # RelationNodeLoader (no explicit resolver needed).
@@ -263,6 +275,11 @@ class SourcePreviewType(RelationBatchedDjangoObjectType):
 
     status = graphene.Field(PreviewStatusGrapheneEnum)
     status_display = EnumDescription(source="get_status_display")
+    # See FigureType.hulk_uuid.
+    hulk_uuid = graphene.UUID()
+
+    def resolve_hulk_uuid(root, info, **kwargs):
+        return info.context.source_preview_hulk_dataloader.load(root.id).then(lambda row: row.uuid if row else None)
 
     def resolve_pdf(root, info, **kwargs):
         if root.status == SourcePreview.PREVIEW_STATUS.COMPLETED:
