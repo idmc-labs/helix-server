@@ -242,7 +242,7 @@ class TestOrderingOnlyArgumentPaginationGuard(HelixTestCase):
 class TestNestedListOrderingGuard(HelixTestCase):
     """The THIRD ordering chokepoint.
 
-    A *paginated* nested list is resolved by `OneToManyLoader`, which never calls either
+    A *paginated* nested list is resolved by `FilteredRelationListLoader`, which never calls either
     pagination class: it numbers each parent's children with `Window(order_by=...)` built by
     `_ordering_expressions`. Same guard, same message, or a nested list accepts what its
     top-level counterpart refuses. Pinned next to the other two so they cannot drift.

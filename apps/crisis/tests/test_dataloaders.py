@@ -19,13 +19,13 @@ from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
 class TestGenericDataLoaders(HelixGraphQLTestCase):
-    """Guards the generic ``utils.graphene.dataloaders`` OneToManyLoader / CountLoader that back
+    """Guards the generic ``utils.graphene.dataloaders`` FilteredRelationListLoader / FilteredRelationCountLoader that back
     every ``DjangoPaginatedListObjectField`` exposed under a list path.
 
     Covers the engine's code-path matrix:
-      - OneToManyLoader python-group path  (unpaginated reverse-M2M: figure.sources)
-      - OneToManyLoader window-CTE path    (paginated reverse-FK: crisis.events(pageSize:N))
-      - CountLoader grouped-count path     (crisis.events.totalCount)
+      - FilteredRelationListLoader python-group path  (unpaginated reverse-M2M: figure.sources)
+      - FilteredRelationListLoader window-CTE path    (paginated reverse-FK: crisis.events(pageSize:N))
+      - FilteredRelationCountLoader grouped-count path     (crisis.events.totalCount)
       - childless parent -> empty results / count 0 (no crash)
       - constant (non-N+1) query count: the per-parent overhead must stay flat as the number
         of parent rows grows (the whole point of batching these loaders).
@@ -65,7 +65,7 @@ class TestGenericDataLoaders(HelixGraphQLTestCase):
         return json.loads(response.content)["data"]
 
     def test_unpaginated_reverse_m2m_sources(self) -> None:
-        # OneToManyLoader python-group path: figure.sources has no pageSize param, so the field
+        # FilteredRelationListLoader python-group path: figure.sources has no pageSize param, so the field
         # returns the FULL source set per figure (just ordered). Assert each figure gets exactly
         # its own sources and the childless figure gets an empty list.
         query = """
@@ -96,7 +96,7 @@ class TestGenericDataLoaders(HelixGraphQLTestCase):
         self.assertEqual(by_id[str(self.figure_c.id)], set())
 
     def test_paginated_reverse_fk_events_page(self) -> None:
-        # OneToManyLoader window-CTE path: crisis.events declares pageSize. Default ordering is
+        # FilteredRelationListLoader window-CTE path: crisis.events declares pageSize. Default ordering is
         # empty -> _ordering_expressions falls back to (pk ASC), so page 1 of size 2 is the two
         # lowest-pk events. Assert we get exactly the requested page and the count is the real
         # related total (not the page size).
@@ -122,7 +122,7 @@ class TestGenericDataLoaders(HelixGraphQLTestCase):
 
         # Window-CTE returns exactly one page (page_size rows) per parent...
         self.assertEqual(page_ids, expected_first_two)
-        # ...while CountLoader reports the full related total, independent of the page slice.
+        # ...while FilteredRelationCountLoader reports the full related total, independent of the page slice.
         self.assertEqual(crisis_node["events"]["totalCount"], 3)
 
         # Childless crisis: empty page, count 0, no crash.
@@ -171,7 +171,7 @@ class TestGenericDataLoaders(HelixGraphQLTestCase):
         # per-parent queries. The exact total query count of the GraphQL pipeline is brittle, so
         # instead we assert it does NOT scale with the number of parent crises: capture the count
         # with a single events-bearing crisis present, then add two more (each with its own
-        # events) and capture again. Because OneToManyLoader / CountLoader batch every parent key
+        # events) and capture again. Because FilteredRelationListLoader / FilteredRelationCountLoader batch every parent key
         # into a single query each, the two counts must be EQUAL. An N+1 regression would make the
         # 3-crisis count strictly larger than the 1-crisis count.
         #
@@ -340,7 +340,7 @@ class TestGenericDataLoaders(HelixGraphQLTestCase):
     def test_nested_list_ordered_by_gated_figure_count_annotation(self) -> None:
         # Regression guard: a nested paginated list ordered by a GATED figure-count annotation
         # (total_stock_idp_figures) must not FieldError. The annotation is added only when the
-        # ordering references it, so OneToManyLoader must forward `ordering` into the entity
+        # ordering references it, so FilteredRelationListLoader must forward `ordering` into the entity
         # filterset (mirroring the top-level path). Before the fix this raised
         # "Cannot resolve keyword 'total_stock_idp_figures'" -> HTTP 500.
         crisis = CrisisFactory.create()

@@ -185,7 +185,7 @@ class OrderingOnlyArgumentPagination(BaseDjangoGraphqlPagination):
     def paginate_queryset(self, qs, **kwargs):
         # One ordering rule for every list: `nulls_last_order_queryset` carries the allowlist
         # refusal, NULLS LAST, the filterset's own ordering, and the pk tiebreaker. A field served
-        # here is often the same field a list serves through OneToManyLoader, so anything this
+        # here is often the same field a list serves through FilteredRelationListLoader, so anything this
         # route did differently showed up as two orders for one set of arguments.
         kwargs[self.ordering_param] = kwargs.get(self.ordering_param) or self.ordering
         return nulls_last_order_queryset(qs, self.ordering_param, **kwargs)

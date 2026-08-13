@@ -194,7 +194,7 @@ class TestArchivedOrganizationProvenance(HelixGraphQLTestCase):
         self.assertEqual(publishers["totalCount"], 2, content)
 
     def test_entry_publishers_keep_an_archived_publisher_inside_a_list(self):
-        """The nested-in-a-list route goes through OneToManyLoader, not the single-object path."""
+        """The nested-in-a-list route goes through FilteredRelationListLoader, not the single-object path."""
         entry = EntryFactory.create(created_by=self.user)
         entry.publishers.set([self.visible, self.removed])
         self.removed.delete()

@@ -284,7 +284,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             # Without page params the loader's batch holds every child row of the parent,
             # so the group it returns already carries the total.
             return page.then(len)
-        return info.context.get_count_loader(
+        return info.context.get_filtered_relation_count_loader(
             parent_class.__name__,
             child_class.__name__,
             loader_params,
@@ -311,7 +311,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 raise NotImplementedError(f"Dataloader error: fetching without dataloader. {info.path}")
             parent_class = root._meta.model
             child_class = manager.model
-            # The loader instance is selected by these arguments (see GQLContext.get_dataloader),
+            # The loader instance is selected by these arguments (see GQLContext.get_filtered_relation_list_loader),
             # so every argument that changes the rows a batch returns is passed here.
             loader_params = dict(
                 parent=parent_class,
@@ -326,7 +326,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 **kwargs,
             )
             # TODO: qs should be executed only when we access the results node in the future
-            qs = info.context.get_dataloader(
+            qs = info.context.get_filtered_relation_list_loader(
                 parent_class.__name__,
                 self.related_name,
                 loader_params,

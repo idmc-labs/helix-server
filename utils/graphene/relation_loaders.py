@@ -13,10 +13,14 @@ FASTER than a wide multi-table ``select_related`` JOIN (and it dedupes shared ta
 
 This module provides:
   * ``RelationNodeLoader`` — batch-load a related model's rows by PK (forward FK / OneToOne).
-  * ``RelationBatchedDjangoObjectType`` — a base type that, for every exposed forward FK / O2O field
-    WITHOUT a hand-written resolver (and not a paginated list), installs a resolver routing through
-    ``RelationNodeLoader``. Reverse-FK / M2M list relations are intentionally left for a follow-up
-    (they need a grouped list loader; many are already paginated via ``OneToManyLoader``).
+  * ``ReverseFKListLoader`` — batch a reverse-FK list: one query per (parent, accessor), grouped
+    by parent id.
+  * ``M2MListLoader`` — the same for an M2M, read through the through table.
+  * ``RelationBatchedDjangoObjectType`` — a base type that installs a resolver for every exposed
+    relation field WITHOUT a hand-written resolver: forward FK / O2O through ``RelationNodeLoader``,
+    non-paginated reverse-FK / M2M lists through the grouped list loaders above. A field declared
+    as a paginated list is left alone — ``FilteredRelationListLoader`` serves those, because they
+    carry the field's own filterset, ordering and pagination.
 
 NOTE: every loader here reaches its rows through ``objects``. Django's own descriptors do not —
 ``ForwardManyToOneDescriptor`` resolves an FK through ``_base_manager`` and ``ManyRelatedManager``
@@ -181,7 +185,7 @@ class RelationBatchedDjangoObjectType(DjangoObjectType):
                 continue  # explicit resolver / loader already present
             field = cls._meta.fields.get(name)
             if isinstance(field, DjangoPaginatedListObjectField):
-                continue  # paginated list -> OneToManyLoader path
+                continue  # paginated list -> FilteredRelationListLoader path
             # concrete forward relation on THIS model: FK (many_to_one) or forward O2O -> node loader
             if getattr(rel, "concrete", False) and (getattr(rel, "many_to_one", False) or getattr(rel, "one_to_one", False)):
                 setattr(cls, "resolve_%s" % snake, _make_fk_resolver(snake, rel.related_model))

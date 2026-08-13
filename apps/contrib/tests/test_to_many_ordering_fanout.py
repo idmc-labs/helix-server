@@ -60,7 +60,7 @@ LIST_QUERY = """
     }
 """
 
-# The paginated nested-list route (OneToManyLoader + Window), the other place a sort key
+# The paginated nested-list route (FilteredRelationListLoader + Window), the other place a sort key
 # can reach the ORM.
 NESTED_EVENTS_QUERY = """
     query MyQuery($ordering: String) {

@@ -67,7 +67,7 @@ class TestMonitoringSubRegionCountryCountLoader(HelixGraphQLTestCase):
 
 class TestTwoRelationsToTheSameChild(HelixGraphQLTestCase):
     """Country.contacts and Country.operatingContacts both count Contact rows for the same
-    parent id, and count different ones: each needs its own CountLoader.
+    parent id, and count different ones: each needs its own FilteredRelationCountLoader.
     """
 
     def setUp(self) -> None:

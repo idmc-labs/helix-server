@@ -1,6 +1,6 @@
 """The per-model ORDERING_ALLOWLIST applies to nested lists too, end to end over GraphQL.
 
-A *paginated* nested list is resolved by `OneToManyLoader.batch_load_fn`, which builds
+A *paginated* nested list is resolved by `FilteredRelationListLoader.batch_load_fn`, which builds
 `Window(order_by=_ordering_expressions(...))` instead of going through either pagination
 class. Until the guard was added there, `crisisList { events(ordering: ..., pageSize: N) }`
 took any token the ORM could resolve: junk came back as Django's raw `FieldError` (which

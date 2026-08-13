@@ -47,16 +47,16 @@ from apps.report.dataloaders import (
     ReportTotalDisaggregationLoader,
 )
 from apps.users.dataloaders import UserPortfoliosMetadataLoader
-from utils.graphene.dataloaders import CountLoader, OneToManyLoader, call_signature
+from utils.graphene.dataloaders import FilteredRelationCountLoader, FilteredRelationListLoader, call_signature
 from utils.graphene.relation_loaders import RelationNodeLoader
 
 
 class GQLContext:
     def __init__(self, request):
         self.request = request
-        # global dataloaders
-        self.one_to_many_dataloaders = {}
-        self.count_dataloaders = {}
+        # one loader per (relation, call-arguments) pair
+        self.filtered_relation_list_loaders = {}
+        self.filtered_relation_count_loaders = {}
         # one RelationNodeLoader per related model (forward FK / O2O batching)
         self.relation_node_loaders = {}
         # one reverse-FK / M2M list loader per (parent, accessor) ref
@@ -66,28 +66,27 @@ class GQLContext:
     def user(self):
         return self.request.user
 
-    def get_dataloader(self, parent: str, related_name: str, params: dict):
-        # TODO: rename to get OneToManyLoader?
+    def get_filtered_relation_list_loader(self, parent: str, related_name: str, params: dict):
         # One loader per relation AND per set of call arguments: a loader resolves its whole
         # batch with the arguments it was built with and caches promises by parent id alone,
         # so two aliases of the same field with different filters/pagination each need their
         # own. Callers sharing an argument set share the loader, and so batch into one query.
         ref = f"{parent}_{related_name}_{call_signature(params)}"
-        if ref not in self.one_to_many_dataloaders:
-            self.one_to_many_dataloaders[ref] = OneToManyLoader(**params)
-        return self.one_to_many_dataloaders[ref]
+        if ref not in self.filtered_relation_list_loaders:
+            self.filtered_relation_list_loaders[ref] = FilteredRelationListLoader(**params)
+        return self.filtered_relation_list_loaders[ref]
 
-    def get_count_loader(self, parent: str, child: str, params: dict):
+    def get_filtered_relation_count_loader(self, parent: str, child: str, params: dict):
         # `related_name` separates two relations running from the same parent to the same
         # child (ContextualUpdate sources/publishers, Country contacts/operatingContacts),
         # which count different rows. The loader is built with — and keyed by — only the
         # arguments a count is resolved with, so aliases that differ merely in page size
         # share one loader and one query.
-        count_params = {key: params[key] for key in CountLoader.CALL_PARAMS if key in params}
+        count_params = {key: params[key] for key in FilteredRelationCountLoader.CALL_PARAMS if key in params}
         ref = f"{parent}_{child}_{params.get('related_name')}_{call_signature(count_params)}"
-        if ref not in self.count_dataloaders:
-            self.count_dataloaders[ref] = CountLoader(**count_params)
-        return self.count_dataloaders[ref]
+        if ref not in self.filtered_relation_count_loaders:
+            self.filtered_relation_count_loaders[ref] = FilteredRelationCountLoader(**count_params)
+        return self.filtered_relation_count_loaders[ref]
 
     def get_relation_node_loader(self, model):
         # one RelationNodeLoader per related model (batches forward FK / O2O loads by PK)

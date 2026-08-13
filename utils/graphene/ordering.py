@@ -9,7 +9,7 @@ All three paths from a client `ordering` string to SQL are gated:
 `nulls_last_order_queryset` and `OrderingOnlyArgumentPagination.paginate_queryset`
 (`utils/graphene/pagination.py`) for top-level and enum-ish lists, and
 `_ordering_expressions` (`utils/graphene/dataloaders.py`) for the paginated nested lists
-`OneToManyLoader` resolves with a `Window(order_by=...)`. A token absent from a bounded
+`FilteredRelationListLoader` resolves with a `Window(order_by=...)`. A token absent from a bounded
 model's set is therefore unreachable on EVERY list over that model — which is what lets a
 to-many denormalisation be retired rather than merely unused; see
 `apps/contrib/tests/test_to_many_ordering_fanout.py`.

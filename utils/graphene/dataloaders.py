@@ -143,8 +143,13 @@ def call_signature(params):
     return hashlib.sha1(_stable_repr(signature).encode()).hexdigest()
 
 
-class RelationCallLoader(DataLoader):
-    """Holds the arguments of one nested-list resolution for its whole batch."""
+class FilteredRelationLoader(DataLoader):
+    """Holds the arguments of one nested-list resolution for its whole batch.
+
+    The loaders in `utils/graphene/relation_loaders.py` batch a relation as the model declares
+    it. These carry what the *field* declares -- its filterset, ordering and pagination -- so an
+    instance is valid only for one argument set and `call_signature` keys the registry by it.
+    """
 
     def __init__(
         self,
@@ -173,7 +178,7 @@ class RelationCallLoader(DataLoader):
         self.kwargs = kwargs
 
 
-class CountLoader(RelationCallLoader):
+class FilteredRelationCountLoader(FilteredRelationLoader):
     # The arguments a count batch is resolved with: the relation, the filters and the
     # requesting user. Pagination is not among them - a total counts the unpaged set.
     CALL_PARAMS = (
@@ -210,7 +215,13 @@ class CountLoader(RelationCallLoader):
         return Promise.resolve([related_objects_by_parent.get(key) or 0 for key in keys])
 
 
-class OneToManyLoader(RelationCallLoader):
+class FilteredRelationListLoader(FilteredRelationLoader):
+    """Batch one nested list field: a reverse-FK or M2M child list per parent, filtered and ordered.
+
+    Paginated when the field declares page arguments (one page per parent, cut from a
+    `ROW_NUMBER()` window), whole-relation when it does not.
+    """
+
     def _filtered_qs(self):
         # Forward ordering to filtersets that opt in, so the (gated) figure-count annotations the
         # ordering references actually get added — mirrors the top-level path in
