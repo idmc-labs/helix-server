@@ -64,6 +64,20 @@ CANNOT_UPDATE_MESSAGE = _("You cannot sign off the entry.")
 
 
 class FigureLocation(UUIDAbstractModel, models.Model):
+    # figure.geoLocations
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "city",
+            "country",
+            "country_code",
+            "display_name",
+            "id",
+            "identifier",
+            "name",
+            "state",
+        }
+    )
+
     class ACCURACY(enum.Enum):
         ADM0 = 0
         ADM1 = 1
@@ -191,6 +205,17 @@ class FigureDisaggregationAbstractModel(models.Model):
 
 
 class DisaggregatedAge(models.Model):
+    # figure.disaggregationAge
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "age_from",
+            "age_to",
+            "id",
+            "sex",
+            "value",
+        }
+    )
+
     sex = enum.EnumField(enum=GENDER_TYPE, verbose_name=_("Sex"))
     uuid = models.UUIDField(verbose_name="UUID", blank=True, default=uuid4)
     value = models.PositiveIntegerField(blank=True, null=True, verbose_name=_("Value"))
@@ -202,6 +227,31 @@ class DisaggregatedAge(models.Model):
 
 
 class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisaggregationAbstractModel, models.Model):
+    # figureList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "category",
+            "country__idmc_short_name",
+            "created_at",
+            "created_by__full_name",
+            "entry__article_title",
+            "event__crisis__name",
+            "event__name",
+            "figure_cause",
+            "flow_end_date",
+            "flow_start_date",
+            "geolocations",
+            "id",
+            "modified_at",
+            "role",
+            "sources_reliability",
+            "stock_date",
+            "stock_reporting_date",
+            "term",
+            "total_figures",
+        }
+    )
+
     from apps.crisis.models import Crisis
 
     class QUANTIFIER(enum.Enum):
@@ -1365,6 +1415,17 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
 
 
 class FigureTag(MetaInformationAbstractModel):
+    # figureTagList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "created_by__full_name",
+            "id",
+            "modified_at",
+            "name",
+        }
+    )
+
     name = models.CharField(verbose_name=_("Name"), max_length=256)
 
     @classmethod
@@ -1434,11 +1495,29 @@ class EntryReviewer(MetaInformationAbstractModel, models.Model):
 
 
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
+    # entryList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "article_title",
+            "created_at",
+            "created_by__full_name",
+            "id",
+            "modified_at",
+            "publish_date",
+            "publishers__name",
+        }
+    )
+
     FIGURES_PER_ENTRY = FIGURE_NUMBER
 
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = "total_flow_nd_figures"
     IDP_FIGURES_ANNOTATE = "total_stock_idp_figures"
+
+    # CTEManager so the list queryset can render WITH clauses (used by the publishers
+    # sort-key CTE in EntryExtractionFilterSet), matching Figure/Event/Country/Crisis.
+    # Manager-only change (no migration); Entry has no soft-delete manager to preserve.
+    objects = CTEManager()
 
     url = models.URLField(verbose_name=_("Source URL"), max_length=2000, blank=True, null=True)
     associated_parked_item = models.OneToOneField(

@@ -24,6 +24,14 @@ from utils.fields import generate_full_media_url
 
 
 class GeographicalGroup(models.Model):
+    # geographicalGroupList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
+
     name = models.CharField(verbose_name=_("Name"), max_length=256)
 
     def __str__(self):
@@ -31,6 +39,14 @@ class GeographicalGroup(models.Model):
 
 
 class CountryRegion(models.Model):
+    # countryRegionList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
+
     # NOTE: following are the figure disaggregation fields
     ND_CONFLICT_ANNOTATE = "total_flow_conflict"
     ND_DISASTER_ANNOTATE = "total_flow_disaster"
@@ -131,6 +147,14 @@ class CountryRegion(models.Model):
 
 
 class MonitoringSubRegion(models.Model):
+    # monitoringSubRegionList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
+
     name = models.CharField(verbose_name=_("Name"), max_length=256)
 
     countries: models.QuerySet["Country"]
@@ -243,6 +267,20 @@ class CountrySubRegion(models.Model):
 
 
 class Country(models.Model):
+    # countryList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "geographical_group__name",
+            "id",
+            "idmc_short_name",
+            "region__name",
+            "total_flow_conflict",
+            "total_flow_disaster",
+            "total_stock_conflict",
+            "total_stock_disaster",
+        }
+    )
+
     GEOJSON_PATH = "geojsons"
     # NOTE: following are the figure disaggregation fields
     ND_CONFLICT_ANNOTATE = "total_flow_conflict"
@@ -605,6 +643,15 @@ class CountryPopulation(models.Model):
 
 
 class ContextualAnalysis(MetaInformationArchiveAbstractModel, models.Model):
+    # contextualAnalyses (nested on country)
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "modified_at",
+        }
+    )
+
     country = models.ForeignKey(
         "Country", verbose_name=_("Country"), on_delete=models.CASCADE, related_name="contextual_analyses"
     )
@@ -614,11 +661,33 @@ class ContextualAnalysis(MetaInformationArchiveAbstractModel, models.Model):
 
 
 class Summary(MetaInformationArchiveAbstractModel, models.Model):
+    # summaries (nested on country)
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "modified_at",
+        }
+    )
+
     country = models.ForeignKey("Country", verbose_name=_("Country"), on_delete=models.CASCADE, related_name="summaries")
     summary = models.TextField(verbose_name=_("Summary"), blank=False)
 
 
 class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
+    # householdSizeList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "country",
+            "created_at",
+            "id",
+            "modified_at",
+            "reference_date",
+            "size",
+            "year",
+        }
+    )
+
     class GAP_FILLING_METHOD(enum.Enum):
         EXACT_YEAR = 0
         BACKWARD_FILLING = 1

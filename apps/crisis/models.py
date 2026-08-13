@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
+from django.db.models.functions import Cast
 from django.db.models.sql.constants import LOUTER
 from django.utils.translation import gettext_lazy as _
 from django_cte import CTEManager, With
@@ -14,6 +15,30 @@ from apps.users.models import User
 
 
 class Crisis(MetaInformationAbstractModel, models.Model):
+    # crisisList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "countries__idmc_short_name",
+            "created_at",
+            "created_by__full_name",
+            "crisis_type",
+            "end_date",
+            "event_count",
+            "id",
+            "modified_at",
+            "name",
+            "progress",
+            "review_approved_count",
+            "review_in_progress_count",
+            "review_not_started_count",
+            "review_re_request_count",
+            "start_date",
+            "total_count",
+            "total_flow_nd_figures",
+            "total_stock_idp_figures",
+        }
+    )
+
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = "total_flow_nd_figures"
     IDP_FIGURES_ANNOTATE = "total_stock_idp_figures"
@@ -325,7 +350,12 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                 + models.F("review_approved_count")
             ),
             "progress": models.Case(
-                models.When(total_count__gt=0, then=models.F("review_approved_count") / models.F("total_count")),
+                # Cast: both counts are integers, so the division truncates and every partially
+                # approved row reads 0 -- the FloatField on the Case only labels the result.
+                models.When(
+                    total_count__gt=0,
+                    then=Cast(models.F("review_approved_count"), models.FloatField()) / models.F("total_count"),
+                ),
                 default=models.Value(0),
                 output_field=models.FloatField(),
             ),

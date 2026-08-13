@@ -74,7 +74,7 @@ class DeleteResource(graphene.Mutation):
         try:
             instance = Resource.objects.get(id=id, created_by=info.context.user)
         except Resource.DoesNotExist:
-            return UpdateResource(errors=[dict(field="nonFieldErrors", messages=gettext("Resource does not exist."))])
+            return DeleteResource(errors=[dict(field="nonFieldErrors", messages=gettext("Resource does not exist."))])
         instance.delete()
         instance.id = id
         return DeleteResource(result=instance, errors=None, ok=True)

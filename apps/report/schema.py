@@ -122,8 +122,8 @@ class ReportType(RelationBatchedDjangoObjectType):
 
     def resolve_total_disaggregation(root, info, **kwargs):
         # Batched: the per-report aggregate can't be merged (distinct filters), but the
-        # loader prefetches the filter M2Ms for the whole batch so get_filter_kwargs
-        # stops issuing ~18 queries per report (N+1 in query count).
+        # loader eager-loads the filter M2Ms of the reports whose filter kwargs are not
+        # cached, so get_filter_kwargs stops issuing ~18 queries per report.
         return info.context.report_report_total_disaggregation.load(root.id)
 
     generated_from = graphene.Field(ReportTypeEnum)

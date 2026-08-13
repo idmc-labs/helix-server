@@ -1,6 +1,7 @@
-from django.contrib.postgres.aggregates.general import StringAgg
 from django.db.models import (
     Exists,
+    Max,
+    Min,
     OuterRef,
     Q,
 )
@@ -9,7 +10,6 @@ from django_cte import With
 from django_filters import rest_framework as df
 
 from apps.common.enums import GENDER_TYPE
-from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.constants import FLOW, STOCK
@@ -24,6 +24,7 @@ from apps.event.models import ContextOfViolence
 from apps.extraction.models import ExtractionQuery
 from apps.report.models import Report
 from utils.filters import (
+    AcceptsOrdering,
     IDFilter,
     IDListFilter,
     MultiWordSearchFilterSet,
@@ -35,7 +36,7 @@ MALE = GENDER_TYPE.MALE.name
 FEMALE = GENDER_TYPE.FEMALE.name
 
 
-class EntryExtractionFilterSet(MultiWordSearchFilterSet):
+class EntryExtractionFilterSet(AcceptsOrdering, MultiWordSearchFilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
     filter_figure_events = IDListFilter(method="filter_figure_events_")
 
@@ -80,6 +81,30 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
         model = Entry
         fields = {}
         multi_word_search_fields = ["article_title"]
+
+    @property
+    def qs(self):
+        queryset = super().qs
+        # Ordering by `publishers__name` (M2M) would JOIN-fan-out one entry into one row
+        # per publisher. Denormalize the sort key into a per-entry scalar via a whole-table
+        # CTE (one hash aggregation, not a per-row subquery), LEFT JOIN by id, and order by
+        # that scalar — one row per entry, deterministic, no global DISTINCT. The outer
+        # annotation is aliased to the ordering token so order_by("publishers__name") binds
+        # to it instead of re-traversing the M2M. Min ascending / Max descending: that is the
+        # publisher the fan-out join sorted the entry at (see EventFilter.qs for the full
+        # reasoning).
+        if "publishers__name" in self.ordering_fields:
+            sort_key = Max if "publishers__name" in self.descending_ordering_fields else Min
+            cte = With(
+                Entry.objects.values("id").annotate(publishers_name=sort_key("publishers__name")),
+                name="entry_publishers_name_agg",
+            )
+            queryset = (
+                cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
+                .with_cte(cte)
+                .annotate(**{"publishers__name": cte.col.publishers_name})
+            )
+        return queryset
 
     @staticmethod
     def _figures_for_entry(**lookups):
@@ -352,12 +377,7 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
         )
 
 
-class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
-    # Opt-in: DjangoPaginatedListObjectField uses this marker to decide whether
-    # to forward the active ordering as a constructor arg, so subclasses can
-    # gate expensive annotations on it.
-    accepts_ordering = True
-
+class BaseFigureExtractionFilterSet(AcceptsOrdering, MultiWordSearchFilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
     filter_figure_regions = IDListFilter(method="filter_regions")
     filter_figure_geographical_groups = IDListFilter(method="filter_geographical_groups")
@@ -400,11 +420,6 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
         model = Figure
         fields = []
         multi_word_search_fields = ["entry__article_title"]
-
-    def __init__(self, *args, ordering=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ordering = ordering
-        self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
 
     def filter_filter_figure_created_by(self, qs, name, value):
         if value:
@@ -653,16 +668,15 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
             # runs in both the CTE and the outer query). The real fix for filtered
             # aggregate-ordering is denormalizing the sort key.
             if "geolocations" in self.ordering_fields:
+                # Sort key only — the rendered value comes from figure_geolocations_loader.
+                # Smallest/greatest location name, per the to-many ordering rule.
+                geolocations_aggregate = Max if "geolocations" in self.descending_ordering_fields else Min
+                # NOTE: the two CTEs below need distinct names — two With(...)
+                # with the default name in one query is a DuplicateAlias error
+                # when a client orders by both keys at once.
                 cte = With(
-                    Figure.objects.values("id").annotate(
-                        geolocations=StringAgg(
-                            "geo_locations__display_name",
-                            EXTERNAL_ARRAY_SEPARATOR,
-                            # Explicit inner order: otherwise the sort key is
-                            # assembled in plan-dependent order.
-                            ordering="geo_locations__display_name",
-                        )
-                    )
+                    Figure.objects.values("id").annotate(geolocations=geolocations_aggregate("geo_locations__display_name")),
+                    name="figure_geolocations_agg",
                 )
                 queryset = (
                     cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
@@ -673,7 +687,10 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
             # NOTE: expensive annotation for ordering and filtering.
             # we can't use elif here as ordering params can be multiple; is it practical?
             if "sources_reliability" in self.ordering_fields:
-                cte = With(Figure.objects.values("id").annotate(**Figure.annotate_sources_reliability()))
+                cte = With(
+                    Figure.objects.values("id").annotate(**Figure.annotate_sources_reliability()),
+                    name="figure_sources_reliability_agg",
+                )
                 queryset = (
                     cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
                     .with_cte(cte)

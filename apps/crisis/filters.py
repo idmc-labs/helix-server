@@ -1,6 +1,8 @@
 import graphene
-from django.db.models import Count, Exists, OuterRef
+from django.db.models import Count, Exists, Max, Min, OuterRef
+from django.db.models.sql.constants import LOUTER
 from django.http import HttpRequest
+from django_cte import With
 
 from apps.crisis.models import Crisis
 from apps.event.models import Event
@@ -14,6 +16,7 @@ from utils.figure_filter import (
     FigureFilterHelper,
 )
 from utils.filters import (
+    AcceptsOrdering,
     IDListFilter,
     MultiWordSearchFilterSet,
     SimpleInputFilter,
@@ -22,12 +25,7 @@ from utils.filters import (
 )
 
 
-class CrisisFilter(MultiWordSearchFilterSet):
-    # Opt-in: DjangoPaginatedListObjectField uses this marker to decide whether
-    # to forward the active ordering as a constructor arg, so we can gate
-    # expensive annotations on it (see qs property below).
-    accepts_ordering = True
-
+class CrisisFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     countries = IDListFilter(method="filter_countries")
     crisis_types = StringListFilter(method="filter_crisis_types")
     events = IDListFilter(method="filter_events")
@@ -48,11 +46,6 @@ class CrisisFilter(MultiWordSearchFilterSet):
             "end_date": ["lt", "lte", "gt", "gte"],
         }
         multi_word_search_fields = ["name", "events__name"]
-
-    def __init__(self, *args, ordering=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ordering = ordering
-        self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
 
     def noop(self, qs, name, value):
         return qs
@@ -99,9 +92,10 @@ class CrisisFilter(MultiWordSearchFilterSet):
         # nd/idp totals are annotated only when needed: aggregate_figures set, or sorting by them
         # (else resolvers read the default dataloaders). We need BOTH a subquery and a CTE; a CTE
         # alone can't do it — it is fixed to the default unfiltered scope, so aggregate_figures'
-        # filtered values must come from the parametrized subquery. The CTE is just the faster
-        # set-based path for the default values when sorting (big win on event; crisis/country are
-        # low-cardinality, so ~neutral there, kept for parity).
+        # filtered values must come from the parametrized subquery. When sorting, the CTE is much
+        # the cheaper of the two: its cost is one grouped pass over the 186k-row figure table,
+        # while the subquery's is per crisis row (260ms -> 93ms on a 50-row page). Few rows do not
+        # make that neutral — every crisis still drives its own aggregation over the figure table.
         # TODO: move aggregate_figures onto dataloaders -> the subquery arm goes away.
         figure_disaggregation = Crisis._total_figure_disaggregation_subquery(
             figures=figure_qs,
@@ -123,9 +117,30 @@ class CrisisFilter(MultiWordSearchFilterSet):
         if self.ordering_fields & set(review_figures_count.keys()):
             queryset = queryset.annotate(**review_figures_count)
 
+        # Crisis never got the denormalisation EventFilter has, so ordering by this M2M path
+        # JOIN-fanned-out one crisis into one row per country. Denormalise the sort key into
+        # a per-crisis scalar and alias it to the ordering token, exactly as event/entry do.
+        # Min ascending / Max descending: that is the country the fan-out join sorted the
+        # crisis at (see EventFilter.qs for the full reasoning).
+        if "countries__idmc_short_name" in self.ordering_fields:
+            sort_key = Max if "countries__idmc_short_name" in self.descending_ordering_fields else Min
+            cte = With(
+                Crisis.objects.values("id").annotate(countries_idmc_short_name=sort_key("countries__idmc_short_name")),
+                name="crisis_countries_name_agg",
+            )
+            queryset = (
+                cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
+                .with_cte(cte)
+                .annotate(**{"countries__idmc_short_name": cte.col.countries_idmc_short_name})
+            )
+
         # event_count is resolved via EventCountLoader unless the list is ordered by it.
+        # distinct: when a review-figure count is annotated too, it aggregates
+        # `events__figures`, and Django reuses the `events` join — so a bare Count would
+        # count figure rows. The ordering would then disagree with the eventCount values the
+        # client is shown, which come from EventCountLoader.
         if "event_count" in self.ordering_fields:
-            queryset = queryset.annotate(event_count=Count("events"))
+            queryset = queryset.annotate(event_count=Count("events", distinct=True))
 
         # NOTE: no prefetch_related("events"): CrisisType exposes `events` as a paginated
         # dataloader field (apps/crisis/schema.py), not root.events.all(), and event_count

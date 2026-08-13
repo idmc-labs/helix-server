@@ -27,6 +27,7 @@ from utils.figure_filter import (
     FigureFilterHelper,
 )
 from utils.filters import (
+    AcceptsOrdering,
     IDFilter,
     IDListFilter,
     MultiWordSearchFilterSet,
@@ -85,12 +86,7 @@ class CountryRegionFilter(MultiWordSearchFilterSet):
         multi_word_search_fields = ["name"]
 
 
-class CountryFilter(MultiWordSearchFilterSet):
-    # Opt-in: DjangoPaginatedListObjectField uses this marker to decide whether
-    # to forward the active ordering as a constructor arg, so we can gate
-    # expensive annotations on it (see qs property below).
-    accepts_ordering = True
-
+class CountryFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     id = IDFilter(field_name="id", lookup_expr="exact")
     region_by_ids = StringListFilter(method="filter_regions")
     geo_group_by_ids = StringListFilter(method="filter_geo_groups")
@@ -108,11 +104,6 @@ class CountryFilter(MultiWordSearchFilterSet):
         model = Country
         fields = []
         multi_word_search_fields = ["idmc_short_name", "iso3"]
-
-    def __init__(self, *args, ordering=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ordering = ordering
-        self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
 
     def noop(self, qs, name, value):
         return qs
@@ -174,8 +165,10 @@ class CountryFilter(MultiWordSearchFilterSet):
         # CTE; a CTE alone can't do it — it is fixed to the default current-year unfiltered scope,
         # so aggregate_figures' filtered / year / report-scoped values must come from the
         # parametrized subquery. (Gate on the raw field, not figure_qs: a year-only filter leaves
-        # figure_qs None but still needs its own date range.) The CTE is just the faster set-based
-        # path for the default values when sorting; country is low-cardinality, so ~neutral, parity.
+        # figure_qs None but still needs its own date range.) When sorting, the CTE is much the
+        # cheaper of the two: its cost is one grouped pass over the 186k-row figure table, while the
+        # subquery's is per country row, four aggregations at a time (444ms -> 60ms on a 50-row
+        # page). Few rows do not make that neutral.
         figure_disaggregation = Country._total_figure_disaggregation_subquery(
             figures=figure_qs,
             start_date=start_date,

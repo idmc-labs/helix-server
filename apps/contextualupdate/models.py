@@ -8,6 +8,20 @@ from apps.crisis.models import Crisis
 
 
 class ContextualUpdate(MetaInformationArchiveAbstractModel, models.Model):
+    # contextualUpdateList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "article_title",
+            "countries__idmc_short_name",
+            "created_at",
+            "id",
+            "modified_at",
+            "publish_date",
+            "publishers__name",
+            "sources__name",
+        }
+    )
+
     url = models.URLField(verbose_name=_("Source URL"), max_length=2000, blank=True, null=True)
     preview = models.ForeignKey(
         "contrib.SourcePreview",

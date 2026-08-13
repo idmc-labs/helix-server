@@ -67,6 +67,10 @@ def convert_json_field_to_scalar(field, registry=None):
 class DisaggregatedAgeType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisaggregatedAge
+        # entry_figure_related and report_report_related are unbounded fan-out. figureList has no
+        # disaggregated-age filter, and reportList cannot filter on a report's stored age
+        # disaggregation, so neither has a bounded replacement.
+        exclude_fields = ("entry_figure_related", "report_report_related")
 
     uuid = graphene.String(required=True)
     age_from = graphene.Field(graphene.Int)
@@ -90,6 +94,9 @@ class DisaggregatedStratumType(ObjectType):
 class FigureLocationType(RelationBatchedDjangoObjectType):
     class Meta:
         model = FigureLocation
+        # figures is unbounded fan-out; figureList has no geo-location filter, so there is
+        # no bounded replacement for it.
+        exclude_fields = ("figures",)
 
     accuracy = graphene.Field(AccuracyGrapheneEnum)
     accuracy_display = EnumDescription(source="get_accuracy_display")
@@ -108,6 +115,10 @@ class FigureLocationListType(CustomDjangoListObjectType):
 class FigureTagType(RelationBatchedDjangoObjectType):
     class Meta:
         model = FigureTag
+        # figure_set is unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureTags: [id]}), a strict membership test that reproduces
+        # the removed set exactly (895 figures on the widest tag).
+        exclude_fields = ("figure_set",)
 
 
 class FigureLastReviewCommentStatusType(ObjectType):
@@ -118,7 +129,9 @@ class FigureLastReviewCommentStatusType(ObjectType):
 
 class FigureType(RelationBatchedDjangoObjectType):
     class Meta:
-        exclude_fields = ("figure_reviews",)
+        # report_set is unbounded fan-out: the reports that pinned this figure into their figure
+        # set. reportList cannot filter by a member figure, so it has no bounded replacement.
+        exclude_fields = ("figure_reviews", "report_set")
         model = Figure
 
     quantifier = graphene.Field(QuantifierGrapheneEnum)
@@ -148,7 +161,9 @@ class FigureType(RelationBatchedDjangoObjectType):
     other_sub_type = graphene.Field(OtherSubTypeObjectType)
     figure_typology = graphene.String()
     sources = DjangoPaginatedListObjectField(
-        OrganizationListType, related_name="sources", reverse_related_name="sourced_figures"
+        OrganizationListType,
+        related_name="sources",
+        reverse_related_name="sourced_figures",
     )
     stock_date = graphene.Date()
     stock_reporting_date = graphene.Date()
@@ -225,7 +240,9 @@ class EntryType(RelationBatchedDjangoObjectType):
     created_by = graphene.Field("apps.users.schema.UserType")
     last_modified_by = graphene.Field("apps.users.schema.UserType")
     publishers = DjangoPaginatedListObjectField(
-        OrganizationListType, related_name="publishers", reverse_related_name="published_entries"
+        OrganizationListType,
+        related_name="publishers",
+        reverse_related_name="published_entries",
     )
     preview = graphene.Field("apps.entry.schema.SourcePreviewType")
 

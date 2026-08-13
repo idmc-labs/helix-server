@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
-from django.db.models import Case, CharField, F, Q, When
+from django.db.models import Case, CharField, F, When
 from promise import Promise
 from promise.dataloader import DataLoader
 
@@ -56,7 +56,14 @@ class FigureGeoLocationLoader(DataLoader):
     def batch_load_fn(self, keys):
         qs = (
             Figure.objects.filter(id__in=keys)
-            .annotate(geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR))
+            # ordering makes the concatenation deterministic: without it StringAgg emits the
+            # display names in plan-dependent order, so the same figure's geolocations string
+            # can reorder across runs and index states. Order by the aggregated column itself.
+            .annotate(
+                geolocations=StringAgg(
+                    "geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR, ordering="geo_locations__display_name"
+                )
+            )
             .values("id", "geolocations")
         )
         batch_load = {item["id"]: item["geolocations"] for item in qs}
@@ -78,13 +85,11 @@ class FigureLastReviewCommentStatusLoader(DataLoader):
     def batch_load_fn(self, keys):
         review_comment_qs = (
             UnifiedReviewComment.objects.filter(
-                Q(figure__in=keys)
-                and Q(
-                    comment_type__in=[
-                        UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN,
-                        UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED,
-                    ]
-                )
+                figure__in=keys,
+                comment_type__in=[
+                    UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN,
+                    UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED,
+                ],
             )
             .order_by(
                 "figure_id",

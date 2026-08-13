@@ -14,7 +14,31 @@ from graphene.types.generic import GenericScalar
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django.forms.converter import convert_form_field
 
+from utils.graphene.ordering import strip_direction
 from utils.mutation import compare_input_output_type_fields, generate_object_field_from_input_type
+
+
+class AcceptsOrdering:
+    """Exposes the active `ordering` string to a filterset as the sort keys it needs.
+
+    `utils/graphene/fields.py` and the relation loaders forward `ordering` to any filterset
+    declaring `accepts_ordering`, so a `qs` property can annotate a sort key on demand rather than
+    let the ORM traverse a to-many path and fan one parent out into a row per child.
+
+    `ordering_fields` holds the keys with the direction stripped; `descending_ordering_fields` holds
+    only those sorted descending, because a denormalised to-many key depends on the direction --
+    ascending sorts by the smallest child, descending by the greatest.
+
+    Mix in FIRST, so this `__init__` consumes `ordering` before the FilterSet sees the kwargs.
+    """
+
+    accepts_ordering = True
+
+    def __init__(self, *args, ordering=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        tokens = [token for token in (ordering or "").replace(" ", "").split(",") if token]
+        self.ordering_fields = {strip_direction(token) for token in tokens}
+        self.descending_ordering_fields = {strip_direction(token) for token in tokens if token.startswith("-")}
 
 
 class MultiWordSearchFilterSet(df.FilterSet):
@@ -119,12 +143,13 @@ class MultiWordSearchFilterSet(df.FilterSet):
         # DIFFERENT related rows. Testing those paths through `Exists` keeps the
         # fan-out inside the subquery — no `.distinct()`.
         #
-        # `helix_unaccent` for every lookup: the wrapper inlines to the extension's
-        # C function, so unindexed evaluations cost the same as the built-in
-        # `unaccent` while the planner index-serves whatever predicate shapes it
-        # can (single-column scans, same-table BitmapOr, the `Exists` child
-        # subqueries). Cross-table ORs still evaluate row-by-row — no index can
-        # drive those regardless of the function.
+        # `helix_unaccent` for every lookup: the wrapper reaches the extension's
+        # C function for about what calling it directly costs, so unindexed
+        # evaluations are no worse than the built-in `unaccent` while the planner
+        # index-serves whatever predicate shapes it can (single-column scans,
+        # same-table BitmapOr, the `Exists` child subqueries). Cross-table ORs
+        # still evaluate row-by-row — no index can drive those regardless of the
+        # function.
         model = queryset.model
         field_is_to_many = {field: self.field_path_is_to_many(field) for field in self.multiword_searchable_fields}
         filter_condition = Q()

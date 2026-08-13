@@ -146,19 +146,39 @@ class QueryAbstractModel(models.Model):
     # (e.g. a data migration touching the filter M2Ms directly).
     FILTER_KWARGS_CACHE_TTL = 6 * 60 * 60
 
+    def filter_kwargs_cache_key(self):
+        """Cache key of this instance's computed filter kwargs, None for an unsaved one.
+
+        Keyed on (model, pk, modified_at): a save rotates `modified_at`, so an edit
+        invalidates by construction.
+        """
+        if self.pk is None:
+            return None
+        modified_at = getattr(self, "modified_at", None)  # from the MetaInformation mixins
+        stamp = modified_at.isoformat() if modified_at else "na"
+        return f"query_filter_kwargs:v1:{self._meta.label_lower}:{self.pk}:{stamp}"
+
+    @classmethod
+    def with_uncached_filter_kwargs(cls, instances):
+        """The instances whose filter kwargs are not cached, read in one cache round trip.
+
+        The ~18 filter M2Ms are read only for these, so a caller batching many instances
+        can restrict eager loading to them.
+        """
+        keys = [instance.filter_kwargs_cache_key() for instance in instances]
+        cached = cache.get_many([key for key in keys if key])
+        return [instance for instance, key in zip(instances, keys) if key not in cached]
+
     @property
     def get_filter_kwargs(self):
         # The stored filter definition only changes when the instance is edited, but
         # reading it costs one query per M2M filter field (~18) — a fixed tax on every
-        # report-scoped list/figure query. Cache the computed kwargs keyed on
-        # (model, pk, modified_at): a save rotates modified_at, so edits invalidate
-        # by construction. (Prefetching instead was measured as a regression — there
-        # is no N to amortize on the single-report path.)
-        if self.pk is None:
+        # report-scoped list/figure query. Cache the computed kwargs. (Prefetching
+        # instead was measured as a regression — there is no N to amortize on the
+        # single-report path.)
+        key = self.filter_kwargs_cache_key()
+        if key is None:
             return self._compute_filter_kwargs()
-        modified_at = getattr(self, "modified_at", None)  # from the MetaInformation mixins
-        stamp = modified_at.isoformat() if modified_at else "na"
-        key = f"query_filter_kwargs:v1:{self._meta.label_lower}:{self.pk}:{stamp}"
         data = cache.get(key)
         if data is None:
             data = self._compute_filter_kwargs()
@@ -243,4 +263,13 @@ class QueryAbstractModel(models.Model):
 
 
 class ExtractionQuery(MetaInformationAbstractModel, QueryAbstractModel):
+    # extractionQueryList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "modified_at",
+        }
+    )
+
     name = models.CharField(verbose_name=_("Name"), max_length=128)

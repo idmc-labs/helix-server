@@ -273,6 +273,7 @@ CACHES = {
     },
 }
 
+
 REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
@@ -331,6 +332,19 @@ else:
             "PORT": env("POSTGRES_PORT"),
         }
     }
+
+if TESTING:
+    # `Client.save()` writes the whole `client_ids` list from its own database into this cache,
+    # and `track_gidd` refuses any client absent from it. The write happens outside the test
+    # transaction, so a rollback cannot undo it: two pytest processes sharing this redis --
+    # different test databases, one cache -- clobber each other's list, and the loser's GIDD
+    # queries start failing with "Client is not registered". Namespacing per process keeps
+    # concurrent runs (several checkouts, or several agents) from seeing each other's keys.
+    # Keyed by database, not by pid: these keys have no TTL and container pids are small and
+    # reused, so a later process inherits a dead one's namespace along with its stale list.
+    CACHES[EXTERNAL_API_CACHE_ALIAS]["KEY_PREFIX"] = "external_api_test_{}_{}".format(
+        DATABASES["default"]["NAME"], PYTEST_XDIST_WORKER or "main"
+    )
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators

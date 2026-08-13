@@ -13,6 +13,17 @@ User = get_user_model()
 
 
 class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
+    # organizationKindList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "modified_at",
+            "name",
+            "reliability",
+        }
+    )
+
     class ORGANIZATION_RELIABILITY(enum.Enum):
         LOW = 0
         MEDIUM = 1
@@ -34,6 +45,20 @@ class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
 
 
 class Organization(MetaInformationArchiveAbstractModel, SoftDeleteModel, models.Model):
+    # organizationList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "category",
+            "countries__idmc_short_name",
+            "created_at",
+            "id",
+            "modified_at",
+            "name",
+            "organization_kind__name",
+            "short_name",
+        }
+    )
+
     class ORGANIZATION_CATEGORY(enum.Enum):
         UNKNOWN = 0
         REGIONAL = 1

@@ -7,6 +7,7 @@ from random import randint
 from unittest import mock
 
 from apps.contrib.models import Client
+from apps.contrib.redis_client_track import set_client_ids_in_redis
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import Entry, Figure
@@ -24,6 +25,7 @@ from utils.factories import (
     FigureFactory,
     ReportFactory,
 )
+from utils.graphene import dataloaders  # noqa: F401  (see query_json patch note)
 from utils.tests import (
     HelixGraphQLTestCase,
     create_user_with_role,
@@ -215,7 +217,16 @@ def get_dates(_type: GetDatesTypes, year: int) -> GetDatesDateRangeType:
 
 
 class TestCoreData(HelixGraphQLTestCase):
+    # Patch BOTH bindings: utils.graphene.dataloaders holds its own from-import
+    # of get_page_size. The dataloaders patch must be the INNER decorator (it
+    # starts first): if the outer/pagination patch were active when dataloaders
+    # gets imported for the first time, the mock lambda would be captured as the
+    # module's "original" and survive unpatching for the rest of the process
+    # (freezing nested pagination at the mocked size for every later test in
+    # the worker). The module-level dataloaders import below removes the
+    # import-order dependence entirely.
     @mock.patch("utils.graphene.pagination.get_page_size", lambda *_: 999999)
+    @mock.patch("utils.graphene.dataloaders.get_page_size", lambda *_: 999999)
     def query_json(self, query: str, variables: typing.Optional[dict] = None) -> dict:
         with RuntimeProfile(str(variables)):
             response = self.query(query, variables=variables)
@@ -499,6 +510,12 @@ class TestCoreData(HelixGraphQLTestCase):
 
     def setUp(self) -> None:
         super().setUp()
+        # `Client.save()` mirrors the whole client list into one redis key that `track_gidd`
+        # gates the GIDD endpoints on. The write lives outside the test transaction, so nothing
+        # rolls it back and anything else touching that key -- another test, another process on
+        # the same redis -- leaves this class's client missing and every GIDD query answering
+        # "Client is not registered". Re-seeding here makes each test independent of that.
+        set_client_ids_in_redis(list(Client.objects.values_list("code", flat=True)))
         self.user_monitoring_expert = create_user_with_role(
             USER_ROLE.MONITORING_EXPERT.name,
             country=self.country_npl.pk,
