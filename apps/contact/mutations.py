@@ -76,7 +76,7 @@ class DeleteContact(graphene.Mutation):
         try:
             instance = Contact.objects.get(id=id)
         except Contact.DoesNotExist:
-            return UpdateContact(errors=[dict(field="nonFieldErrors", messages=gettext("Contact does not exist."))])
+            return DeleteContact(errors=[dict(field="nonFieldErrors", messages=gettext("Contact does not exist."))])
         instance.delete()
         instance.id = id
         return DeleteContact(result=instance, errors=None, ok=True)

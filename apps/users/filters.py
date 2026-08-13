@@ -5,10 +5,17 @@ from django.db.models import Min
 
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio, User
-from utils.filters import IDFilter, IDListFilter, MultiWordSearchFilterSet, StringListFilter, generate_type_for_filter_set
+from utils.filters import (
+    AcceptsOrdering,
+    IDFilter,
+    IDListFilter,
+    MultiWordSearchFilterSet,
+    StringListFilter,
+    generate_type_for_filter_set,
+)
 
 
-class UserFilter(MultiWordSearchFilterSet):
+class UserFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     id = IDFilter(field_name="id", lookup_expr="exact")
     email = django_filters.CharFilter(field_name="email", lookup_expr="iexact")
     role_in = StringListFilter(method="filter_role_in")
@@ -47,10 +54,29 @@ class UserFilter(MultiWordSearchFilterSet):
             return queryset
         return queryset.filter(groups__permissions__codename__in=value)
 
+    # Mirrors UserPortfolioMetaDataLoader: each flag is "does this user hold a portfolio with
+    # that role". Exists rather than a join so the annotation cannot multiply user rows on a
+    # list that already carries to-many portfolio filters.
+    ROLE_FLAG_ANNOTATIONS = {
+        "is_admin": USER_ROLE.ADMIN,
+        "is_directors_office": USER_ROLE.DIRECTORS_OFFICE,
+        "is_reporting_team": USER_ROLE.REPORTING_TEAM,
+    }
+
     @property
     def qs(self):
-        # to get the highest role
-        return super().qs.prefetch_related("portfolios").distinct()
+        # No prefetch_related("portfolios"): UserType serves portfolios via its own resolver,
+        # not off the instance, so the eager prefetch was a dead load. The .distinct() stays —
+        # it is load-bearing for the to-many portfolio filters (see FUTURE_WORK).
+        queryset = super().qs.distinct()
+        annotations = {
+            flag: models.Exists(Portfolio.objects.filter(user=models.OuterRef("pk"), role=role.value))
+            for flag, role in self.ROLE_FLAG_ANNOTATIONS.items()
+            if flag in self.ordering_fields
+        }
+        if annotations:
+            queryset = queryset.annotate(**annotations)
+        return queryset
 
 
 class PortfolioFilter(django_filters.FilterSet):

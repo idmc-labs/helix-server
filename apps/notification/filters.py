@@ -36,7 +36,7 @@ class NotificationFilter(df.FilterSet):
         if not value:
             return qs
         if isinstance(value[0], int):
-            return qs.filter(type_in=value).distinct()
+            return qs.filter(type_in=value)
         return qs.filter(type__in=[Notification.Type.get(item).value for item in value])
 
     def filter_created_at_after(self, qs, name, value):

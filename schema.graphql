@@ -553,10 +553,6 @@ type ContextOfViolenceType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  figures: [FigureType!]!
-  events: [EventType!]!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
 }
 
 input ContextOfViolenceUpdateInputType {
@@ -769,7 +765,6 @@ type CountryType {
   contextualAnalyses(filters: ContextualAnalysisFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContextualAnalysisListType
   summaries(filters: CountrySummaryFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): SummaryListType
   householdSizes: [CountryHouseholdSizeType!]!
-  organizations: [OrganizationType!]!
   operatingContacts(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
   contacts(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
   communications: [CommunicationType!]!
@@ -1263,8 +1258,6 @@ type DisaggregatedAgeType {
   value: Int
   ageFrom: Int
   ageTo: Int
-  entryFigureRelated: [FigureType!]!
-  reportReportRelated: [ReportType!]!
   sexDisplay: EnumDescription
 }
 
@@ -1288,10 +1281,7 @@ type DisasterCategoryListType {
 type DisasterCategoryType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   subCategories(filters: DisasterSubCategoryFilterDataInputType, ordering: String): DisasterSubCategoryListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
 }
 
@@ -1319,10 +1309,7 @@ type DisasterSubCategoryListType {
 type DisasterSubCategoryType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   types(filters: DisasterTypeFilterDataInputType, ordering: String): DisasterTypeObjectListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
 }
 
@@ -1336,9 +1323,6 @@ type DisasterSubObjectListType {
 type DisasterSubObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
 }
 
@@ -1360,10 +1344,7 @@ type DisasterTypeObjectListType {
 type DisasterTypeObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   subTypes(filters: DisasterSubTypeFilterDataInputType, ordering: String): DisasterSubObjectListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
 }
 
@@ -1502,7 +1483,6 @@ type EntryType {
   idmcAnalysis: String
   isConfidential: Boolean!
   notifications: [GenericNotificationType!]!
-  figures: [FigureType!]
 }
 
 input EntryUpdateInputType {
@@ -1590,6 +1570,7 @@ input EventFilterDataInputType {
   eventTypes: [String!]
   countries: [ID!]
   osvSubTypeByIds: [ID!]
+  otherSubTypes: [ID!]
   disasterSubTypes: [ID!]
   violenceTypes: [ID!]
   violenceSubTypes: [ID!]
@@ -1655,8 +1636,6 @@ type EventType {
   notifications: [GenericNotificationType!]!
   eventReviews: [UnifiedReviewCommentType!]!
   eventCode: [EventCodeType!]!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   eventTypeDisplay: EnumDescription
   totalStockIdpFigures: Int
   stockIdpFiguresMaxEndDate: Date
@@ -2190,7 +2169,6 @@ type FigureLocationType {
   geocoder: GEOCODER
   geocoderMetadata: JSONString
   geoLocationReviewComments: [UnifiedReviewCommentType!]!
-  figures: [FigureType!]!
   accuracyDisplay: EnumDescription
   identifierDisplay: EnumDescription
   geocoderDisplay: EnumDescription
@@ -2220,7 +2198,6 @@ type FigureTagType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  figureSet: [FigureType!]!
   contextualupdateSet: [ContextualUpdateType!]!
 }
 
@@ -2296,7 +2273,6 @@ type FigureType {
   reviewStatus: FIGURE_REVIEW_STATUS
   notifications: [GenericNotificationType!]!
   figureReviewComments: [UnifiedReviewCommentType!]!
-  reportSet: [ReportType!]!
   getQuantifier: EnumDescription
   unitDisplay: EnumDescription
   roleDisplay: EnumDescription
@@ -3012,6 +2988,7 @@ input OrganizationFilterDataInputType {
   categories: [String!]
   organizationKinds: [ID!]
   orderCountryFirst: [ID!]
+  excludeDeleted: Boolean
 }
 
 input OrganizationKindCreateInputType {
@@ -3077,16 +3054,9 @@ type OrganizationType {
   organizationKind: OrganizationKindObjectType
   methodology: String
   parent: OrganizationType
-  sourcedFigures: [FigureType!]!
-  publishedEntries: [EntryType!]!
-  subOrganizations: [OrganizationType!]!
   contacts(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
-  sourcedExtractionquery: [ExtractionQueryObjectType!]!
-  publishedExtractionquery: [ExtractionQueryObjectType!]!
   sourcedContextualUpdates: [ContextualUpdateType!]!
   publishedContextualUpdates: [ContextualUpdateType!]!
-  sourcedReport: [ReportType!]!
-  publishedReport: [ReportType!]!
   categoryDisplay: EnumDescription
 }
 
@@ -3107,10 +3077,6 @@ input OrganizationUpdateInputType {
 type OsvSubObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
-  events: [EventType!]!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
 }
 
 input OsvSubTypeFilterDataInputType {
@@ -3143,8 +3109,6 @@ type OtherSubTypeObjectType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  figures: [FigureType!]!
-  events: [EventType!]!
 }
 
 enum PARKING_LOT_SOURCE {
@@ -4305,9 +4269,6 @@ type ViolenceSubObjectListType {
 type ViolenceSubObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
 }
 
 input ViolenceSubTypeFilterDataInputType {
@@ -4317,10 +4278,7 @@ input ViolenceSubTypeFilterDataInputType {
 type ViolenceType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   subTypes(filters: ViolenceSubTypeFilterDataInputType, ordering: String): ViolenceSubObjectListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
 }
 
 type VisualizationFigureType {

@@ -1,5 +1,4 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.contact.schema import ContactListType
@@ -10,12 +9,33 @@ from apps.organization.models import Organization, OrganizationKind
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 
-class OrganizationType(DjangoObjectType):
+class OrganizationType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Organization
+        # sourced_figures and published_entries are unbounded fan-out (one organization sources
+        # 15,312 figures and publishes 3,321 entries); read them via
+        # figureList(filters: {filterFigureSources: [id]}) and
+        # entryList(filters: {filterEntryPublishers: [id]}). Both are strict membership tests over
+        # the M2M through table and reproduce the removed sets exactly.
+        # sourced_report, published_report, sourced_extractionquery and published_extractionquery
+        # are this organization's appearances in the stored figure filter of a report or a saved
+        # extraction query; reportList and extractionQueryList cannot filter on that selection, so
+        # those four have no bounded replacement.
+        # sub_organizations is the reverse of Organization.parent and OrganizationFilter has no
+        # parent filter, so it has no bounded replacement either.
+        exclude_fields = (
+            "sourced_figures",
+            "published_entries",
+            "sourced_report",
+            "published_report",
+            "sourced_extractionquery",
+            "published_extractionquery",
+            "sub_organizations",
+        )
 
     category = graphene.Field(OrganizationCategoryTypeGrapheneEnum)
     category_display = EnumDescription(source="get_category_display")
@@ -25,17 +45,8 @@ class OrganizationType(DjangoObjectType):
     organization_kind = graphene.Field("apps.organization.schema.OrganizationKindObjectType")
     countries = graphene.List(graphene.NonNull(CountryType), required=True)
 
-    def resolve_countries(root, info, **kwargs):
-        """
-        Resolves the countries related to the organization.
-        """
-        return info.context.organization_countries_loader.load(root.id)
-
-    def resolve_organization_kind(root, info, **kwargs):
-        """
-        Resolves the organization kind for the organization.
-        """
-        return info.context.organization_organization_kind_loader.load(root.id)
+    # organization_kind (forward FK) + countries (M2M) are auto-wired via
+    # RelationBatchedDjangoObjectType -> RelationNodeLoader / M2MListLoader.
 
 
 class OrganizationListType(CustomDjangoListObjectType):
@@ -44,7 +55,7 @@ class OrganizationListType(CustomDjangoListObjectType):
         model = Organization
 
 
-class OrganizationKindObjectType(DjangoObjectType):
+class OrganizationKindObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = OrganizationKind
 

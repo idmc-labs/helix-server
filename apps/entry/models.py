@@ -30,6 +30,7 @@ from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
+from django_cte import CTEManager
 from django_enumfield import enum
 
 from apps.common.enums import GENDER_TYPE
@@ -63,6 +64,20 @@ CANNOT_UPDATE_MESSAGE = _("You cannot sign off the entry.")
 
 
 class FigureLocation(UUIDAbstractModel, models.Model):
+    # figure.geoLocations
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "city",
+            "country",
+            "country_code",
+            "display_name",
+            "id",
+            "identifier",
+            "name",
+            "state",
+        }
+    )
+
     class ACCURACY(enum.Enum):
         ADM0 = 0
         ADM1 = 1
@@ -190,6 +205,17 @@ class FigureDisaggregationAbstractModel(models.Model):
 
 
 class DisaggregatedAge(models.Model):
+    # figure.disaggregationAge
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "age_from",
+            "age_to",
+            "id",
+            "sex",
+            "value",
+        }
+    )
+
     sex = enum.EnumField(enum=GENDER_TYPE, verbose_name=_("Sex"))
     uuid = models.UUIDField(verbose_name="UUID", blank=True, default=uuid4)
     value = models.PositiveIntegerField(blank=True, null=True, verbose_name=_("Value"))
@@ -201,6 +227,31 @@ class DisaggregatedAge(models.Model):
 
 
 class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisaggregationAbstractModel, models.Model):
+    # figureList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "category",
+            "country__idmc_short_name",
+            "created_at",
+            "created_by__full_name",
+            "entry__article_title",
+            "event__crisis__name",
+            "event__name",
+            "figure_cause",
+            "flow_end_date",
+            "flow_start_date",
+            "geolocations",
+            "id",
+            "modified_at",
+            "role",
+            "sources_reliability",
+            "stock_date",
+            "stock_reporting_date",
+            "term",
+            "total_figures",
+        }
+    )
+
     from apps.crisis.models import Crisis
 
     class QUANTIFIER(enum.Enum):
@@ -359,6 +410,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             REVIEW_RE_REQUESTED: _("Review re-requested"),
         }
 
+    objects = CTEManager()
+
     uuid = models.UUIDField(verbose_name="UUID", blank=True, default=uuid4)
     entry = models.ForeignKey("Entry", verbose_name=_("Entry"), related_name="figures", on_delete=models.CASCADE)
     # to keep track of the old sub facts
@@ -368,7 +421,10 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
     unit = enum.EnumField(enum=UNIT, verbose_name=_("Unit of Figure"), default=UNIT.PERSON)
     household_size = models.FloatField(verbose_name=_("Household Size"), blank=True, null=True)
     total_figures = models.PositiveIntegerField(verbose_name=_("Total Figures"), default=0, editable=False)
-    category = enum.EnumField(enum=FIGURE_CATEGORY_TYPES, verbose_name=_("Figure Category"), blank=True, null=True)
+    # category is required like the other figure enums (quantifier/unit/role/figure_cause):
+    # every figure has one and all rows already populate it, so NOT NULL just enforces what the
+    # data already guarantees (DRF derives required=True; no value CHECK, like the sibling enums).
+    category = enum.EnumField(enum=FIGURE_CATEGORY_TYPES, verbose_name=_("Figure Category"), blank=False, null=False)
     term = enum.EnumField(enum=FIGURE_TERMS, verbose_name=_("Figure Term"), blank=True, null=True)
     displacement_occurred = enum.EnumField(
         enum=DISPLACEMENT_OCCURRED,
@@ -518,11 +574,35 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             models.Index(fields=["end_date"]),
             models.Index(fields=["start_date_accuracy"]),
             models.Index(fields=["end_date_accuracy"]),
-            models.Index(fields=["country"]),
+            # NOTE: no explicit index on `country` / `event` — both are ForeignKeys, which
+            # Django already indexes (db_index defaults True for FK). The explicit Meta
+            # indexes here were exact duplicates (entry_figur_country_*/event_* alongside
+            # the FK's entry_figure_country_id_*/event_id_*), doubling write cost + space
+            # on this 186k-row table for no read benefit.
             models.Index(fields=["category"]),
             models.Index(fields=["role"]),
-            models.Index(fields=["event"]),
             models.Index(fields=["figure_cause"]),
+            # Match the figure-list default ordering (created_at DESC NULLS LAST,
+            # applied by utils.graphene.pagination.nulls_last_order_queryset). A plain
+            # ASC index can't serve DESC NULLS LAST, so the list previously seq-scanned
+            # all rows + top-N sorted; this expression index turns it into an index scan.
+            models.Index(models.F("created_at").desc(nulls_last=True), name="figure_created_at_desc_idx"),
+            # Partial index serving the reference-date CTE in
+            # Event.annotate_total_figure_disaggregation_via_cte (CTE1), which filters
+            # role=RECOMMENDED + category=IDPS, groups by event, and takes MAX(end_date).
+            # Leading with `event` (the GROUP BY key) lets the planner produce groups in
+            # index order; `category` (equality) narrows within the partial set; `end_date`
+            # last lets MAX() read the last row per (event,category) range without a sort.
+            # The `role=RECOMMENDED` predicate is baked into the partial condition so the
+            # index only stores the recommended rows (the common QA/default-filter subset),
+            # keeping it small on this 186k-row table. The literal 0 is ROLE.RECOMMENDED.value
+            # (`role` is an enum.EnumField stored as int); the enum class isn't in scope inside
+            # Meta, and the CTE itself filters on `rec = Figure.ROLE.RECOMMENDED.value` == 0.
+            models.Index(
+                fields=["event", "category", "end_date"],
+                condition=models.Q(role=0),
+                name="figure_event_cat_role_rec_idx",
+            ),
         ]
         permissions = (("approve_figure", "Can approve/unapprove figure"),)
 
@@ -768,54 +848,45 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         return None
 
     # methods
+    @staticmethod
+    def with_year_difference(qs: QuerySet) -> QuerySet:
+        return qs.annotate(
+            year_difference=ExpressionWrapper(
+                ExtractYear("end_date") - ExtractYear("start_date"),
+                output_field=fields.IntegerField(),
+            )
+        )
+
     @classmethod
-    def _filtered_nd_figures(
+    def _nd_figures_q(
         cls,
         categories: List[int],
-        qs: QuerySet,
         start_date: Optional[date],
         end_date: Optional[date],
     ):
-        # NOTE: We should write this query without using union
-        year_difference = ExpressionWrapper(
-            ExtractYear("end_date") - ExtractYear("start_date"),
-            output_field=fields.IntegerField(),
-        )
-        qs = qs.annotate(year_difference=year_difference)
-
-        same_year_figures_filter = dict(
-            year_difference__lt=1,
-        )
-        multiple_year_figures = dict(
-            year_difference__gte=1,
-        )
-
+        # Caller must annotate `year_difference` on the queryset first.
         if len(categories) > 1:
-            same_year_figures_filter.update(category__in=categories)
-            multiple_year_figures.update(category__in=categories)
+            category_q = models.Q(category__in=categories)
         else:
-            same_year_figures_filter.update(
-                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-            )
-            multiple_year_figures.update(
-                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-            )
+            category_q = models.Q(category=categories[0])
 
+        same_year = category_q & models.Q(year_difference__lt=1)
+        multi_year = category_q & models.Q(year_difference__gte=1)
         if start_date:
-            same_year_figures_filter = dict(
-                **same_year_figures_filter,
-                start_date__gte=start_date,
-            )
-            multiple_year_figures = dict(**multiple_year_figures, end_date__gte=start_date)
-
+            same_year &= models.Q(start_date__gte=start_date)
+            multi_year &= models.Q(end_date__gte=start_date)
         if end_date:
-            same_year_figures_filter = dict(**same_year_figures_filter, start_date__lte=end_date)
-            multiple_year_figures = dict(
-                **multiple_year_figures,
-                end_date__lte=end_date,
-            )
+            same_year &= models.Q(start_date__lte=end_date)
+            multi_year &= models.Q(end_date__lte=end_date)
+        return same_year | multi_year
 
-        return qs.filter(models.Q(**same_year_figures_filter) | models.Q(**multiple_year_figures))
+    @classmethod
+    def nd_figures_q_for_listing(
+        cls,
+        start_date: Optional[date],
+        end_date: Optional[date] = None,
+    ):
+        return cls._nd_figures_q(cls.flow_list(), start_date, end_date)
 
     @classmethod
     def filtered_nd_figures(
@@ -824,12 +895,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
-        return cls._filtered_nd_figures(
-            [Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value],
-            qs,
-            start_date,
-            end_date=end_date,
-        )
+        qs = cls.with_year_difference(qs)
+        return qs.filter(cls._nd_figures_q([Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value], start_date, end_date))
 
     @classmethod
     def filtered_nd_figures_for_listing(
@@ -838,12 +905,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
-        return cls._filtered_nd_figures(
-            cls.flow_list(),
-            qs,
-            start_date,
-            end_date=end_date,
-        )
+        qs = cls.with_year_difference(qs)
+        return qs.filter(cls._nd_figures_q(cls.flow_list(), start_date, end_date))
 
     @classmethod
     def annotate_stock_and_flow_dates(cls):
@@ -956,20 +1019,43 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         ]
 
     @classmethod
+    def _idp_figures_q(
+        cls,
+        categories: List[int],
+        start_date: Optional[date],
+        end_date: Optional[date],
+        *,
+        end_date_lookup,
+    ):
+        if len(categories) > 1:
+            q = models.Q(category__in=categories)
+        else:
+            q = models.Q(category=categories[0])
+
+        if start_date:
+            q &= models.Q(end_date__gte=start_date)
+        if end_date:
+            q &= models.Q(**{f"end_date__{end_date_lookup}": end_date})
+        return q
+
+    @classmethod
+    def idp_figures_q_for_listing(
+        cls,
+        start_date: Optional[date],
+        end_date: Optional[date] = None,
+    ):
+        return cls._idp_figures_q(cls.stock_list(), start_date, end_date, end_date_lookup="lte")
+
+    @classmethod
     def filtered_idp_figures(
         cls,
         qs: QuerySet,
         start_date: Optional[date],
         end_date: Optional[Union[date, models.OuterRef]] = None,
     ):
-        qs = qs.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+        return qs.filter(
+            cls._idp_figures_q([Figure.FIGURE_CATEGORY_TYPES.IDPS.value], start_date, end_date, end_date_lookup="exact")
         )
-        if start_date:
-            qs = qs.filter(end_date__gte=start_date)
-        if end_date:
-            qs = qs.filter(end_date=end_date)
-        return qs
 
     @classmethod
     def filtered_idp_figures_for_listing(
@@ -978,12 +1064,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
-        qs = qs.filter(category__in=cls.stock_list())
-        if start_date:
-            qs = qs.filter(end_date__gte=start_date)
-        if end_date:
-            qs = qs.filter(end_date__lte=end_date)
-        return qs
+        return qs.filter(cls.idp_figures_q_for_listing(start_date, end_date))
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
@@ -1334,6 +1415,17 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
 
 
 class FigureTag(MetaInformationAbstractModel):
+    # figureTagList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "created_by__full_name",
+            "id",
+            "modified_at",
+            "name",
+        }
+    )
+
     name = models.CharField(verbose_name=_("Name"), max_length=256)
 
     @classmethod
@@ -1403,11 +1495,29 @@ class EntryReviewer(MetaInformationAbstractModel, models.Model):
 
 
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
+    # entryList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "article_title",
+            "created_at",
+            "created_by__full_name",
+            "id",
+            "modified_at",
+            "publish_date",
+            "publishers__name",
+        }
+    )
+
     FIGURES_PER_ENTRY = FIGURE_NUMBER
 
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = "total_flow_nd_figures"
     IDP_FIGURES_ANNOTATE = "total_stock_idp_figures"
+
+    # CTEManager so the list queryset can render WITH clauses (used by the publishers
+    # sort-key CTE in EntryExtractionFilterSet), matching Figure/Event/Country/Crisis.
+    # Manager-only change (no migration); Entry has no soft-delete manager to preserve.
+    objects = CTEManager()
 
     url = models.URLField(verbose_name=_("Source URL"), max_length=2000, blank=True, null=True)
     associated_parked_item = models.OneToOneField(
@@ -1456,6 +1566,11 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         indexes = [
             models.Index(fields=["publish_date"]),
             models.Index(fields=["review_status"]),
+            # Match the entry-list default ordering (created_at DESC NULLS LAST,
+            # applied by utils.graphene.pagination.nulls_last_order_queryset). A plain
+            # ASC index can't serve DESC NULLS LAST, so the list previously seq-scanned
+            # all rows + top-N sorted; this expression index turns it into an index scan.
+            models.Index(models.F("created_at").desc(nulls_last=True), name="entry_created_at_desc_idx"),
         ]
 
     @classmethod

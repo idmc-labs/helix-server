@@ -19,6 +19,19 @@ logger = logging.getLogger(__name__)
 
 
 class User(AbstractUser):
+    # users
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "date_joined",
+            "full_name",
+            "id",
+            "is_active",
+            "is_admin",
+            "is_directors_office",
+            "is_reporting_team",
+        }
+    )
+
     email = models.EmailField(verbose_name=_("Email Address"), unique=True)
     username = models.CharField(
         verbose_name=_("Username"),
@@ -184,6 +197,14 @@ class User(AbstractUser):
 
 
 class Portfolio(models.Model):
+    # portfolios
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "role",
+        }
+    )
+
     user = models.ForeignKey("User", verbose_name=_("User"), related_name="portfolios", on_delete=models.CASCADE)
     role = enum.EnumField(USER_ROLE, verbose_name=_("Role"), default=USER_ROLE.GUEST, blank=False)
     monitoring_sub_region = models.ForeignKey(

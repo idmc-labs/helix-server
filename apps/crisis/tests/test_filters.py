@@ -2,7 +2,7 @@ from apps.crisis.filters import CrisisFilter
 from apps.crisis.models import (
     Crisis,
 )
-from utils.factories import CountryFactory, CrisisFactory, EventFactory
+from utils.factories import CountryFactory, CrisisFactory, EntryFactory, EventFactory, FigureFactory
 from utils.tests import HelixTestCase
 
 CONFLICT = Crisis.CRISIS_TYPE.CONFLICT
@@ -17,7 +17,10 @@ class TestCrisisFilter(HelixTestCase):
         CrisisFactory.create(name="one")
         c2 = CrisisFactory.create(name="two")
         c3 = CrisisFactory.create(name="towo")
-        obtained = self.filter_class(data=dict(search="w")).qs
+        # The multi-word search qs has no inherent ORDER BY (the list field applies the
+        # production ordering), so order by id here to keep the assertion independent of the
+        # DB scan order. TODO: make the search/list ordering deterministic (see FUTURE_WORK).
+        obtained = self.filter_class(data=dict(search="wo")).qs.order_by("id")
         expected = [c2, c3]
         self.assertEqual(expected, list(obtained))
 
@@ -79,3 +82,27 @@ class TestCrisisFilter(HelixTestCase):
         obtained = self.filter_class(data=dict(search="asia", crisis_types=[CONFLICT])).qs
         expected = [asia_crisis_1]
         self.assertQuerySetEqual(expected, obtained)
+
+    def test_event_count_ordering_not_inflated_by_review_count_join(self):
+        """`event_count` must count events, not the figures joined in by a review count.
+
+        `annotate_review_figures_count()` aggregates `events__figures`, and Django reuses the
+        `events` join for both annotations — so a bare `Count("events")` counts figure rows.
+        The list would then be ordered by a number the client never sees, because the
+        displayed `eventCount` comes from `EventCountLoader`.
+        """
+        entry = EntryFactory.create()
+        # one event carrying 3 figures ...
+        few_events = CrisisFactory.create(name="few-events")
+        event = EventFactory.create(crisis=few_events)
+        FigureFactory.create_batch(3, entry=entry, event=event)
+        # ... versus two events carrying one figure each.
+        many_events = CrisisFactory.create(name="many-events")
+        for _ in range(2):
+            FigureFactory.create(entry=entry, event=EventFactory.create(crisis=many_events))
+
+        qs = self.filter_class(data={}, ordering="event_count,review_not_started_count").qs
+        counts = {crisis.id: crisis.event_count for crisis in qs}
+
+        self.assertEqual(counts[few_events.id], 1)
+        self.assertEqual(counts[many_events.id], 2)

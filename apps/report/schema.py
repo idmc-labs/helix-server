@@ -1,5 +1,4 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -25,6 +24,7 @@ from apps.report.models import (
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 
@@ -35,7 +35,7 @@ class ReportTotalsType(graphene.ObjectType):
     total_flow_disaster_sum = graphene.Int()
 
 
-class ReportCommentType(DjangoObjectType):
+class ReportCommentType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReportComment
 
@@ -46,7 +46,7 @@ class ReportCommentListType(CustomDjangoListObjectType):
         filterset_class = ReportCommentFilter
 
 
-class ReportApprovalType(DjangoObjectType):
+class ReportApprovalType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReportApproval
 
@@ -57,7 +57,7 @@ class ReportApprovalListType(CustomDjangoListObjectType):
         filterset_class = ReportApprovalFilter
 
 
-class ReportGenerationType(DjangoObjectType):
+class ReportGenerationType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReportGeneration
         exclude_fields = ("approvers",)
@@ -68,6 +68,9 @@ class ReportGenerationType(DjangoObjectType):
     approvals = DjangoPaginatedListObjectField(
         ReportApprovalListType,
     )
+
+    def resolve_is_approved(root, info, **kwargs):
+        return info.context.report_generation_approved_loader.load(root.id)
 
     def resolve_full_report(root, info, **kwargs):
         if root.status == ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED:
@@ -86,7 +89,7 @@ class ReportGenerationListType(CustomDjangoListObjectType):
         filterset_class = ReportGenerationFilter
 
 
-class ReportType(DjangoObjectType):
+class ReportType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Report
         exclude_fields = ("reports", "figures", "masterfact_reports")
@@ -106,11 +109,23 @@ class ReportType(DjangoObjectType):
     filter_figure_review_status = graphene.List(graphene.NonNull(FigureReviewStatusEnum))
 
     total_disaggregation = graphene.NonNull(ReportTotalsType)
-    # FIXME: use dataloader for last_generation
     last_generation = graphene.Field(ReportGenerationType)
     generations = DjangoPaginatedListObjectField(
         ReportGenerationListType,
     )
+
+    def resolve_last_generation(root, info, **kwargs):
+        # Batched (was a per-report query -> N+1 on the report list). The loader
+        # replicates Report.last_generation: latest generation per report with the
+        # is_approved annotation.
+        return info.context.report_report_last_generation.load(root.id)
+
+    def resolve_total_disaggregation(root, info, **kwargs):
+        # Batched: the per-report aggregate can't be merged (distinct filters), but the
+        # loader eager-loads the filter M2Ms of the reports whose filter kwargs are not
+        # cached, so get_filter_kwargs stops issuing ~18 queries per report.
+        return info.context.report_report_total_disaggregation.load(root.id)
+
     generated_from = graphene.Field(ReportTypeEnum)
     generated_from_display = EnumDescription(source="get_generated_from_display_display")
 

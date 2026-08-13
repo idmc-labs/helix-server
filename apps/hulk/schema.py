@@ -1,9 +1,9 @@
 import graphene
 from graphene_django import DjangoObjectType
-from graphene_django_extras import PageGraphqlPagination
 
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.graphene.pagination import GatedPageGraphqlPagination
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.permissions import is_authenticated
 
@@ -90,7 +90,7 @@ class Query:
     hulk_bulk_import = graphene.Field(HulkBulkImportType, id=graphene.ID(required=True))
     hulk_bulk_imports = DjangoPaginatedListObjectField(
         HulkBulkImportListType,
-        pagination=PageGraphqlPagination(page_size_query_param="pageSize"),
+        pagination=GatedPageGraphqlPagination(page_size_query_param="pageSize"),
     )
 
     @staticmethod

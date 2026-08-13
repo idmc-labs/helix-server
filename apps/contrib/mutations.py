@@ -158,7 +158,7 @@ class UpdateClient(graphene.Mutation):
         try:
             instance = Client.objects.get(id=data["id"])
         except Client.DoesNotExist:
-            return ClientUpdateSerializer(errors=[dict(field="nonFieldErrors", messages=gettext("Client does not exist."))])
+            return UpdateClient(errors=[dict(field="nonFieldErrors", messages=gettext("Client does not exist."))], ok=False)
         serializer = ClientUpdateSerializer(instance=instance, data=data, context=dict(request=info.context), partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateClient(errors=errors, ok=False)

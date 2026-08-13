@@ -1,3 +1,5 @@
+from django.db.models import Exists, OuterRef
+
 from apps.resource.models import Resource, ResourceGroup
 from utils.filters import MultiWordSearchFilterSet, StringListFilter
 
@@ -19,7 +21,7 @@ class ResourceFilter(MultiWordSearchFilterSet):
     def filter_countries(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(countries__in=value).distinct()
+        return qs.filter(Exists(Resource.countries.through.objects.filter(resource_id=OuterRef("pk"), country_id__in=value)))
 
 
 class ResourceGroupFilter(MultiWordSearchFilterSet):

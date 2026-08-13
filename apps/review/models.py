@@ -6,6 +6,15 @@ from apps.contrib.models import MetaInformationArchiveAbstractModel
 
 
 class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
+    # reviewComments
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "modified_at",
+        }
+    )
+
     class REVIEW_COMMENT_TYPE(enum.Enum):
         RED = 0
         GREEN = 1

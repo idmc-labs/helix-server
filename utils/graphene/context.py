@@ -5,9 +5,12 @@ from apps.contrib.dataloaders import (
     BulkApiOperationSuccessListLoader,
 )
 from apps.country.dataloaders import (
+    CountryLastContextualAnalysisLoader,
+    CountryLastSummaryLoader,
+    CountryMonitoringExpertLoader,
     MonitoringSubRegionCountryCountLoader,
-    MonitoringSubRegionCountryLoader,
-    TotalFigureThisYearByCountryCategoryEventTypeLoader,
+    MonitoringSubRegionRegionalCoordinatorLoader,
+    TotalFigureThisYearByCountryLoader,
 )
 from apps.crisis.dataloaders import (
     CrisisReviewCountLoader,
@@ -17,9 +20,6 @@ from apps.crisis.dataloaders import (
     TotalNDFigureByCrisisLoader,
 )
 from apps.entry.dataloaders import (
-    EntryDocumentLoader,
-    EntryPreviewLoader,
-    FigureEntryLoader,
     FigureGeoLocationLoader,
     FigureLastReviewCommentStatusLoader,
     FigureSourcesReliability,
@@ -27,10 +27,7 @@ from apps.entry.dataloaders import (
     TotalIDPFigureByEntryLoader,
     TotalNDFigureByEntryLoader,
 )
-from apps.entry.models import Figure
 from apps.event.dataloaders import (
-    EventCodeLoader,
-    EventCrisisLoader,
     EventEntryCountLoader,
     EventFigureTypologyLoader,
     EventReviewCountLoader,
@@ -44,35 +41,66 @@ from apps.hulk.dataloaders import (
     HulkBulkImportFailureCountLoader,
     HulkBulkImportSuccessCountLoader,
 )
-from apps.organization.dataloaders import OrganizationCountriesLoader, OrganizationOrganizationKindLoader
+from apps.report.dataloaders import (
+    ReportGenerationApprovedLoader,
+    ReportLastGenerationLoader,
+    ReportTotalDisaggregationLoader,
+)
 from apps.users.dataloaders import UserPortfoliosMetadataLoader
-from utils.graphene.dataloaders import CountLoader, OneToManyLoader
+from utils.graphene.dataloaders import FilteredRelationCountLoader, FilteredRelationListLoader, call_signature
+from utils.graphene.relation_loaders import RelationNodeLoader
 
 
 class GQLContext:
     def __init__(self, request):
         self.request = request
-        # global dataloaders
-        self.one_to_many_dataloaders = {}
-        self.count_dataloaders = {}
+        # one loader per (relation, call-arguments) pair
+        self.filtered_relation_list_loaders = {}
+        self.filtered_relation_count_loaders = {}
+        # one RelationNodeLoader per related model (forward FK / O2O batching)
+        self.relation_node_loaders = {}
+        # one reverse-FK / M2M list loader per (parent, accessor) ref
+        self.relation_list_loaders = {}
 
     @cached_property
     def user(self):
         return self.request.user
 
-    def get_dataloader(self, parent: str, related_name: str):
-        # TODO: rename to get OneToManyLoader?
-        # returns a different dataloader for each ref
-        ref = f"{parent}_{related_name}"
-        if ref not in self.one_to_many_dataloaders:
-            self.one_to_many_dataloaders[ref] = OneToManyLoader()
-        return self.one_to_many_dataloaders[ref]
+    def get_filtered_relation_list_loader(self, parent: str, related_name: str, params: dict):
+        # One loader per relation AND per set of call arguments: a loader resolves its whole
+        # batch with the arguments it was built with and caches promises by parent id alone,
+        # so two aliases of the same field with different filters/pagination each need their
+        # own. Callers sharing an argument set share the loader, and so batch into one query.
+        ref = f"{parent}_{related_name}_{call_signature(params)}"
+        if ref not in self.filtered_relation_list_loaders:
+            self.filtered_relation_list_loaders[ref] = FilteredRelationListLoader(**params)
+        return self.filtered_relation_list_loaders[ref]
 
-    def get_count_loader(self, parent: str, child: str):
-        ref = f"{parent}_{child}"
-        if ref not in self.count_dataloaders:
-            self.count_dataloaders[ref] = CountLoader()
-        return self.count_dataloaders[ref]
+    def get_filtered_relation_count_loader(self, parent: str, child: str, params: dict):
+        # `related_name` separates two relations running from the same parent to the same
+        # child (ContextualUpdate sources/publishers, Country contacts/operatingContacts),
+        # which count different rows. The loader is built with — and keyed by — only the
+        # arguments a count is resolved with, so aliases that differ merely in page size
+        # share one loader and one query.
+        count_params = {key: params[key] for key in FilteredRelationCountLoader.CALL_PARAMS if key in params}
+        ref = f"{parent}_{child}_{params.get('related_name')}_{call_signature(count_params)}"
+        if ref not in self.filtered_relation_count_loaders:
+            self.filtered_relation_count_loaders[ref] = FilteredRelationCountLoader(**count_params)
+        return self.filtered_relation_count_loaders[ref]
+
+    def get_relation_node_loader(self, model):
+        # one RelationNodeLoader per related model (batches forward FK / O2O loads by PK)
+        ref = model._meta.label
+        if ref not in self.relation_node_loaders:
+            self.relation_node_loaders[ref] = RelationNodeLoader(model)
+        return self.relation_node_loaders[ref]
+
+    def get_relation_list_loader(self, ref, factory):
+        # one reverse-FK / M2M list loader per relation ref (keyed by what the loader
+        # queries: child/through model + FK names); factory() builds it once
+        if ref not in self.relation_list_loaders:
+            self.relation_list_loaders[ref] = factory()
+        return self.relation_list_loaders[ref]
 
     """
     NOTE: As a convention, data loader should have the name as:
@@ -112,48 +140,30 @@ class GQLContext:
         return MaxStockIDPFigureEndDateByEventLoader()
 
     @cached_property
-    def country_country_this_year_idps_disaster_loader(self):
-        from apps.crisis.models import Crisis
-
-        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
-        )
-
-    @cached_property
-    def country_country_this_year_idps_conflict_loader(self):
-        from apps.crisis.models import Crisis
-
-        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
-        )
-
-    @cached_property
-    def country_country_this_year_nd_conflict_loader(self):
-        from apps.crisis.models import Crisis
-
-        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
-        )
-
-    @cached_property
-    def country_country_this_year_nd_disaster_loader(self):
-        from apps.crisis.models import Crisis
-
-        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
-        )
-
-    @cached_property
-    def monitoring_sub_region_country_loader(self):
-        return MonitoringSubRegionCountryLoader()
+    def country_country_this_year_figures_loader(self):
+        # One loader for the four (category, event type) totals: they share a query, so
+        # they must share the batch that runs it.
+        return TotalFigureThisYearByCountryLoader()
 
     @cached_property
     def monitoring_sub_region_country_count_loader(self):
         return MonitoringSubRegionCountryCountLoader()
+
+    @cached_property
+    def country_last_summary_loader(self):
+        return CountryLastSummaryLoader()
+
+    @cached_property
+    def country_last_contextual_analysis_loader(self):
+        return CountryLastContextualAnalysisLoader()
+
+    @cached_property
+    def country_monitoring_expert_loader(self):
+        return CountryMonitoringExpertLoader()
+
+    @cached_property
+    def monitoring_subregion_regional_coordinator_loader(self):
+        return MonitoringSubRegionRegionalCoordinatorLoader()
 
     @cached_property
     def event_entry_count_dataloader(self):
@@ -196,10 +206,6 @@ class GQLContext:
         return CrisisReviewCountLoader()
 
     @cached_property
-    def event_code_loader(self):
-        return EventCodeLoader()
-
-    @cached_property
     def bulk_api_operation_success_list_loader(self):
         return BulkApiOperationSuccessListLoader()
 
@@ -220,29 +226,17 @@ class GQLContext:
         return HulkBulkImportDatasetsLoader()
 
     @cached_property
-    def event_crisis_loader(self):
-        return EventCrisisLoader()
-
-    @cached_property
-    def figure_entry_loader(self):
-        return FigureEntryLoader()
-
-    @cached_property
-    def entry_document_loader(self):
-        return EntryDocumentLoader()
-
-    @cached_property
-    def organization_countries_loader(self):
-        return OrganizationCountriesLoader()
-
-    @cached_property
-    def organization_organization_kind_loader(self):
-        return OrganizationOrganizationKindLoader()
-
-    @cached_property
-    def entry_preview_loader(self):
-        return EntryPreviewLoader()
-
-    @cached_property
     def user_portfolios_metadata(self):
         return UserPortfoliosMetadataLoader()
+
+    @cached_property
+    def report_report_last_generation(self):
+        return ReportLastGenerationLoader()
+
+    @cached_property
+    def report_report_total_disaggregation(self):
+        return ReportTotalDisaggregationLoader()
+
+    @cached_property
+    def report_generation_approved_loader(self):
+        return ReportGenerationApprovedLoader()

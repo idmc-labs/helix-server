@@ -131,19 +131,30 @@ class Attachment(MetaInformationAbstractModel):
 
 class SoftDeleteQueryset(models.QuerySet):
     def delete(self):
+        # Archiving, not removal — mirrors SoftDeleteModel.delete() so a queryset-level
+        # delete (the Django admin's "Delete selected", among others) cannot destroy rows
+        # that live records still reference.
         self.update(deleted_on=timezone.now())
 
-
-class SoftDeleteManager(models.Manager):
-    def get_queryset(self):
-        return SoftDeleteQueryset(self.model, using=self._db).filter(deleted_on__isnull=True)
+    # Django marks its own QuerySet.delete this way and Manager.from_queryset honours it, so
+    # `Model.objects.delete()` does not exist. An override without the marker is copied onto
+    # the manager, where it archives every row in the table.
+    delete.alters_data = True
+    delete.queryset_only = True
 
 
 class SoftDeleteModel(models.Model):
+    # `deleted_on` marks an archived row, not a removed one: the record stays readable and
+    # keeps its associations, and only the lists that offer it for selection hide it.
     deleted_on = models.DateTimeField(null=True, blank=True)
 
-    objects = SoftDeleteManager()
-    _objects = models.Manager()
+    # A non-filtering manager: it keeps the soft-delete `delete()` but hides nothing. A
+    # filtering default manager also removes the row from every relation traversal, so
+    # archiving an organization stripped it from the publishers/sources of entries and figures
+    # that were never archived — the live record lost part of its provenance. Hiding is a LIST
+    # concern, so the lists that offer organizations for selection exclude archived rows
+    # themselves and every other read keeps showing the real association.
+    objects = SoftDeleteQueryset.as_manager()
 
     def delete(self, *args, **kwargs):
         self.deleted_on = timezone.now()
@@ -218,6 +229,20 @@ def bulk_operation_snapshot(instance, filename: str) -> str:
 
 
 class ExcelDownload(MetaInformationAbstractModel):
+    # excelExports
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "completed_at",
+            "created_at",
+            "download_type",
+            "file_size",
+            "id",
+            "modified_at",
+            "started_at",
+            "status",
+        }
+    )
+
     class EXCEL_GENERATION_STATUS(enum.Enum):
         PENDING = 0
         IN_PROGRESS = 1
@@ -325,6 +350,31 @@ class ExcelDownload(MetaInformationAbstractModel):
 
 
 class Client(MetaInformationAbstractModel):
+    # clientList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "acronym",
+            "code",
+            "contact_email",
+            "contact_name",
+            "contact_website",
+            "created_at",
+            "created_by",
+            "created_by__full_name",
+            "description",
+            "id",
+            "is_active",
+            "last_modified_by",
+            "last_modified_by__full_name",
+            "modified_at",
+            "name",
+            "opted_out_of_emails",
+            "other_notes",
+            "share_source",
+            "type",
+        }
+    )
+
     class CLIENT_TYPE(enum.Enum):
         ACADEMIA_THINK_TANK = 0
         ONG_INGO = 1
@@ -473,6 +523,19 @@ class Client(MetaInformationAbstractModel):
 
 
 class ClientTrackInfo(models.Model):
+    # clientTrackInformationList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "api_name",
+            "api_type",
+            "client__code",
+            "client__name",
+            "id",
+            "requests_per_day",
+            "tracked_date",
+        }
+    )
+
     from apps.entry.models import ExternalApiDump
 
     client = models.ForeignKey("Client", on_delete=models.CASCADE)
@@ -569,6 +632,20 @@ class ClientTrackInfo(models.Model):
 
 
 class BulkApiOperation(models.Model):
+    # bulkApiOperations
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "action",
+            "completed_at",
+            "created_at",
+            "failure_count",
+            "id",
+            "started_at",
+            "status",
+            "success_count",
+        }
+    )
+
     class BULK_OPERATION_ACTION(enum.Enum):
         FIGURE_ROLE = 0
         FIGURE_EVENT = 1

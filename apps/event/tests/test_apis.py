@@ -196,7 +196,14 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertIsNone(content["data"]["createEvent"]["errors"], content)
         self.assertEqual(content["data"]["createEvent"]["result"]["name"], self.input["name"])
         self.assertIsNotNone(content["data"]["createEvent"]["result"]["eventCodes"], content)
-        self.assertEqual(content["data"]["createEvent"]["result"]["eventCodes"][0]["eventCode"], "NEP-2021-XXX")
+        # EventCode.Meta.ordering is ["event_code"], so the relation loader must return
+        # them alphabetically whatever the insertion order (the fixture inserts YYY, XXX,
+        # ZZZ). Pins the whole sequence: a loader that orders by pk returns insertion order.
+        self.assertEqual(
+            [code["eventCode"] for code in content["data"]["createEvent"]["result"]["eventCodes"]],
+            ["NEP-2021-XXX", "NEP-2021-YYY", "NEP-2021-ZZZ"],
+            content,
+        )
 
     def test_valid_event_creation_with_other_sub_type(self) -> None:
         self.input["eventType"] = "DISASTER"
@@ -504,7 +511,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content1["data"]["updateEvent"]["ok"], content1)
         self.assertIsNone(content1["data"]["updateEvent"]["errors"], content1)
-        self.assertIsNone(content1["data"]["updateEvent"]["result"]["eventCodes"], content1)
+        self.assertEqual(content1["data"]["updateEvent"]["result"]["eventCodes"], [], content1)
 
     def test_invalid_update_event_by_guest(self):
         guest = create_user_with_role(USER_ROLE.GUEST.name)

@@ -1,5 +1,4 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.parking_lot.enums import (
@@ -11,10 +10,11 @@ from apps.parking_lot.models import ParkedItem
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 
-class ParkedItemType(DjangoObjectType):
+class ParkedItemType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ParkedItem
 

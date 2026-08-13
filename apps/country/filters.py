@@ -3,6 +3,7 @@ import datetime
 import django_filters
 import graphene
 from django.core.exceptions import ValidationError
+from django.db.models import Exists, OuterRef
 from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext
@@ -26,6 +27,7 @@ from utils.figure_filter import (
     FigureFilterHelper,
 )
 from utils.filters import (
+    AcceptsOrdering,
     IDFilter,
     IDListFilter,
     MultiWordSearchFilterSet,
@@ -84,7 +86,7 @@ class CountryRegionFilter(MultiWordSearchFilterSet):
         multi_word_search_fields = ["name"]
 
 
-class CountryFilter(MultiWordSearchFilterSet):
+class CountryFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     id = IDFilter(field_name="id", lookup_expr="exact")
     region_by_ids = StringListFilter(method="filter_regions")
     geo_group_by_ids = StringListFilter(method="filter_geo_groups")
@@ -112,22 +114,27 @@ class CountryFilter(MultiWordSearchFilterSet):
     def filter_by_events(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(id__in=Country.objects.filter(events__in=value).values("id"))
+        # Correlated Exists over the event<->country M2M through table (mirrors the
+        # Exists-over-distinct conversion elsewhere); the through model is reached via _meta
+        # to avoid importing Event here.
+        through = Country._meta.get_field("events").through
+        return qs.filter(Exists(through.objects.filter(country_id=OuterRef("pk"), event_id__in=value)))
 
     def filter_by_crisis(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(id__in=Country.objects.filter(crises__in=value).values("id"))
+        through = Country._meta.get_field("crises").through
+        return qs.filter(Exists(through.objects.filter(country_id=OuterRef("pk"), crisis_id__in=value)))
 
     def filter_regions(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(region__in=value).distinct()
+        return qs.filter(region__in=value)
 
     def filter_geo_groups(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(geographical_group__in=value).distinct()
+        return qs.filter(geographical_group__in=value)
 
     def filter_year(self, qs, name, value):
         """Filter logic is applied in qs"""
@@ -135,6 +142,8 @@ class CountryFilter(MultiWordSearchFilterSet):
 
     @property
     def qs(self):
+        queryset = super().qs
+
         # Aggregate filter logic
         aggregate_figures = self.data.get("aggregate_figures") or {}
         year = aggregate_figures.get("year")
@@ -151,13 +160,27 @@ class CountryFilter(MultiWordSearchFilterSet):
             start_date = datetime.datetime(year=int(year), month=1, day=1)
             end_date = datetime.datetime(year=int(year), month=12, day=31)
 
-        return super().qs.annotate(
-            **Country._total_figure_disaggregation_subquery(
-                figures=figure_qs,
-                start_date=start_date,
-                end_date=end_date,
-            )
+        # nd/idp totals are annotated only when needed: aggregate_figures set, or sorting by them
+        # (else resolvers read the default current-year dataloaders). We need BOTH a subquery and a
+        # CTE; a CTE alone can't do it — it is fixed to the default current-year unfiltered scope,
+        # so aggregate_figures' filtered / year / report-scoped values must come from the
+        # parametrized subquery. (Gate on the raw field, not figure_qs: a year-only filter leaves
+        # figure_qs None but still needs its own date range.) When sorting, the CTE is much the
+        # cheaper of the two: its cost is one grouped pass over the 186k-row figure table, while the
+        # subquery's is per country row, four aggregations at a time (444ms -> 60ms on a 50-row
+        # page). Few rows do not make that neutral.
+        figure_disaggregation = Country._total_figure_disaggregation_subquery(
+            figures=figure_qs,
+            start_date=start_date,
+            end_date=end_date,
         )
+        figure_count_sort_fields = set(figure_disaggregation.keys())
+        if aggregate_figures:
+            queryset = queryset.annotate(**figure_disaggregation)
+        elif self.ordering_fields & figure_count_sort_fields:
+            queryset = Country.annotate_total_figure_disaggregation_via_cte(queryset)
+
+        return queryset
 
 
 class MonitoringSubRegionFilter(MultiWordSearchFilterSet):
