@@ -97,6 +97,20 @@ class HulkBulkImportRun:
         return artifacts
 
 
+def open_jsonl_writer(path: pathlib.Path) -> typing.TextIO:
+    """
+    Open ``path`` for writing one JSON object per line.
+
+    The rows carry source text in any script — Arabic, Devanagari, romanised
+    transliterations with combining diacritics, U+2017 — so the encoding is
+    pinned to UTF-8 rather than left to the platform locale. Windows' default
+    is cp1252, which has no code point for those characters and would fail the
+    write with ``UnicodeEncodeError``. ``newline="\\n"`` keeps the JSONL
+    byte-identical across platforms, since helix reads the upload as bytes.
+    """
+    return path.open("w", encoding="utf-8", newline="\n")
+
+
 def _download_to(url: str, dst: pathlib.Path) -> bool:
     """Fetch ``url`` and write to ``dst``. Returns True on success."""
     try:
@@ -129,8 +143,8 @@ class HulkDataHandler:
             HulkFigureImport: "figures.jsonl",
         }
 
-        self._export_path_ref: typing.Dict[typing.Type[HulkBaseModel], typing.IO] = {}
-        self._export_error_path_ref: typing.Dict[typing.Type[HulkBaseModel], typing.IO] = {}
+        self._export_path_ref: typing.Dict[typing.Type[HulkBaseModel], typing.TextIO] = {}
+        self._export_error_path_ref: typing.Dict[typing.Type[HulkBaseModel], typing.TextIO] = {}
         self._success_count = {import_type: 0 for import_type in self._export_path_names}
         self._error_count = {import_type: 0 for import_type in self._export_path_names}
 
@@ -141,11 +155,11 @@ class HulkDataHandler:
 
         # Open all files when entering the context
         self._export_path_ref = {
-            import_type: self._stack.enter_context((self.export_dir / path).open("w"))
+            import_type: self._stack.enter_context(open_jsonl_writer(self.export_dir / path))
             for import_type, path in self._export_path_names.items()
         }
         self._export_error_path_ref = {
-            import_type: self._stack.enter_context((self.export_dir / f"errors_{path}").open("w"))
+            import_type: self._stack.enter_context(open_jsonl_writer(self.export_dir / f"errors_{path}"))
             for import_type, path in self._export_path_names.items()
         }
 
