@@ -7,6 +7,7 @@ from random import randint
 from unittest import mock
 
 from apps.contrib.models import Client
+from apps.contrib.redis_client_track import set_client_ids_in_redis
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import Entry, Figure
@@ -509,6 +510,12 @@ class TestCoreData(HelixGraphQLTestCase):
 
     def setUp(self) -> None:
         super().setUp()
+        # `Client.save()` mirrors the whole client list into one redis key that `track_gidd`
+        # gates the GIDD endpoints on. The write lives outside the test transaction, so nothing
+        # rolls it back and anything else touching that key -- another test, another process on
+        # the same redis -- leaves this class's client missing and every GIDD query answering
+        # "Client is not registered". Re-seeding here makes each test independent of that.
+        set_client_ids_in_redis(list(Client.objects.values_list("code", flat=True)))
         self.user_monitoring_expert = create_user_with_role(
             USER_ROLE.MONITORING_EXPERT.name,
             country=self.country_npl.pk,
