@@ -89,14 +89,21 @@ LOGGING_CONFIG = {
 
 logging.config.dictConfig(LOGGING_CONFIG)
 
-# The dataset carries place names and narratives in any script. A console whose
-# encoding cannot represent them (cp1252 on a default Windows install) turns
-# every log line quoting one into a logging error, so force UTF-8 output and
-# degrade unrepresentable characters instead of failing.
-for _stream in (sys.stdout, sys.stderr):
-    _reconfigure = getattr(_stream, "reconfigure", None)
-    if _reconfigure is not None:
-        _reconfigure(encoding="utf-8", errors="backslashreplace")
+
+def _force_utf8_console() -> None:
+    """
+    The dataset carries place names and narratives in any script. A console whose
+    encoding cannot represent them (cp1252 on a default Windows install) turns
+    every log line quoting one into a logging error, so force UTF-8 output and
+    degrade unrepresentable characters instead of failing.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+
+
+_force_utf8_console()
 
 
 class Settings(BaseSettings):

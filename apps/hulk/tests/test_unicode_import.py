@@ -120,8 +120,8 @@ class TestPyhelixJsonlWriterEncoding(SimpleTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "rows.jsonl"
             with open_jsonl_writer(path) as fh:
+                self.assertEqual(fh.encoding.lower().replace("-", ""), "utf8")
                 fh.write(ALL_SAMPLES + "\n")
-            self.assertEqual(fh.encoding.lower().replace("-", ""), "utf8")
             self.assertEqual(path.read_bytes(), (ALL_SAMPLES + "\n").encode("utf-8"))
 
     def test_every_writer_pins_the_encoding_rather_than_inheriting_it(self):
@@ -134,15 +134,19 @@ class TestPyhelixJsonlWriterEncoding(SimpleTestCase):
         real_open = Path.open
 
         def recording_open(path, *args, **kwargs):
-            opened.append((path.name, kwargs))
+            # Path.open is patched process-wide; only the JSONL the handler
+            # writes is under test.
+            if path.suffix == ".jsonl":
+                opened.append((path.name, kwargs))
             return real_open(path, *args, **kwargs)
 
         with tempfile.TemporaryDirectory() as tmp, patch.object(Path, "open", recording_open):
-            with HulkDataHandler(export_dir=Path(tmp), helix_client=_stub_helix_client()):
+            handler = HulkDataHandler(export_dir=Path(tmp), helix_client=_stub_helix_client())
+            with handler:
                 pass
 
-        # Five resources, each with a rows file and an errors file.
-        self.assertEqual(len(opened), 10)
+        # Every resource gets a rows file and an errors file.
+        self.assertEqual(len(opened), 2 * len(handler._export_path_names))
         for name, kwargs in opened:
             with self.subTest(file=name):
                 self.assertEqual(kwargs.get("encoding"), "utf-8")
