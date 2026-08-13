@@ -4,16 +4,17 @@ from django.db.models import Exists, Max, Min, OuterRef, Subquery
 from apps.contact.models import Communication, CommunicationMedium, Contact
 from apps.country.models import Country
 from apps.users.roles import USER_ROLE
-from utils.filters import IDFilter, IDListFilter, MultiWordSearchFilterSet, StringListFilter, generate_type_for_filter_set
-from utils.graphene.ordering import strip_direction
+from utils.filters import (
+    AcceptsOrdering,
+    IDFilter,
+    IDListFilter,
+    MultiWordSearchFilterSet,
+    StringListFilter,
+    generate_type_for_filter_set,
+)
 
 
-class ContactFilter(MultiWordSearchFilterSet):
-    # The client's contact table exposes countries_of_operation__idmc_short_name as a
-    # sortable column; it is an M2M path, so ordering by it JOIN-fanned-out one contact into
-    # one row per country.
-    accepts_ordering = True
-
+class ContactFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     id = IDFilter(field_name="id", lookup_expr="exact")
     countries_of_operation = StringListFilter(method="filter_countries")
 
@@ -27,15 +28,6 @@ class ContactFilter(MultiWordSearchFilterSet):
             return qs
         return qs.filter(
             Exists(Contact.countries_of_operation.through.objects.filter(contact_id=OuterRef("pk"), country_id__in=value))
-        )
-
-    def __init__(self, *args, ordering=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ordering_fields = {strip_direction(field) for field in ordering.split(",") if field} if ordering else set()
-        # A denormalised to-many sort key depends on the direction it is sorted in, which
-        # `ordering_fields` has stripped off.
-        self.descending_ordering_fields = (
-            {strip_direction(field) for field in ordering.split(",") if field.startswith("-")} if ordering else set()
         )
 
     @property

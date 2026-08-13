@@ -24,19 +24,19 @@ from apps.event.models import ContextOfViolence
 from apps.extraction.models import ExtractionQuery
 from apps.report.models import Report
 from utils.filters import (
+    AcceptsOrdering,
     IDFilter,
     IDListFilter,
     MultiWordSearchFilterSet,
     StringListFilter,
     generate_type_for_filter_set,
 )
-from utils.graphene.ordering import strip_direction
 
 MALE = GENDER_TYPE.MALE.name
 FEMALE = GENDER_TYPE.FEMALE.name
 
 
-class EntryExtractionFilterSet(MultiWordSearchFilterSet):
+class EntryExtractionFilterSet(AcceptsOrdering, MultiWordSearchFilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
     filter_figure_events = IDListFilter(method="filter_figure_events_")
 
@@ -81,19 +81,6 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
         model = Entry
         fields = {}
         multi_word_search_fields = ["article_title"]
-
-    # Opt into ordering forwarding (utils/graphene/fields.py) so qs can denormalize a
-    # to-many sort key into a per-entry scalar instead of fan-out-duplicating rows.
-    accepts_ordering = True
-
-    def __init__(self, *args, ordering=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ordering_fields = {strip_direction(field) for field in ordering.split(",") if field} if ordering else set()
-        # A denormalised to-many sort key depends on the direction it is sorted in, which
-        # `ordering_fields` has stripped off.
-        self.descending_ordering_fields = (
-            {strip_direction(field) for field in ordering.split(",") if field.startswith("-")} if ordering else set()
-        )
 
     @property
     def qs(self):
@@ -390,12 +377,7 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
         )
 
 
-class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
-    # Opt-in: DjangoPaginatedListObjectField uses this marker to decide whether
-    # to forward the active ordering as a constructor arg, so subclasses can
-    # gate expensive annotations on it.
-    accepts_ordering = True
-
+class BaseFigureExtractionFilterSet(AcceptsOrdering, MultiWordSearchFilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
     filter_figure_regions = IDListFilter(method="filter_regions")
     filter_figure_geographical_groups = IDListFilter(method="filter_geographical_groups")
@@ -438,13 +420,6 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
         model = Figure
         fields = []
         multi_word_search_fields = ["entry__article_title"]
-
-    def __init__(self, *args, ordering=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ordering_fields = {strip_direction(field) for field in ordering.split(",") if field} if ordering else set()
-        self.descending_ordering_fields = (
-            {strip_direction(field) for field in ordering.split(",") if field.startswith("-")} if ordering else set()
-        )
 
     def filter_filter_figure_created_by(self, qs, name, value):
         if value:

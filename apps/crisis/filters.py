@@ -16,21 +16,16 @@ from utils.figure_filter import (
     FigureFilterHelper,
 )
 from utils.filters import (
+    AcceptsOrdering,
     IDListFilter,
     MultiWordSearchFilterSet,
     SimpleInputFilter,
     StringListFilter,
     generate_type_for_filter_set,
 )
-from utils.graphene.ordering import strip_direction
 
 
-class CrisisFilter(MultiWordSearchFilterSet):
-    # Opt-in: DjangoPaginatedListObjectField uses this marker to decide whether
-    # to forward the active ordering as a constructor arg, so we can gate
-    # expensive annotations on it (see qs property below).
-    accepts_ordering = True
-
+class CrisisFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     countries = IDListFilter(method="filter_countries")
     crisis_types = StringListFilter(method="filter_crisis_types")
     events = IDListFilter(method="filter_events")
@@ -51,15 +46,6 @@ class CrisisFilter(MultiWordSearchFilterSet):
             "end_date": ["lt", "lte", "gt", "gte"],
         }
         multi_word_search_fields = ["name", "events__name"]
-
-    def __init__(self, *args, ordering=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ordering_fields = {strip_direction(field) for field in ordering.split(",") if field} if ordering else set()
-        # A denormalised to-many sort key depends on the direction it is sorted in, which
-        # `ordering_fields` has stripped off.
-        self.descending_ordering_fields = (
-            {strip_direction(field) for field in ordering.split(",") if field.startswith("-")} if ordering else set()
-        )
 
     def noop(self, qs, name, value):
         return qs

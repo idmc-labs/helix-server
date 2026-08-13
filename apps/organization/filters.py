@@ -4,21 +4,15 @@ from django.db.models import Case, Exists, Max, Min, OuterRef, Subquery, When
 from apps.country.models import Country
 from apps.organization.models import Organization, OrganizationKind
 from utils.filters import (
+    AcceptsOrdering,
     IDListFilter,
     MultiWordSearchFilterSet,
     StringListFilter,
     generate_type_for_filter_set,
 )
-from utils.graphene.ordering import strip_direction
 
 
-class OrganizationFilter(MultiWordSearchFilterSet):
-    # The client's organization table exposes `countries__idmc_short_name` as a sortable
-    # column, and ordering by that M2M path JOIN-fans-out one organization into one row per
-    # country. Take the active ordering so the sort key can be denormalised into a
-    # per-organization scalar (see `qs` below).
-    accepts_ordering = True
-
+class OrganizationFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     countries = IDListFilter(method="filter_countries")
     categories = StringListFilter(method="filter_categories")
     organization_kinds = IDListFilter(method="filter_organization_kinds")
@@ -66,15 +60,6 @@ class OrganizationFilter(MultiWordSearchFilterSet):
             Exists(Organization.countries.through.objects.filter(organization_id=OuterRef("pk"), country_id__in=value))
         ).values("id")
         return qs.order_by(Case(When(id__in=country_organization_ids, then=0), default=1))
-
-    def __init__(self, *args, ordering=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ordering_fields = {strip_direction(field) for field in ordering.split(",") if field} if ordering else set()
-        # A denormalised to-many sort key depends on the direction it is sorted in, which
-        # `ordering_fields` has stripped off.
-        self.descending_ordering_fields = (
-            {strip_direction(field) for field in ordering.split(",") if field.startswith("-")} if ordering else set()
-        )
 
     @property
     def qs(self):

@@ -4,17 +4,10 @@ from apps.contextualupdate.models import ContextualUpdate
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.organization.models import Organization
-from utils.filters import MultiWordSearchFilterSet, StringListFilter
-from utils.graphene.ordering import strip_direction
+from utils.filters import AcceptsOrdering, MultiWordSearchFilterSet, StringListFilter
 
 
-class ContextualUpdateFilter(MultiWordSearchFilterSet):
-    # The client's table exposes countries/publishers/sources as sortable columns; all three
-    # are M2M paths, so ordering by them JOIN-fans-out one update into one row per related
-    # row. Take the active ordering so the sort keys can be denormalised to per-update
-    # scalars.
-    accepts_ordering = True
-
+class ContextualUpdateFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     countries = StringListFilter(method="filter_countries")
     sources = StringListFilter(method="filter_sources")
     publishers = StringListFilter(method="filter_publishers")
@@ -47,15 +40,6 @@ class ContextualUpdateFilter(MultiWordSearchFilterSet):
         if value:
             return qs.filter(status__in=[Crisis.CRISIS_TYPE.get(each) for each in value])
         return qs
-
-    def __init__(self, *args, ordering=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ordering_fields = {strip_direction(field) for field in ordering.split(",") if field} if ordering else set()
-        # A denormalised to-many sort key depends on the direction it is sorted in, which
-        # `ordering_fields` has stripped off.
-        self.descending_ordering_fields = (
-            {strip_direction(field) for field in ordering.split(",") if field.startswith("-")} if ordering else set()
-        )
 
     @property
     def qs(self):

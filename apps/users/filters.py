@@ -5,17 +5,17 @@ from django.db.models import Min
 
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio, User
-from utils.filters import IDFilter, IDListFilter, MultiWordSearchFilterSet, StringListFilter, generate_type_for_filter_set
-from utils.graphene.ordering import strip_direction
+from utils.filters import (
+    AcceptsOrdering,
+    IDFilter,
+    IDListFilter,
+    MultiWordSearchFilterSet,
+    StringListFilter,
+    generate_type_for_filter_set,
+)
 
 
-class UserFilter(MultiWordSearchFilterSet):
-    # The role booleans are computed per user from their portfolios (see
-    # UserPortfolioMetaDataLoader), so there is no column to ORDER BY. Take the active
-    # ordering so they can be annotated on demand — they are Exists subqueries, and the
-    # default user list has no reason to pay for three of them.
-    accepts_ordering = True
-
+class UserFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     id = IDFilter(field_name="id", lookup_expr="exact")
     email = django_filters.CharFilter(field_name="email", lookup_expr="iexact")
     role_in = StringListFilter(method="filter_role_in")
@@ -62,10 +62,6 @@ class UserFilter(MultiWordSearchFilterSet):
         "is_directors_office": USER_ROLE.DIRECTORS_OFFICE,
         "is_reporting_team": USER_ROLE.REPORTING_TEAM,
     }
-
-    def __init__(self, *args, ordering=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ordering_fields = {strip_direction(field) for field in ordering.split(",") if field} if ordering else set()
 
     @property
     def qs(self):
