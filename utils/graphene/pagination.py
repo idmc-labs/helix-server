@@ -96,7 +96,8 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
         if not existing:
             return qs.order_by(pk_name)
         if orders_by_pk(existing, pk_name):
-            return qs.order_by(*existing)
+            # Already total; re-applying the same keys would only restate them.
+            return qs
         tiebreaker = F(pk_name).desc() if leads_descending(existing) else F(pk_name).asc()
         return qs.order_by(*existing, tiebreaker)
 
