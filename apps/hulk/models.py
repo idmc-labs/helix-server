@@ -60,6 +60,7 @@ class HulkBulkImport(models.Model):
             "completed_at",
             "created_at",
             "id",
+            "name",
             "started_at",
             "status",
         }

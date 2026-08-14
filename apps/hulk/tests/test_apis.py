@@ -462,6 +462,32 @@ class TestHulkBulkImportListQuery(HelixGraphQLTestCase):
     def test_search_excludes_unnamed_imports(self):
         self.assertNotIn(str(self.bulk_c.id), self._search_ids("2026"))
 
+    ORDERING_QUERY = """
+        query ($ordering: String) {
+          hulkBulkImports(ordering: $ordering) {
+            results { id name }
+          }
+        }
+    """
+
+    def _ordered_names(self, ordering: str) -> list:
+        self.force_login(self.viewer)
+        resp = self.query(self.ORDERING_QUERY, variables={"ordering": ordering})
+        self.assertResponseNoErrors(resp)
+        return [row["name"] for row in resp.json()["data"]["hulkBulkImports"]["results"]]
+
+    def test_ordering_by_name(self):
+        # Unnamed imports sort wherever postgres puts a NULL (last ascending,
+        # first descending), so only the named rows' order is asserted.
+        named = [name for name in self._ordered_names("name") if name is not None]
+        self.assertEqual(named, ["April 2026 backfill", "March 2026 backfill"])
+
+        named = [name for name in self._ordered_names("-name") if name is not None]
+        self.assertEqual(named, ["March 2026 backfill", "April 2026 backfill"])
+
+    def test_ordering_by_name_keeps_every_row(self):
+        self.assertEqual(len(self._ordered_names("name")), 3)
+
     def test_empty_search_returns_everything(self):
         self.assertEqual(
             self._search_ids(""),
