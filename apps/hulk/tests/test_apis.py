@@ -4,7 +4,7 @@ End-to-end tests for the ``triggerHulkBulkImport`` mutation.
 Goal: prove the wire-up — multipart-style file uploads land on
 ``HulkBulkImportDataset`` rows, the task is dispatched on commit (eager celery
 makes this synchronous in tests), and the resulting model exposes the
-per-dataset success/failure file URLs via GraphQL.
+per-dataset success/failure/skip file URLs via GraphQL.
 
 The handler itself is mocked here so we don't depend on real helix mutation
 validity for these end-to-end tests — that surface is covered in
@@ -18,6 +18,7 @@ from io import BytesIO
 from unittest.mock import patch
 
 from django.contrib.auth.models import Permission
+from django.core.files.base import ContentFile
 
 from apps.hulk.models import HulkBulkImport, HulkBulkImportDataset
 from apps.users.enums import USER_ROLE
@@ -68,13 +69,16 @@ class TestTriggerHulkBulkImport(HelixGraphQLTestCase):
             errors
             result {
               id
+              name
               status
               successCount
               failureCount
+              skipCount
               datasets {
                 importType
                 successCount
                 failureCount
+                skipCount
               }
             }
           }
@@ -173,6 +177,33 @@ class TestTriggerHulkBulkImport(HelixGraphQLTestCase):
             self.assertTrue(bool(ds.import_file))
 
         mock_handle.assert_called_once()
+
+    def test_mutation_persists_supplied_name(self):
+        self.force_login(self.admin)
+        with patch("apps.hulk.bulk.handler.HulkBulkImportHandler.handle", return_value=True), self.captureOnCommitCallbacks(
+            execute=True
+        ):
+            resp = self._post_with_datasets(["events"], extra_data={"name": "March 2026 backfill"})
+        content = resp.json()
+        self.assertResponseNoErrors(resp)
+        self.assertTrue(content["data"]["triggerHulkBulkImport"]["ok"], content)
+        result = content["data"]["triggerHulkBulkImport"]["result"]
+        self.assertEqual(result["name"], "March 2026 backfill")
+        bulk = HulkBulkImport.objects.get(pk=result["id"])
+        self.assertEqual(bulk.name, "March 2026 backfill")
+
+    def test_mutation_without_a_name_leaves_it_null(self):
+        self.force_login(self.admin)
+        with patch("apps.hulk.bulk.handler.HulkBulkImportHandler.handle", return_value=True), self.captureOnCommitCallbacks(
+            execute=True
+        ):
+            resp = self._post_with_datasets(["events"])
+        content = resp.json()
+        self.assertResponseNoErrors(resp)
+        self.assertTrue(content["data"]["triggerHulkBulkImport"]["ok"], content)
+        result = content["data"]["triggerHulkBulkImport"]["result"]
+        self.assertIsNone(result["name"])
+        self.assertIsNone(HulkBulkImport.objects.get(pk=result["id"]).name)
 
     def test_mutation_rejects_when_active_import_exists(self):
         """Global lock: another PENDING/IN_PROGRESS row blocks new creation."""
@@ -301,6 +332,47 @@ class TestHulkBulkImportQuery(HelixGraphQLTestCase):
         self.assertResponseNoErrors(resp)
         self.assertEqual(resp.json()["data"]["hulkBulkImport"]["id"], str(self.bulk.id))
 
+    SKIP_QUERY = """
+        query ($id: ID!) {
+          hulkBulkImport(id: $id) {
+            id
+            skipCount
+            datasets { importType skipCount skipFile }
+          }
+        }
+    """
+
+    def test_query_exposes_skip_count_and_skip_file(self):
+        """``skipCount`` aggregates the dataset rows; ``skipFile`` is an absolute URL."""
+        events = HulkBulkImportDataset.objects.create(
+            bulk_import=self.bulk,
+            import_type=HulkBulkImportDataset.HULK_BULK_IMPORT_DATASET_IMPORT_TYPE.EVENT.value,
+        )
+        events.skip_file.save(
+            "skip.jsonl",
+            ContentFile(b'{"uuid":"a","id":1,"message":"Already exists"}\n'),
+            save=False,
+        )
+        events.skip_count = 2
+        events.save()
+        HulkBulkImportDataset.objects.create(
+            bulk_import=self.bulk,
+            import_type=HulkBulkImportDataset.HULK_BULK_IMPORT_DATASET_IMPORT_TYPE.FIGURE.value,
+            skip_count=1,
+        )
+
+        self.force_login(self.viewer)
+        resp = self.query(self.SKIP_QUERY, variables={"id": self.bulk.id})
+        self.assertResponseNoErrors(resp)
+
+        result = resp.json()["data"]["hulkBulkImport"]
+        self.assertEqual(result["skipCount"], 3)
+        by_type = {ds["importType"]: ds for ds in result["datasets"]}
+        self.assertEqual(by_type["EVENT"]["skipCount"], 2)
+        self.assertTrue(by_type["EVENT"]["skipFile"].startswith("http"))
+        self.assertEqual(by_type["FIGURE"]["skipCount"], 1)
+        self.assertIsNone(by_type["FIGURE"]["skipFile"])
+
 
 class TestHulkBulkImportListQuery(HelixGraphQLTestCase):
     QUERY = """
@@ -315,11 +387,13 @@ class TestHulkBulkImportListQuery(HelixGraphQLTestCase):
     def setUp(self):
         self.owner = create_user_with_role(USER_ROLE.ADMIN.name)
         self.viewer = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.bulk_a = HulkBulkImport.objects.create(created_by=self.owner)
+        self.bulk_a = HulkBulkImport.objects.create(created_by=self.owner, name="March 2026 backfill")
         self.bulk_b = HulkBulkImport.objects.create(
             created_by=self.owner,
             status=HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED,
+            name="April 2026 backfill",
         )
+        # Left unnamed: name is optional, so search must cope with a null.
         self.bulk_c = HulkBulkImport.objects.create(created_by=self.viewer)
 
     def _post(self, user, variables=None):
@@ -368,3 +442,54 @@ class TestHulkBulkImportListQuery(HelixGraphQLTestCase):
         self.assertResponseNoErrors(resp)
         data = resp.json()["data"]["hulkBulkImports"]
         self.assertEqual(data["totalCount"], 3)
+
+    def _search_ids(self, search: str) -> set:
+        resp = self._post(self.viewer, variables={"filters": {"search": search}})
+        self.assertResponseNoErrors(resp)
+        return {row["id"] for row in resp.json()["data"]["hulkBulkImports"]["results"]}
+
+    def test_search_matches_name_case_insensitively(self):
+        self.assertEqual(self._search_ids("march"), {str(self.bulk_a.id)})
+        self.assertEqual(self._search_ids("MARCH"), {str(self.bulk_a.id)})
+
+    def test_search_matches_a_shared_term_across_rows(self):
+        self.assertEqual(self._search_ids("backfill"), {str(self.bulk_a.id), str(self.bulk_b.id)})
+
+    def test_search_requires_every_term_to_match(self):
+        self.assertEqual(self._search_ids("march backfill"), {str(self.bulk_a.id)})
+        self.assertEqual(self._search_ids("march april"), set())
+
+    def test_search_excludes_unnamed_imports(self):
+        self.assertNotIn(str(self.bulk_c.id), self._search_ids("2026"))
+
+    ORDERING_QUERY = """
+        query ($ordering: String) {
+          hulkBulkImports(ordering: $ordering) {
+            results { id name }
+          }
+        }
+    """
+
+    def _ordered_names(self, ordering: str) -> list:
+        self.force_login(self.viewer)
+        resp = self.query(self.ORDERING_QUERY, variables={"ordering": ordering})
+        self.assertResponseNoErrors(resp)
+        return [row["name"] for row in resp.json()["data"]["hulkBulkImports"]["results"]]
+
+    def test_ordering_by_name(self):
+        # Unnamed imports sort wherever postgres puts a NULL (last ascending,
+        # first descending), so only the named rows' order is asserted.
+        named = [name for name in self._ordered_names("name") if name is not None]
+        self.assertEqual(named, ["April 2026 backfill", "March 2026 backfill"])
+
+        named = [name for name in self._ordered_names("-name") if name is not None]
+        self.assertEqual(named, ["March 2026 backfill", "April 2026 backfill"])
+
+    def test_ordering_by_name_keeps_every_row(self):
+        self.assertEqual(len(self._ordered_names("name")), 3)
+
+    def test_empty_search_returns_everything(self):
+        self.assertEqual(
+            self._search_ids(""),
+            {str(self.bulk_a.id), str(self.bulk_b.id), str(self.bulk_c.id)},
+        )

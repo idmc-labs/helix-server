@@ -13,7 +13,8 @@ Scope here:
         * reads input from model file fields, writes output to model file fields
         * records pydantic ``pre-errors``
         * records GraphQL ``post-errors``
-        * updates status / success_count / failure_count
+        * skips rows whose uuid already carries an entity
+        * updates status / success_count / failure_count / skip_count
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ from apps.hulk.bulk.handler import (
     iter_jsonl_field,
 )
 from apps.hulk.bulk.utils import parse_aws_s3_url, parse_same_storage_url
-from apps.hulk.models import HulkBulkImport, HulkBulkImportDataset
+from apps.hulk.models import HulkBulkImport, HulkBulkImportDataset, HulkEvent
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     CountryFactory,
@@ -118,11 +119,24 @@ def _failure_file(bulk: HulkBulkImport, resource: str):
     return _dataset_for(bulk, resource).failure_file
 
 
-def _aggregate_counts(bulk: HulkBulkImport) -> tuple[int, int]:
-    """Compute (success_count, failure_count) by summing dataset rows."""
+def _skip_file(bulk: HulkBulkImport, resource: str):
+    return _dataset_for(bulk, resource).skip_file
+
+
+def _one_row(bundle: dict, resource: str, row_uuid: str) -> bytes:
+    """Single-row JSONL payload holding only ``row_uuid`` from ``bundle[resource]``."""
+    for line in bundle[resource].splitlines():
+        if json.loads(line)["uuid"] == row_uuid:
+            return line + b"\n"
+    raise AssertionError(f"{row_uuid} is not a {resource} fixture row")
+
+
+def _aggregate_counts(bulk: HulkBulkImport) -> tuple[int, int, int]:
+    """Compute (success_count, failure_count, skip_count) by summing dataset rows."""
     s = sum(ds.success_count or 0 for ds in bulk.datasets.all())
     f = sum(ds.failure_count or 0 for ds in bulk.datasets.all())
-    return s, f
+    k = sum(ds.skip_count or 0 for ds in bulk.datasets.all())
+    return s, f, k
 
 
 def _jsonl_rows(field_file) -> list[dict]:
@@ -497,12 +511,13 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
             total_success += len(success_rows)
             total_failure += len(failure_rows)
 
-        # Aggregate counters match.
+        # Aggregate counters match. No fixture uuid repeats, so nothing is skipped.
         self.assertEqual(_aggregate_counts(bulk)[0], total_success)
         self.assertEqual(_aggregate_counts(bulk)[1], total_failure)
+        self.assertEqual(_aggregate_counts(bulk)[2], 0)
         # Sanity: every fixture row landed somewhere.
         total_fixture_rows = sum(len(read_expected_input_rows(r)) for r in RESOURCES)
-        self.assertEqual(total_success + total_failure, total_fixture_rows)
+        self.assertEqual(total_success + total_failure + _aggregate_counts(bulk)[2], total_fixture_rows)
 
     def test_handle_post_error_recorded(self):
         """When the GraphQL client returns errors, the row lands in failure_* with post-errors.
@@ -730,6 +745,52 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         }
         self.assertEqual(post_error_uuids, attempted_mutation_uuids)
 
+    def test_unexpected_database_error_fails_only_its_own_row(self):
+        """
+        A row that trips a deadlock / statement timeout / dropped connection is
+        recorded as that row's own post-error. Any ``DatabaseError`` other than
+        ``IntegrityError`` escaping ``handle_row`` reaches ``handle()``'s
+        blanket except and fails the entire import, discarding the work of every
+        other row — unlike a row with bad data, which only fails itself.
+        """
+        from django.db import OperationalError
+
+        from apps.hulk.models import HulkEvent
+
+        bulk = HulkBulkImport.objects.create(created_by=self.user)
+        _create_dataset(bulk, "events", build_jsonl_bundle(self.ctx)["events"])
+
+        doomed_uuid = EVENT_UUIDS["disaster"]
+        real_create = HulkEvent.objects.create
+
+        def _create(**kwargs):
+            if str(kwargs.get("uuid")) == doomed_uuid:
+                raise OperationalError("deadlock detected")
+            return real_create(**kwargs)
+
+        with patch.object(HulkEvent.objects, "create", side_effect=_create), patch(
+            "apps.hulk.bulk.handler.InternalHelixGraphQlClient"
+        ) as MockClient:
+            mock_client = MagicMock()
+            mock_client.run_mutation.side_effect = _CountingResponder()
+            MockClient.return_value.__enter__.return_value = mock_client
+            ok = HulkBulkImportHandler(bulk).handle()
+
+        self.assertTrue(ok)
+        bulk.refresh_from_db()
+        self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
+
+        failures = {r["uuid"]: r["error"] for r in _jsonl_rows(_failure_file(bulk, "events"))}
+        successes = {r["uuid"] for r in _jsonl_rows(_success_file(bulk, "events"))}
+        self.assertIn(doomed_uuid, failures)
+        self.assertIn("database error during creation", failures[doomed_uuid]["post-errors"])
+
+        # Every other row that got as far as a mutation still landed in success.
+        attempted_mutation_uuids = {r["uuid"] for r in read_expected_input_rows("events")} - PYDANTIC_ONLY_FAILURE_UUIDS[
+            "events"
+        ]
+        self.assertEqual(successes, attempted_mutation_uuids - {doomed_uuid})
+
     def test_same_url_source_previews_do_not_collide_on_entity(self):
         """
         Regression: two source_preview rows sharing the same url (distinct
@@ -940,6 +1001,79 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         per_row_failure_uuids = {r["uuid"] for r in failure_events if r["uuid"] is not None}
         self.assertEqual(success_uuids | per_row_failure_uuids, all_event_uuids)
 
+    def test_handle_row_without_uuid_records_pre_error(self):
+        """
+        A row with no uuid can't be tracked or de-duplicated, so it fails with
+        a pre-error rather than disappearing from every counter.
+        """
+        bulk = HulkBulkImport.objects.create(created_by=self.user)
+        row = json.loads(_one_row(build_jsonl_bundle(self.ctx), "events", EVENT_UUIDS["conflict"]))
+        row["uuid"] = None
+        _create_dataset(bulk, "events", (json.dumps(row) + "\n").encode("utf-8"))
+
+        with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient:
+            mock_client = MagicMock()
+            mock_client.run_mutation.side_effect = _CountingResponder()
+            MockClient.return_value.__enter__.return_value = mock_client
+            HulkBulkImportHandler(bulk).handle()
+
+        failure_rows = _jsonl_rows(_failure_file(bulk, "events"))
+        self.assertEqual(len(failure_rows), 1)
+        self.assertIsNone(failure_rows[0]["uuid"])
+        self.assertEqual(failure_rows[0]["error"]["pre-errors"], "missing uuid")
+
+        ds = _dataset_for(bulk, "events")
+        self.assertEqual(ds.failure_count, 1)
+        self.assertEqual(ds.success_count, 0)
+
+    def test_handle_row_missing_the_uuid_key_records_pre_error(self):
+        """A row that omits ``uuid`` fails on its own, taking no other row with it."""
+        bulk = HulkBulkImport.objects.create(created_by=self.user)
+        bundle = build_jsonl_bundle(self.ctx)
+        row = json.loads(_one_row(bundle, "events", EVENT_UUIDS["conflict"]))
+        row.pop("uuid")
+        payload = (json.dumps(row) + "\n").encode("utf-8") + _one_row(bundle, "events", EVENT_UUIDS["disaster"])
+        _create_dataset(bulk, "events", payload)
+
+        with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient:
+            mock_client = MagicMock()
+            mock_client.run_mutation.side_effect = _CountingResponder()
+            MockClient.return_value.__enter__.return_value = mock_client
+            HulkBulkImportHandler(bulk).handle()
+
+        failure_rows = _jsonl_rows(_failure_file(bulk, "events"))
+        self.assertEqual(len(failure_rows), 1)
+        self.assertIsNone(failure_rows[0]["uuid"])
+        self.assertEqual(failure_rows[0]["error"]["pre-errors"], "missing uuid")
+
+        ds = _dataset_for(bulk, "events")
+        self.assertEqual(ds.failure_count, 1)
+        self.assertEqual(ds.success_count, 1)
+
+    def test_handle_row_that_is_not_a_json_object_records_pre_error(self):
+        """Valid json that isn't an object reaches the handler; it fails as a row."""
+        bulk = HulkBulkImport.objects.create(created_by=self.user)
+        _create_dataset(bulk, "events", b"[1, 2]\n")
+
+        with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient:
+            mock_client = MagicMock()
+            mock_client.run_mutation.side_effect = _CountingResponder()
+            MockClient.return_value.__enter__.return_value = mock_client
+            HulkBulkImportHandler(bulk).handle()
+
+        failure_rows = _jsonl_rows(_failure_file(bulk, "events"))
+        self.assertEqual(len(failure_rows), 1)
+        self.assertIsNone(failure_rows[0]["uuid"])
+        self.assertEqual(
+            failure_rows[0]["error"]["pre-errors"],
+            "invalid row: expected a json object, got list",
+        )
+
+        ds = _dataset_for(bulk, "events")
+        self.assertEqual(ds.failure_count, 1)
+        self.assertEqual(ds.success_count, 0)
+        self.assertEqual(ds.skip_count, 0)
+
     def test_handle_no_inputs_at_all(self):
         """
         Edge case: serializer rejects this end-to-end, but the handler itself
@@ -954,6 +1088,7 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
         self.assertEqual(_aggregate_counts(bulk)[0], 0)
         self.assertEqual(_aggregate_counts(bulk)[1], 0)
+        self.assertEqual(_aggregate_counts(bulk)[2], 0)
 
     def test_handle_figures_without_entries_cascade_pre_errors(self):
         """
@@ -1670,6 +1805,82 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         for row in failure_rows:
             self.assertIn("post-errors", row["error"])
             self.assertIn("download failed", row["error"]["post-errors"])
+
+
+class TestHulkBulkImportSkippedRows(HelixGraphQLTestCase):
+    """
+    Rows the handler declines to import because their uuid already carries an
+    entity: they count as skips rather than successes or failures, and no
+    second helix entity is created for them.
+    """
+
+    def setUp(self):
+        self.user = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.ctx = _make_ctx()
+        self.event_row = _one_row(build_jsonl_bundle(self.ctx), "events", EVENT_UUIDS["conflict"])
+
+    def _run(self, bulk):
+        with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient:
+            mock_client = MagicMock()
+            mock_client.run_mutation.side_effect = _CountingResponder()
+            MockClient.return_value.__enter__.return_value = mock_client
+            HulkBulkImportHandler(bulk).handle()
+
+    def _import_events(self, payload: bytes) -> HulkBulkImport:
+        bulk = HulkBulkImport.objects.create(created_by=self.user)
+        _create_dataset(bulk, "events", payload)
+        self._run(bulk)
+        return bulk
+
+    def test_uuid_imported_by_an_earlier_bulk_is_skipped(self):
+        first = self._import_events(self.event_row)
+        self.assertEqual(_dataset_for(first, "events").success_count, 1)
+        self.assertEqual(HulkEvent.objects.count(), 1)
+
+        second = self._import_events(self.event_row)
+
+        ds = _dataset_for(second, "events")
+        self.assertEqual(ds.skip_count, 1)
+        self.assertEqual(ds.success_count, 0)
+        self.assertEqual(ds.failure_count, 0)
+        # The uuid still maps to the entity the first run created.
+        self.assertEqual(HulkEvent.objects.count(), 1)
+
+    def test_skipped_rows_are_written_to_skip_file(self):
+        first = self._import_events(self.event_row)
+        created_id = _jsonl_rows(_success_file(first, "events"))[0]["id"]
+
+        second = self._import_events(self.event_row)
+
+        skip_rows = _jsonl_rows(_skip_file(second, "events"))
+        self.assertEqual(len(skip_rows), 1)
+        self.assertEqual(set(skip_rows[0].keys()), {"uuid", "id", "message"})
+        self.assertEqual(skip_rows[0]["uuid"], EVENT_UUIDS["conflict"])
+        self.assertEqual(skip_rows[0]["message"], "Already exists")
+        # The skip row points back at the entity the earlier run created.
+        self.assertEqual(skip_rows[0]["id"], created_id)
+        # Skips stay out of the other two artifacts.
+        self.assertEqual(_jsonl_rows(_success_file(second, "events")), [])
+        self.assertEqual(_jsonl_rows(_failure_file(second, "events")), [])
+
+    def test_skip_file_stays_empty_when_nothing_is_skipped(self):
+        bulk = self._import_events(self.event_row)
+
+        ds = _dataset_for(bulk, "events")
+        self.assertEqual(ds.skip_count, 0)
+        self.assertFalse(bool(ds.skip_file))
+
+    def test_uuid_repeated_within_one_dataset_is_imported_once(self):
+        bulk = self._import_events(self.event_row + self.event_row)
+
+        ds = _dataset_for(bulk, "events")
+        self.assertEqual(ds.success_count, 1)
+        self.assertEqual(ds.skip_count, 1)
+        self.assertEqual(HulkEvent.objects.count(), 1)
+        # The message separates a repeat inside the input from a replay of an
+        # earlier import, which the skip artifact would otherwise conflate.
+        skip_rows = _jsonl_rows(_skip_file(bulk, "events"))
+        self.assertEqual(skip_rows[0]["message"], "Duplicate uuid in this dataset")
 
 
 class TestHulkBulkImportImpersonation(HelixGraphQLTestCase):

@@ -112,7 +112,7 @@ class Settings(BaseSettings):
     HELIX_BASE_DOMAIN: str = HelixEndpoint.BaseDomain.PRODUCTION
     HELIX_EMAIL: str
     HELIX_PASSWORD: str
-    # Trigger triggerHulkBulkImport and download success/failure artifacts
+    # Trigger triggerHulkBulkImport and download success/failure/skip artifacts
     # after the JSONL files are generated. Disable to do a dry-run that only
     # writes local JSONL.
     HELIX_SEND_TO_HELIX: bool = True
@@ -476,11 +476,12 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
 
 def _log_bulk_progress(state: HulkBulkImportState) -> None:
     logger.info(
-        "HulkBulkImport %s status=%s success=%s failure=%s",
+        "HulkBulkImport %s status=%s success=%s failure=%s skip=%s",
         state.id,
         state.status_display or state.status.name,
         state.success_count,
         state.failure_count,
+        state.skip_count,
     )
 
 
@@ -505,7 +506,10 @@ def send_to_helix(hulk_handler: HulkDataHandler, settings: Settings) -> None:
     )
 
     for dataset in final_state.datasets or []:
-        print(f"{dataset.import_type} success={dataset.success_count} failure={dataset.failure_count}")
+        print(
+            f"{dataset.import_type} success={dataset.success_count} "
+            f"failure={dataset.failure_count} skip={dataset.skip_count}"
+        )
 
     artifacts = run.download_artifacts(OUTPUT_DATASET_DIR / f"helix_{run.bulk_id}")
     artifacts_serializable = {

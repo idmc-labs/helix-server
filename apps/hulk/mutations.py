@@ -15,6 +15,7 @@ class HulkBulkImportDatasetCreateInputType(graphene.InputObjectType):
 
 
 class HulkBulkImportCreateInputType(graphene.InputObjectType):
+    name = graphene.String()
     datasets = graphene.List(graphene.NonNull(HulkBulkImportDatasetCreateInputType), required=True)
 
 

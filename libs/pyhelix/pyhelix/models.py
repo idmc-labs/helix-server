@@ -361,6 +361,11 @@ class HulkFigureImport(HulkBaseModel):
 
     @model_validator(mode="after")
     def parse_dates(self):
+        # Input fields the resolved dates come from, used to name the offending
+        # column in error messages.
+        start_field = "start_date"
+        end_field = "end_date"
+
         if self.category.value in FIGURE_FLOW_LIST:
             if (
                 self.start_date is None
@@ -379,6 +384,8 @@ class HulkFigureImport(HulkBaseModel):
         elif self.category.value in FIGURE_STOCK_LIST:
             if self.stock_date is None or self.stock_reporting_date is None or self.stock_date_accuracy is None:
                 raise ValueError("stock_date/stock_reporting_date/stock_date_accuracy are all required for stock category")
+            start_field = "stock_date"
+            end_field = "stock_reporting_date"
             self._start_date = self.stock_date
             self._start_date_accuracy = self.stock_date_accuracy
             self._end_date = self.stock_reporting_date
@@ -388,9 +395,11 @@ class HulkFigureImport(HulkBaseModel):
         max_future_date = _max_allowed_future_date()
         start_date = getattr(self, "_start_date", None)
         end_date = getattr(self, "_end_date", None)
+        if start_date and end_date and end_date < start_date:
+            raise ValueError(f"The {start_field} must be earlier than {end_field}.")
         if start_date and start_date > max_future_date:
-            raise ValueError(f"start_date: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
+            raise ValueError(f"{start_field}: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
         if end_date and end_date > max_future_date:
-            raise ValueError(f"end_date: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
+            raise ValueError(f"{end_field}: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
 
         return self

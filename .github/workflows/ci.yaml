@@ -5,7 +5,7 @@ on:
 
 jobs:
   _:
-    uses: toggle-corp/banjo-action/.github/workflows/pipeline.yml@v0.2.0
+    uses: toggle-corp/banjo-action/.github/workflows/pipeline.yml@v0.4.0
     permissions:
       contents: read
       packages: write
@@ -23,3 +23,4 @@ jobs:
       docker__post_test__extra_step_01_command: "docker compose run --rm server ./manage.py update_pyhelix_constants --check"
       # Job: Helm
       helm__chart_directory: "./helm"
+      helm__version: "v4.2.2"

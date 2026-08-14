@@ -9,7 +9,7 @@ import mimetypes
 import typing
 import uuid
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, urljoin
 
 import httpx
 import pydantic
@@ -39,6 +39,7 @@ from .models import (
     HulkFigureImport,
     HulkSourcePreviewImport,
 )
+from .url_guard import UnsafeUrlError, validate_fetch_url
 from .utils import S3Source, parse_aws_s3_url, parse_same_storage_url
 
 logger = logging.getLogger(__name__)
@@ -200,6 +201,13 @@ def get_filename_from_response(response, fallback="attachment"):
     return fallback
 
 
+# How many ``Location`` hops a row's url may take. Each hop costs a fresh
+# ``validate_fetch_url`` + DNS lookup on operator-supplied input, and a
+# legitimate file link needs a couple at most (http→https, a CDN handoff, a
+# signed-url exchange).
+MAX_DOWNLOAD_REDIRECTS = 5
+
+
 def download_file(url):
     """
     Fetch a file via HTTP for the attachment handler's slow path.
@@ -210,18 +218,31 @@ def download_file(url):
     object helix's own credentials cannot read (the signature only works over
     an HTTP GET — ``copy_object`` cannot present it).
 
+    Redirects are followed here rather than by httpx so every hop clears
+    :func:`validate_fetch_url`: a public url answering ``302 Location:
+    http://169.254.169.254/...`` is the same problem as naming that host
+    outright, and ``follow_redirects=True`` chases it without showing us the
+    target. See :mod:`apps.hulk.bulk.url_guard`.
+
     Non-2xx responses raise: S3 answers a bad/expired signature with a 403 and
     an XML error body, which must not be stored as if it were the attachment.
     """
-    response = httpx.get(url, follow_redirects=True)
-    response.raise_for_status()
-
-    filename = get_filename_from_response(response, fallback="attachment")
-
-    return ContentFile(
-        response.content,
-        name=filename,
-    )
+    with httpx.Client(follow_redirects=False) as client:
+        current_url = url
+        for _ in range(MAX_DOWNLOAD_REDIRECTS + 1):
+            validate_fetch_url(current_url)
+            response = client.get(current_url)
+            if response.has_redirect_location:
+                # Resolve against the *responding* url so a relative Location
+                # ("/next") is joined to the host that actually answered.
+                current_url = urljoin(str(response.url), response.headers["location"])
+                continue
+            response.raise_for_status()
+            return ContentFile(
+                response.content,
+                name=get_filename_from_response(response, fallback="attachment"),
+            )
+    raise httpx.TooManyRedirects(f"exceeded {MAX_DOWNLOAD_REDIRECTS} redirects starting from {url!r}")
 
 
 class _ImpersonatedUserNotFound(Exception):
@@ -277,6 +298,7 @@ class HulkHelixModelImportBaseHandler:
 
         self.success_list = []
         self.error_list = []
+        self.skip_list = []
         self._impersonation_user_cache: dict[int, typing.Optional[User]] = {}
 
     @abc.abstractmethod
@@ -298,7 +320,16 @@ class HulkHelixModelImportBaseHandler:
             }
         )
 
-    def add_error(self, *, uuid: uuid.UUID, error: dict):
+    def add_skip(self, *, uuid: uuid.UUID, id: int, message: str):
+        self.skip_list.append(
+            {
+                "uuid": uuid,
+                "id": id,
+                "message": message,
+            }
+        )
+
+    def add_error(self, *, uuid: typing.Optional[uuid.UUID], error: dict):
         self.error_list.append(
             {
                 "uuid": uuid,
@@ -384,13 +415,29 @@ class HulkHelixModelImportBaseHandler:
         return user
 
     def handle_row(self, row):
-        row_uuid = row["uuid"]
+        # A jsonl line only has to be valid json to reach here — it can be any
+        # type, and a row object can be missing the uuid key entirely.
+        if not isinstance(row, dict):
+            self.add_error(
+                uuid=None,
+                error={PRE_ERROR_KEY: f"invalid row: expected a json object, got {type(row).__name__}"},
+            )
+            return
+
+        row_uuid = row.get("uuid")
         if row_uuid is None:
+            self.add_error(uuid=None, error={PRE_ERROR_KEY: "missing uuid"})
             return
 
         if hulk_obj := self.hulk_entity_relation_cls.objects.filter(uuid=row_uuid).first():
             logger.info("Already exists: %s", hulk_obj)
-            self.add_success(uuid=row_uuid, id=hulk_obj.entity_id, message="Already exists")
+            # A relation row carrying this bulk import was written by an earlier
+            # row of this very dataset — the input repeats a uuid.
+            if hulk_obj.bulk_import_id == self.bulk_import.pk:
+                message = "Duplicate uuid in this dataset"
+            else:
+                message = "Already exists"
+            self.add_skip(uuid=row_uuid, id=hulk_obj.entity_id, message=message)
             return
 
         try:
@@ -449,6 +496,22 @@ class HulkHelixModelImportBaseHandler:
             return
         except IntegrityError as e:
             self.add_error(uuid=row_uuid, error={POST_ERROR_KEY: f"relation insert failed: {e}"})
+            return
+        except DatabaseError as db_error:
+            # Anything the DB throws that isn't an IntegrityError — a deadlock or
+            # serialization failure under contention, a statement timeout, a
+            # dropped connection. Uncaught it reaches ``handle()``'s blanket
+            # except and fails the whole import, discarding every other row's
+            # work, where a row with bad data only fails itself. The ``atomic``
+            # block has rolled its own work back by this point, so the run
+            # continues from a clean transaction state and the row lands in the
+            # failure JSONL, re-importable as-is.
+            logger.exception(
+                "Database error while creating %s row uuid=%s",
+                self.hulk_entity_relation_cls.get_entity_cls().__name__,
+                row_uuid,
+            )
+            self.add_error(uuid=row_uuid, error={POST_ERROR_KEY: f"database error during creation: {db_error}"})
             return
 
         self.add_success(uuid=row_uuid, id=new_obj_id, message="Created")
@@ -515,7 +578,9 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
         helix's own storage endpoint, which is always eligible). Firing
         ``copy_object`` at whatever bucket a url happens to name would let a row
         borrow helix's IAM identity to read buckets the importer can't. Every
-        other url — S3 or not — gets downloaded.
+        other url — S3 or not — gets downloaded, and only after
+        ``validate_fetch_url`` confirms it points at the public internet rather
+        than back into helix's own network.
 
         Both routes end in the same BigAttachment sequence, so a row's size limit
         and metadata handling no longer depend on where its file lives.
@@ -531,6 +596,10 @@ class HulkHelixAttachmentImportHandler(HulkHelixModelImportBaseHandler):
 
         try:
             attachment_file = download_file(import_data.file_url)
+        except UnsafeUrlError as e:
+            # Distinct wording from a plain download failure: the row was
+            # refused on purpose, not lost to a flaky network.
+            raise _InputBuildError(f"refused to fetch url: {e}")
         except Exception as e:
             raise _InputBuildError(f"download failed: {e}")
         return self._create_via_big_attachment(
@@ -943,7 +1012,7 @@ class HulkBulkImportHandler:
 
     def _persist_results(self, datasets_by_type: dict):
         """
-        Write each handler's success_list / error_list back to its
+        Write each handler's success_list / error_list / skip_list back to its
         ``HulkBulkImportDataset`` row. Aggregate counts are computed on read
         via the GraphQL resolver, so we only update per-dataset counters here.
         """
@@ -954,7 +1023,8 @@ class HulkBulkImportHandler:
             handler = getattr(self, handler_attr)
             ds.success_count = len(handler.success_list)
             ds.failure_count = len(handler.error_list)
-            update_fields = ["success_count", "failure_count"]
+            ds.skip_count = len(handler.skip_list)
+            update_fields = ["success_count", "failure_count", "skip_count"]
             if handler.success_list:
                 ds.success_file.save(
                     "success.jsonl",
@@ -969,6 +1039,13 @@ class HulkBulkImportHandler:
                     save=False,
                 )
                 update_fields.append("failure_file")
+            if handler.skip_list:
+                ds.skip_file.save(
+                    "skip.jsonl",
+                    ContentFile(dump_jsonl(handler.skip_list)),
+                    save=False,
+                )
+                update_fields.append("skip_file")
             ds.save(update_fields=update_fields)
 
     def handle(self) -> bool:

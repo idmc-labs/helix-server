@@ -1,6 +1,6 @@
 """
 Model-layer tests for ``HulkBulkImport`` + ``HulkBulkImportDataset``: dataset
-rows persist their three file artifacts and the ``update_status`` state
+rows persist their four file artifacts and the ``update_status`` state
 machine sets + saves timestamps.
 """
 
@@ -43,8 +43,9 @@ class TestHulkBulkImportModel(HelixGraphQLTestCase):
                 self.assertTrue(bool(ds.import_file))
                 self.assertFalse(bool(ds.success_file))
                 self.assertFalse(bool(ds.failure_file))
+                self.assertFalse(bool(ds.skip_file))
 
-    def test_dataset_success_failure_round_trip(self):
+    def test_dataset_success_failure_skip_round_trip(self):
         bulk = HulkBulkImport.objects.create(created_by=self.user)
         ds = HulkBulkImportDataset.objects.create(
             bulk_import=bulk,
@@ -61,16 +62,24 @@ class TestHulkBulkImportModel(HelixGraphQLTestCase):
             ContentFile(b'{"uuid":"b","error":{"pre-errors":"x"}}\n'),
             save=False,
         )
+        ds.skip_file.save(
+            "skip.jsonl",
+            ContentFile(b'{"uuid":"c","id":2,"message":"Already exists"}\n'),
+            save=False,
+        )
         ds.success_count = 1
         ds.failure_count = 1
+        ds.skip_count = 1
         ds.save()
 
         ds.refresh_from_db()
         self.assertTrue(bool(ds.import_file))
         self.assertTrue(bool(ds.success_file))
         self.assertTrue(bool(ds.failure_file))
+        self.assertTrue(bool(ds.skip_file))
         self.assertEqual(ds.success_count, 1)
         self.assertEqual(ds.failure_count, 1)
+        self.assertEqual(ds.skip_count, 1)
 
     def test_dataset_unique_per_import_type(self):
         bulk = HulkBulkImport.objects.create(created_by=self.user)

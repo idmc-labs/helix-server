@@ -54,6 +54,13 @@ env = environ.Env(
     # Helix's own storage endpoint (AWS_S3_ENDPOINT_URL) is always eligible and
     # needs no entry here; see HulkHelixAttachmentImportHandler._resolve_copy_source.
     HULK_DIRECT_ACCESS_BUCKETS=(list, []),
+    # NOTE: Hulk bulk-import: hosts whose `file_url` may be downloaded even though
+    # they resolve to a private/internal address. Downloads are otherwise restricted
+    # to publicly routable addresses so a row cannot make the worker fetch internal
+    # endpoints (cloud instance metadata, admin ports) and publish the response as an
+    # Attachment. Helix's own storage endpoint (AWS_S3_ENDPOINT_URL) is always allowed
+    # and needs no entry here; see apps.hulk.bulk.url_guard.
+    HULK_FETCH_ALLOWED_HOSTS=(list, []),
     # Redis URL
     DJANGO_CACHE_REDIS_URL=str,  # redis://redis:6379/1
     DJANGO_EXTERNAL_API_CACHE_REDIS_URL=str,  # redis://redis:6379/1
@@ -505,6 +512,10 @@ GZIP_CONTENT_TYPES = [
 # Hulk bulk-import: buckets a row may be server-side copied from, using helix's
 # credentials, into an Attachment all users can read (see envvar docstring above).
 HULK_DIRECT_ACCESS_BUCKETS = [b.strip() for b in env("HULK_DIRECT_ACCESS_BUCKETS") if b.strip()]
+
+# Hulk bulk-import: hosts exempt from the "must resolve to a public address" rule
+# applied to every downloaded `file_url` (see envvar docstring above).
+HULK_FETCH_ALLOWED_HOSTS = [h.strip() for h in env("HULK_FETCH_ALLOWED_HOSTS") if h.strip()]
 
 # HEALTH-CHECK
 REDIS_URL = DJANGO_CACHE_REDIS_URL

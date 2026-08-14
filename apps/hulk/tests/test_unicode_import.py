@@ -145,8 +145,9 @@ class TestPyhelixJsonlWriterEncoding(SimpleTestCase):
             with handler:
                 pass
 
-        # Every resource gets a rows file and an errors file.
-        self.assertEqual(len(opened), 2 * len(handler._export_path_names))
+        # Every resource gets a rows file and an errors file, plus the one
+        # duplicate-uuid report shared by all of them.
+        self.assertEqual(len(opened), 2 * len(handler._export_path_names) + 1)
         for name, kwargs in opened:
             with self.subTest(file=name):
                 self.assertEqual(kwargs.get("encoding"), "utf-8")

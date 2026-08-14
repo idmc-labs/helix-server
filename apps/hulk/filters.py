@@ -1,13 +1,12 @@
 import django_filters
-from django_filters import rest_framework as df
 
-from utils.filters import IDListFilter, MultipleInputFilter
+from utils.filters import IDListFilter, MultipleInputFilter, MultiWordSearchFilterSet
 
 from .enums import HulkBulkImportStatusEnum
 from .models import HulkBulkImport
 
 
-class HulkBulkImportFilter(df.FilterSet):
+class HulkBulkImportFilter(MultiWordSearchFilterSet):
     status_list = MultipleInputFilter(HulkBulkImportStatusEnum, field_name="status")
     created_by_ids = IDListFilter(method="filter_created_by")
     created_at_gte = django_filters.DateTimeFilter(field_name="created_at", lookup_expr="gte")
@@ -16,6 +15,7 @@ class HulkBulkImportFilter(df.FilterSet):
     class Meta:
         model = HulkBulkImport
         fields = []
+        multi_word_search_fields = ["name"]
 
     def filter_created_by(self, qs, name, value):
         if not value:

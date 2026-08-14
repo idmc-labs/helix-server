@@ -184,10 +184,12 @@ class GraphqlQuery:
                 query pyhelixHulkBulkImport($id: ID!) {
                   hulkBulkImport(id: $id) {
                     id
+                    name
                     status
                     statusDisplay
                     successCount
                     failureCount
+                    skipCount
                     startedAt
                     completedAt
                     datasets {
@@ -195,9 +197,11 @@ class GraphqlQuery:
                       importType
                       successCount
                       failureCount
+                      skipCount
                       importFile
                       successFile
                       failureFile
+                      skipFile
                     }
                   }
                 }
@@ -207,10 +211,10 @@ class GraphqlQuery:
 
     # Mutations
 
-    # Shape of the trigger_hulk_bulk_import mutation. The variables dict is
-    # *only* the null-placeholder shape (a list of {importType, importFile:null}
-    # objects) — the actual file objects ride on the multipart envelope,
-    # see ``HelixClient.trigger_hulk_bulk_import``.
+    # Shape of the trigger_hulk_bulk_import mutation. The variables dict carries
+    # the optional ``name`` plus the null-placeholder ``datasets`` shape (a list
+    # of {importType, importFile:null} objects) — the actual file objects ride on
+    # the multipart envelope, see ``HelixClient.trigger_hulk_bulk_import``.
     trigger_hulk_bulk_import_query = """
         mutation pyhelixTriggerHulkBulkImport($data: HulkBulkImportCreateInputType!) {
           triggerHulkBulkImport(data: $data) {
@@ -218,6 +222,7 @@ class GraphqlQuery:
             errors
             result {
               id
+              name
               status
             }
           }

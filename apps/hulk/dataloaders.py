@@ -36,6 +36,17 @@ class HulkBulkImportFailureCountLoader(DataLoader):
         return Promise.resolve([_map.get(key, 0) for key in keys])
 
 
+class HulkBulkImportSkipCountLoader(DataLoader):
+    def batch_load_fn(self, keys):
+        qs = (
+            HulkBulkImportDataset.objects.filter(bulk_import_id__in=keys)
+            .values("bulk_import_id")
+            .annotate(total=Sum("skip_count"))
+        )
+        _map = {row["bulk_import_id"]: row["total"] or 0 for row in qs}
+        return Promise.resolve([_map.get(key, 0) for key in keys])
+
+
 class HulkBulkImportDatasetsLoader(DataLoader):
     def batch_load_fn(self, keys):
         qs = HulkBulkImportDataset.objects.filter(bulk_import_id__in=keys).order_by("import_type")
