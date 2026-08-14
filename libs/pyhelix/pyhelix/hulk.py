@@ -54,7 +54,7 @@ class HulkBulkImportRun:
     :py:meth:`HulkDataHandler.send_to_helix`.
 
     Wraps the ``bulk_id`` and the originating :class:`HelixClient` so callers
-    can poll status, wait for terminal state, and pull success/failure
+    can poll status, wait for terminal state, and pull success/failure/skip
     artifacts without re-passing the client around.
     """
 
@@ -86,11 +86,13 @@ class HulkBulkImportRun:
 
     def download_artifacts(self, out_dir: pathlib.Path) -> typing.Dict[str, typing.Dict[str, typing.Optional[pathlib.Path]]]:
         """
-        Download ``success_<resource>.jsonl`` and ``failure_<resource>.jsonl``
-        for every dataset attached to this import into ``out_dir``.
+        Download ``success_<resource>.jsonl``, ``failure_<resource>.jsonl`` and
+        ``skip_<resource>.jsonl`` for every dataset attached to this import
+        into ``out_dir``.
 
-        Returns ``{resource: {"success": path|None, "failure": path|None}}``.
-        Missing URLs (e.g. no failures) are reported as ``None``.
+        Returns ``{resource: {"success": path|None, "failure": path|None,
+        "skip": path|None}}``. Missing URLs (e.g. no failures) are reported as
+        ``None``.
         """
         state = self.get_state()
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -101,7 +103,7 @@ class HulkBulkImportRun:
             if resource is None:
                 continue
             entry: typing.Dict[str, typing.Optional[pathlib.Path]] = {}
-            for kind, url in (("success", ds.success_file), ("failure", ds.failure_file)):
+            for kind, url in (("success", ds.success_file), ("failure", ds.failure_file), ("skip", ds.skip_file)):
                 dst = out_dir / f"{kind}_{resource}.jsonl"
                 entry[kind] = dst if (url and _download_to(url, dst)) else None
             artifacts[resource] = entry

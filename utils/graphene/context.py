@@ -43,6 +43,7 @@ from apps.hulk.dataloaders import (
     FigureHulkLoader,
     HulkBulkImportDatasetsLoader,
     HulkBulkImportFailureCountLoader,
+    HulkBulkImportSkipCountLoader,
     HulkBulkImportSuccessCountLoader,
     SourcePreviewHulkLoader,
 )
@@ -245,6 +246,10 @@ class GQLContext:
     @cached_property
     def hulk_bulk_import_failure_count_loader(self):
         return HulkBulkImportFailureCountLoader()
+
+    @cached_property
+    def hulk_bulk_import_skip_count_loader(self):
+        return HulkBulkImportSkipCountLoader()
 
     @cached_property
     def hulk_bulk_import_datasets_loader(self):

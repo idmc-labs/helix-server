@@ -21,9 +21,11 @@ class HulkBulkImportDatasetState(BaseModel):
     import_type: str = Field(alias="importType")
     success_count: typing.Optional[int] = Field(default=None, alias="successCount")
     failure_count: typing.Optional[int] = Field(default=None, alias="failureCount")
+    skip_count: typing.Optional[int] = Field(default=None, alias="skipCount")
     import_file: typing.Optional[str] = Field(default=None, alias="importFile")
     success_file: typing.Optional[str] = Field(default=None, alias="successFile")
     failure_file: typing.Optional[str] = Field(default=None, alias="failureFile")
+    skip_file: typing.Optional[str] = Field(default=None, alias="skipFile")
 
 
 # Clone of HulkBulkImportType
@@ -35,6 +37,7 @@ class HulkBulkImportState(BaseModel):
     status_display: str = Field(alias="statusDisplay")
     success_count: typing.Optional[int] = Field(default=None, alias="successCount")
     failure_count: typing.Optional[int] = Field(default=None, alias="failureCount")
+    skip_count: typing.Optional[int] = Field(default=None, alias="skipCount")
     started_at: typing.Optional[datetime.datetime] = Field(default=None, alias="startedAt")
     completed_at: typing.Optional[datetime.datetime] = Field(default=None, alias="completedAt")
     datasets: typing.Optional[typing.List[HulkBulkImportDatasetState]] = Field(default=None)

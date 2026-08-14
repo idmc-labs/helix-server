@@ -298,6 +298,7 @@ class HulkHelixModelImportBaseHandler:
 
         self.success_list = []
         self.error_list = []
+        self.skip_list = []
         self._impersonation_user_cache: dict[int, typing.Optional[User]] = {}
 
     @abc.abstractmethod
@@ -319,7 +320,16 @@ class HulkHelixModelImportBaseHandler:
             }
         )
 
-    def add_error(self, *, uuid: uuid.UUID, error: dict):
+    def add_skip(self, *, uuid: uuid.UUID, id: int, message: str):
+        self.skip_list.append(
+            {
+                "uuid": uuid,
+                "id": id,
+                "message": message,
+            }
+        )
+
+    def add_error(self, *, uuid: typing.Optional[uuid.UUID], error: dict):
         self.error_list.append(
             {
                 "uuid": uuid,
@@ -405,13 +415,29 @@ class HulkHelixModelImportBaseHandler:
         return user
 
     def handle_row(self, row):
-        row_uuid = row["uuid"]
+        # A jsonl line only has to be valid json to reach here — it can be any
+        # type, and a row object can be missing the uuid key entirely.
+        if not isinstance(row, dict):
+            self.add_error(
+                uuid=None,
+                error={PRE_ERROR_KEY: f"invalid row: expected a json object, got {type(row).__name__}"},
+            )
+            return
+
+        row_uuid = row.get("uuid")
         if row_uuid is None:
+            self.add_error(uuid=None, error={PRE_ERROR_KEY: "missing uuid"})
             return
 
         if hulk_obj := self.hulk_entity_relation_cls.objects.filter(uuid=row_uuid).first():
             logger.info("Already exists: %s", hulk_obj)
-            self.add_success(uuid=row_uuid, id=hulk_obj.entity_id, message="Already exists")
+            # A relation row carrying this bulk import was written by an earlier
+            # row of this very dataset — the input repeats a uuid.
+            if hulk_obj.bulk_import_id == self.bulk_import.pk:
+                message = "Duplicate uuid in this dataset"
+            else:
+                message = "Already exists"
+            self.add_skip(uuid=row_uuid, id=hulk_obj.entity_id, message=message)
             return
 
         try:
@@ -986,7 +1012,7 @@ class HulkBulkImportHandler:
 
     def _persist_results(self, datasets_by_type: dict):
         """
-        Write each handler's success_list / error_list back to its
+        Write each handler's success_list / error_list / skip_list back to its
         ``HulkBulkImportDataset`` row. Aggregate counts are computed on read
         via the GraphQL resolver, so we only update per-dataset counters here.
         """
@@ -997,7 +1023,8 @@ class HulkBulkImportHandler:
             handler = getattr(self, handler_attr)
             ds.success_count = len(handler.success_list)
             ds.failure_count = len(handler.error_list)
-            update_fields = ["success_count", "failure_count"]
+            ds.skip_count = len(handler.skip_list)
+            update_fields = ["success_count", "failure_count", "skip_count"]
             if handler.success_list:
                 ds.success_file.save(
                     "success.jsonl",
@@ -1012,6 +1039,13 @@ class HulkBulkImportHandler:
                     save=False,
                 )
                 update_fields.append("failure_file")
+            if handler.skip_list:
+                ds.skip_file.save(
+                    "skip.jsonl",
+                    ContentFile(dump_jsonl(handler.skip_list)),
+                    save=False,
+                )
+                update_fields.append("skip_file")
             ds.save(update_fields=update_fields)
 
     def handle(self) -> bool:

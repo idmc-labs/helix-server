@@ -2723,12 +2723,14 @@ type HulkBulkImportDatasetType {
   bulkImport: HulkBulkImportType!
   successCount: Int
   failureCount: Int
+  skipCount: Int
   createdAt: DateTime!
   importType: HULK_BULK_IMPORT_DATASET_IMPORT_TYPE!
   importTypeDisplay: EnumDescription!
   importFile: String
   successFile: String
   failureFile: String
+  skipFile: String
 }
 
 input HulkBulkImportFilterDataInputType {
@@ -2755,6 +2757,7 @@ type HulkBulkImportType {
   statusDisplay: EnumDescription!
   successCount: Int
   failureCount: Int
+  skipCount: Int
   datasets: [HulkBulkImportDatasetType!]
 }
 

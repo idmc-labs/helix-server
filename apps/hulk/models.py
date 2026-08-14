@@ -33,6 +33,14 @@ def upload_dataset_failure_file(instance, filename: str) -> str:
     )
 
 
+def upload_dataset_skip_file(instance, filename: str) -> str:
+    return (
+        f"hulk/bulk-operation/{instance.bulk_import_id}/datasets/"
+        f"{instance.import_type.name.lower() if hasattr(instance.import_type, 'name') else instance.import_type}/skip/"
+        f"{uuid4()}/{filename}"
+    )
+
+
 # Resource types handled by the bulk pipeline. The order is *also* the
 # dependency order the handler walks — later types reference earlier ones
 # by UUID. Driver code should always iterate in this order.
@@ -124,7 +132,7 @@ class HulkBulkImport(models.Model):
 class HulkBulkImportDataset(models.Model):
     """
     One row per resource type uploaded for a HulkBulkImport. Stores the input
-    JSONL plus the success/failure output JSONLs and per-type counts.
+    JSONL plus the success/failure/skip output JSONLs and per-type counts.
 
     Replaces the older 15-FileField layout on ``HulkBulkImport`` itself.
     """
@@ -163,9 +171,17 @@ class HulkBulkImportDataset(models.Model):
         upload_to=upload_dataset_failure_file,
         max_length=2000,
     )
+    skip_file = CachedFileField(
+        verbose_name=_("Skip JSONL"),
+        blank=True,
+        null=True,
+        upload_to=upload_dataset_skip_file,
+        max_length=2000,
+    )
 
     success_count = models.PositiveIntegerField(blank=True, null=True)
     failure_count = models.PositiveIntegerField(blank=True, null=True)
+    skip_count = models.PositiveIntegerField(blank=True, null=True)
 
     created_at = models.DateTimeField(verbose_name=_("Created At"), auto_now_add=True)
 

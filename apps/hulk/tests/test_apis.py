@@ -4,7 +4,7 @@ End-to-end tests for the ``triggerHulkBulkImport`` mutation.
 Goal: prove the wire-up — multipart-style file uploads land on
 ``HulkBulkImportDataset`` rows, the task is dispatched on commit (eager celery
 makes this synchronous in tests), and the resulting model exposes the
-per-dataset success/failure file URLs via GraphQL.
+per-dataset success/failure/skip file URLs via GraphQL.
 
 The handler itself is mocked here so we don't depend on real helix mutation
 validity for these end-to-end tests — that surface is covered in
@@ -18,6 +18,7 @@ from io import BytesIO
 from unittest.mock import patch
 
 from django.contrib.auth.models import Permission
+from django.core.files.base import ContentFile
 
 from apps.hulk.models import HulkBulkImport, HulkBulkImportDataset
 from apps.users.enums import USER_ROLE
@@ -71,10 +72,12 @@ class TestTriggerHulkBulkImport(HelixGraphQLTestCase):
               status
               successCount
               failureCount
+              skipCount
               datasets {
                 importType
                 successCount
                 failureCount
+                skipCount
               }
             }
           }
@@ -300,6 +303,47 @@ class TestHulkBulkImportQuery(HelixGraphQLTestCase):
         resp = self._post(self.viewer)
         self.assertResponseNoErrors(resp)
         self.assertEqual(resp.json()["data"]["hulkBulkImport"]["id"], str(self.bulk.id))
+
+    SKIP_QUERY = """
+        query ($id: ID!) {
+          hulkBulkImport(id: $id) {
+            id
+            skipCount
+            datasets { importType skipCount skipFile }
+          }
+        }
+    """
+
+    def test_query_exposes_skip_count_and_skip_file(self):
+        """``skipCount`` aggregates the dataset rows; ``skipFile`` is an absolute URL."""
+        events = HulkBulkImportDataset.objects.create(
+            bulk_import=self.bulk,
+            import_type=HulkBulkImportDataset.HULK_BULK_IMPORT_DATASET_IMPORT_TYPE.EVENT.value,
+        )
+        events.skip_file.save(
+            "skip.jsonl",
+            ContentFile(b'{"uuid":"a","id":1,"message":"Already exists"}\n'),
+            save=False,
+        )
+        events.skip_count = 2
+        events.save()
+        HulkBulkImportDataset.objects.create(
+            bulk_import=self.bulk,
+            import_type=HulkBulkImportDataset.HULK_BULK_IMPORT_DATASET_IMPORT_TYPE.FIGURE.value,
+            skip_count=1,
+        )
+
+        self.force_login(self.viewer)
+        resp = self.query(self.SKIP_QUERY, variables={"id": self.bulk.id})
+        self.assertResponseNoErrors(resp)
+
+        result = resp.json()["data"]["hulkBulkImport"]
+        self.assertEqual(result["skipCount"], 3)
+        by_type = {ds["importType"]: ds for ds in result["datasets"]}
+        self.assertEqual(by_type["EVENT"]["skipCount"], 2)
+        self.assertTrue(by_type["EVENT"]["skipFile"].startswith("http"))
+        self.assertEqual(by_type["FIGURE"]["skipCount"], 1)
+        self.assertIsNone(by_type["FIGURE"]["skipFile"])
 
 
 class TestHulkBulkImportListQuery(HelixGraphQLTestCase):

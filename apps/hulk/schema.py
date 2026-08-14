@@ -21,6 +21,7 @@ class HulkBulkImportDatasetType(DjangoObjectType):
             "created_at",
             "success_count",
             "failure_count",
+            "skip_count",
         )
 
     import_type = graphene.Field(HulkBulkImportDatasetImportTypeEnum, required=True)
@@ -33,6 +34,7 @@ class HulkBulkImportDatasetType(DjangoObjectType):
     import_file = graphene.String()
     success_file = graphene.String()
     failure_file = graphene.String()
+    skip_file = graphene.String()
 
     def resolve_import_file(root, info, **kwargs):
         if not root.import_file:
@@ -48,6 +50,11 @@ class HulkBulkImportDatasetType(DjangoObjectType):
         if not root.failure_file:
             return None
         return info.context.request.build_absolute_uri(root.failure_file.url)
+
+    def resolve_skip_file(root, info, **kwargs):
+        if not root.skip_file:
+            return None
+        return info.context.request.build_absolute_uri(root.skip_file.url)
 
 
 class HulkBulkImportType(DjangoObjectType):
@@ -68,6 +75,7 @@ class HulkBulkImportType(DjangoObjectType):
     # denormalised column on HulkBulkImport itself.
     success_count = graphene.Int()
     failure_count = graphene.Int()
+    skip_count = graphene.Int()
     datasets = graphene.List(graphene.NonNull(HulkBulkImportDatasetType))
 
     def resolve_success_count(root, info, **kwargs):
@@ -75,6 +83,9 @@ class HulkBulkImportType(DjangoObjectType):
 
     def resolve_failure_count(root, info, **kwargs):
         return info.context.hulk_bulk_import_failure_count_loader.load(root.pk)
+
+    def resolve_skip_count(root, info, **kwargs):
+        return info.context.hulk_bulk_import_skip_count_loader.load(root.pk)
 
     def resolve_datasets(root, info, **kwargs):
         return info.context.hulk_bulk_import_datasets_loader.load(root.pk)

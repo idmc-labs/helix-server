@@ -188,6 +188,7 @@ class GraphqlQuery:
                     statusDisplay
                     successCount
                     failureCount
+                    skipCount
                     startedAt
                     completedAt
                     datasets {
@@ -195,9 +196,11 @@ class GraphqlQuery:
                       importType
                       successCount
                       failureCount
+                      skipCount
                       importFile
                       successFile
                       failureFile
+                      skipFile
                     }
                   }
                 }
