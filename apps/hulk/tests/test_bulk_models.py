@@ -399,23 +399,53 @@ class TestHulkFigureImportDates(HelixGraphQLTestCase):
         with helix_client_context(self.stub_client):
             pyhelix_models.HulkFigureImport(**row)
 
+    def test_flow_end_date_before_start_date_rejected(self):
+        """A flow figure whose ``end_date`` precedes ``start_date`` is rejected,
+        naming the flow input fields."""
+        row = self._flow_row(start_date="2024-01-31", end_date="2024-01-01")
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+        self.assertIn("The start_date must be earlier than end_date.", str(cm.exception))
+
+    def test_flow_end_date_equal_start_date_allowed(self):
+        """A single-day flow figure (``start_date == end_date``) stays valid."""
+        row = self._flow_row(start_date="2024-01-01", end_date="2024-01-01")
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+
     # -- stock dates (mapped to start/end) -----------------------------------
 
     def test_stock_date_beyond_10_years_rejected(self):
         """``stock_date`` maps to ``start_date``; a far-future value is rejected
-        against the start_date bound."""
-        row = self._stock_row(stock_date=self._far_future())
+        against the start bound, named after the stock input field."""
+        row = self._stock_row(stock_date=self._far_future(), stock_reporting_date=self._far_future())
         with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
             pyhelix_models.HulkFigureImport(**row)
-        self.assertIn("start_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+        message = str(cm.exception)
+        self.assertIn("stock_date: This date cannot be more than 10 years in the future.", message)
+        self.assertNotIn("start_date", message)
 
     def test_stock_reporting_date_beyond_10_years_rejected(self):
         """``stock_reporting_date`` maps to ``end_date``; a far-future value is
-        rejected against the end_date bound."""
+        rejected against the end bound, named after the stock input field."""
         row = self._stock_row(stock_reporting_date=self._far_future())
         with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
             pyhelix_models.HulkFigureImport(**row)
-        self.assertIn("end_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+        message = str(cm.exception)
+        self.assertIn("stock_reporting_date: This date cannot be more than 10 years in the future.", message)
+        self.assertNotIn("end_date", message)
+
+    def test_stock_reporting_date_before_stock_date_rejected(self):
+        """A stock figure whose ``stock_reporting_date`` precedes ``stock_date``
+        is rejected, naming the stock input fields rather than the internal
+        start/end mapping."""
+        row = self._stock_row(stock_date="2024-01-31", stock_reporting_date="2024-01-05")
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+        message = str(cm.exception)
+        self.assertIn("The stock_date must be earlier than stock_reporting_date.", message)
+        self.assertNotIn("start_date", message)
+        self.assertNotIn("end_date", message)
 
     def test_stock_dates_within_10_years_allowed(self):
         row = self._stock_row(stock_date=self._near_future(), stock_reporting_date=self._near_future())
