@@ -317,6 +317,7 @@ GRAPHQL_TYPE_SPECS: List[GraphqlTypeSpec] = [
         py_name="HulkBulkImportState",
         fields=[
             "id",
+            "name",
             "status",
             "statusDisplay",
             "successCount",

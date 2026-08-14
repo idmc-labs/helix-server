@@ -42,6 +42,7 @@ class HulkBulkImportSerializer(serializers.Serializer):
     resource type. Duplicate ``import_type`` values are rejected.
     """
 
+    name = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=255)
     datasets = HulkBulkImportDatasetCreateSerializer(many=True)
 
     def validate_datasets(self, value):
@@ -103,6 +104,7 @@ class HulkBulkImportSerializer(serializers.Serializer):
             if HulkBulkImport.objects.filter(status__in=_ACTIVE_IMPORT_STATUSES).exists():
                 raise serializers.ValidationError(_ACTIVE_IMPORT_ERROR)
             bulk = HulkBulkImport.objects.create(
+                name=validated_data.get("name"),
                 created_by=request.user,
                 celery_task_id=task_id,
             )

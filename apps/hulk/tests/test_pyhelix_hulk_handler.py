@@ -48,9 +48,11 @@ class _DummyHelixClient:
 
     def __init__(self):
         self.triggered = []
+        self.triggered_names = []
 
-    def trigger_hulk_bulk_import(self, paths):
+    def trigger_hulk_bulk_import(self, paths, *, name=None):
         self.triggered.append(paths)
+        self.triggered_names.append(name)
         return self.BULK_ID
 
 
@@ -199,3 +201,19 @@ class TestSendToHelixDuplicateGuard(_HandlerTestCase):
         self.assertEqual(run.bulk_id, _DummyHelixClient.BULK_ID)
         self.assertEqual(len(self.helix_client.triggered), 1)
         self.assertEqual(sorted(self.helix_client.triggered[0]), ["attachments"])
+
+
+class TestSendToHelixName(_HandlerTestCase):
+    def test_name_is_forwarded_to_the_client(self):
+        with self._handler() as handler:
+            handler.handle_import_object(_attachment(UUID_A))
+            handler.send_to_helix(name="March 2026 backfill")
+
+        self.assertEqual(self.helix_client.triggered_names, ["March 2026 backfill"])
+
+    def test_no_name_forwards_nothing(self):
+        with self._handler() as handler:
+            handler.handle_import_object(_attachment(UUID_A))
+            handler.send_to_helix()
+
+        self.assertEqual(self.helix_client.triggered_names, [None])

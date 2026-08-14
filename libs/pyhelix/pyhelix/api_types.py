@@ -33,6 +33,7 @@ class HulkBulkImportState(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     id: str
+    name: typing.Optional[str] = Field(default=None)
     status: typing_extensions.Annotated[HULK_BULK_IMPORT_STATUS, enum_parser(HULK_BULK_IMPORT_STATUS)]
     status_display: str = Field(alias="statusDisplay")
     success_count: typing.Optional[int] = Field(default=None, alias="successCount")

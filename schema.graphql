@@ -2710,6 +2710,7 @@ type HouseholdSizeListType {
 }
 
 input HulkBulkImportCreateInputType {
+  name: String
   datasets: [HulkBulkImportDatasetCreateInputType!]!
 }
 
@@ -2749,6 +2750,7 @@ type HulkBulkImportListType {
 
 type HulkBulkImportType {
   id: ID!
+  name: String
   createdAt: DateTime!
   createdBy: UserType!
   startedAt: DateTime

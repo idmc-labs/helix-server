@@ -273,11 +273,14 @@ class HulkDataHandler:
         )
         self._error_count[import_model] += 1
 
-    def send_to_helix(self) -> HulkBulkImportRun:
+    def send_to_helix(self, *, name: typing.Optional[str] = None) -> HulkBulkImportRun:
         """
         Upload the JSONL files produced by this handler to helix via the
         ``triggerHulkBulkImport`` mutation and return a :class:`HulkBulkImportRun`
         the caller can poll for status / pull artifacts.
+
+        ``name`` is an optional label stored on the helix-side import row so a
+        run can be identified by something other than its id and timestamp.
 
         A dataset repeating a uuid would create conflicting rows in helix, so
         the upload is refused with :class:`DuplicateUuidError` before anything
@@ -320,6 +323,6 @@ class HulkDataHandler:
             raise RuntimeError(f"send_to_helix: no non-empty JSONL files in {self.export_dir}; nothing to upload.")
 
         logger.info("Uploading %d JSONL files to helix: %s", len(paths), sorted(paths))
-        bulk_id = self.helix_client.trigger_hulk_bulk_import(paths)
+        bulk_id = self.helix_client.trigger_hulk_bulk_import(paths, name=name)
         logger.info("Triggered HulkBulkImport id=%s", bulk_id)
         return HulkBulkImportRun(helix_client=self.helix_client, bulk_id=bulk_id)

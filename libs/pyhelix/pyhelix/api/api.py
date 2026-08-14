@@ -113,10 +113,15 @@ class HelixClient:
     def trigger_hulk_bulk_import(
         self,
         jsonl_paths: typing.Mapping[str, typing.Union[str, Path]],
+        *,
+        name: typing.Optional[str] = None,
     ) -> str:
         """
         Trigger a HulkBulkImport with the given JSONL files. Returns the new
         ``HulkBulkImport.id``.
+
+        ``name`` is an optional label stored on the import row; when omitted the
+        key is left out of the request entirely.
 
         ``jsonl_paths`` keys are short resource names (``"attachments"``,
         ``"source_previews"``, ``"entries"``, ``"events"``, ``"figures"``);
@@ -151,10 +156,13 @@ class HelixClient:
             raise ValueError("trigger_hulk_bulk_import: at least one JSONL path is required")
 
         datasets = [{"importType": import_type, "importFile": None} for _, import_type, _ in present]
+        data: dict = {"datasets": datasets}
+        if name is not None:
+            data["name"] = name
         operations = {
             "operationName": "pyhelixTriggerHulkBulkImport",
             "query": GraphqlQuery.trigger_hulk_bulk_import_query,
-            "variables": {"data": {"datasets": datasets}},
+            "variables": {"data": data},
         }
         # graphene-file-upload allows nested-index paths in the multipart map.
         file_map = {f"f{i}": [f"variables.data.datasets.{i}.importFile"] for i in range(len(present))}

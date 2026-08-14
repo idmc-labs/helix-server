@@ -62,6 +62,7 @@ class HulkBulkImportType(DjangoObjectType):
         model = HulkBulkImport
         fields = (
             "id",
+            "name",
             "created_at",
             "created_by",
             "started_at",

@@ -69,6 +69,7 @@ class TestTriggerHulkBulkImport(HelixGraphQLTestCase):
             errors
             result {
               id
+              name
               status
               successCount
               failureCount
@@ -176,6 +177,33 @@ class TestTriggerHulkBulkImport(HelixGraphQLTestCase):
             self.assertTrue(bool(ds.import_file))
 
         mock_handle.assert_called_once()
+
+    def test_mutation_persists_supplied_name(self):
+        self.force_login(self.admin)
+        with patch("apps.hulk.bulk.handler.HulkBulkImportHandler.handle", return_value=True), self.captureOnCommitCallbacks(
+            execute=True
+        ):
+            resp = self._post_with_datasets(["events"], extra_data={"name": "March 2026 backfill"})
+        content = resp.json()
+        self.assertResponseNoErrors(resp)
+        self.assertTrue(content["data"]["triggerHulkBulkImport"]["ok"], content)
+        result = content["data"]["triggerHulkBulkImport"]["result"]
+        self.assertEqual(result["name"], "March 2026 backfill")
+        bulk = HulkBulkImport.objects.get(pk=result["id"])
+        self.assertEqual(bulk.name, "March 2026 backfill")
+
+    def test_mutation_without_a_name_leaves_it_null(self):
+        self.force_login(self.admin)
+        with patch("apps.hulk.bulk.handler.HulkBulkImportHandler.handle", return_value=True), self.captureOnCommitCallbacks(
+            execute=True
+        ):
+            resp = self._post_with_datasets(["events"])
+        content = resp.json()
+        self.assertResponseNoErrors(resp)
+        self.assertTrue(content["data"]["triggerHulkBulkImport"]["ok"], content)
+        result = content["data"]["triggerHulkBulkImport"]["result"]
+        self.assertIsNone(result["name"])
+        self.assertIsNone(HulkBulkImport.objects.get(pk=result["id"]).name)
 
     def test_mutation_rejects_when_active_import_exists(self):
         """Global lock: another PENDING/IN_PROGRESS row blocks new creation."""

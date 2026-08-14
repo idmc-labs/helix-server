@@ -78,6 +78,10 @@ class HulkBulkImport(models.Model):
         FAILED = 3
         SKIPPED = 4
 
+    # Operator-supplied label for the run. Optional — rows without one are
+    # identified by pk and timestamp.
+    name = models.CharField(verbose_name=_("Name"), max_length=255, blank=True, null=True)
+
     created_at = models.DateTimeField(verbose_name=_("Created At"), auto_now_add=True)
     created_by = models.ForeignKey(
         "users.User",
