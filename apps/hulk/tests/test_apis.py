@@ -387,11 +387,13 @@ class TestHulkBulkImportListQuery(HelixGraphQLTestCase):
     def setUp(self):
         self.owner = create_user_with_role(USER_ROLE.ADMIN.name)
         self.viewer = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.bulk_a = HulkBulkImport.objects.create(created_by=self.owner)
+        self.bulk_a = HulkBulkImport.objects.create(created_by=self.owner, name="March 2026 backfill")
         self.bulk_b = HulkBulkImport.objects.create(
             created_by=self.owner,
             status=HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED,
+            name="April 2026 backfill",
         )
+        # Left unnamed: name is optional, so search must cope with a null.
         self.bulk_c = HulkBulkImport.objects.create(created_by=self.viewer)
 
     def _post(self, user, variables=None):
@@ -440,3 +442,28 @@ class TestHulkBulkImportListQuery(HelixGraphQLTestCase):
         self.assertResponseNoErrors(resp)
         data = resp.json()["data"]["hulkBulkImports"]
         self.assertEqual(data["totalCount"], 3)
+
+    def _search_ids(self, search: str) -> set:
+        resp = self._post(self.viewer, variables={"filters": {"search": search}})
+        self.assertResponseNoErrors(resp)
+        return {row["id"] for row in resp.json()["data"]["hulkBulkImports"]["results"]}
+
+    def test_search_matches_name_case_insensitively(self):
+        self.assertEqual(self._search_ids("march"), {str(self.bulk_a.id)})
+        self.assertEqual(self._search_ids("MARCH"), {str(self.bulk_a.id)})
+
+    def test_search_matches_a_shared_term_across_rows(self):
+        self.assertEqual(self._search_ids("backfill"), {str(self.bulk_a.id), str(self.bulk_b.id)})
+
+    def test_search_requires_every_term_to_match(self):
+        self.assertEqual(self._search_ids("march backfill"), {str(self.bulk_a.id)})
+        self.assertEqual(self._search_ids("march april"), set())
+
+    def test_search_excludes_unnamed_imports(self):
+        self.assertNotIn(str(self.bulk_c.id), self._search_ids("2026"))
+
+    def test_empty_search_returns_everything(self):
+        self.assertEqual(
+            self._search_ids(""),
+            {str(self.bulk_a.id), str(self.bulk_b.id), str(self.bulk_c.id)},
+        )

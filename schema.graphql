@@ -2735,6 +2735,7 @@ type HulkBulkImportDatasetType {
 }
 
 input HulkBulkImportFilterDataInputType {
+  search: String
   statusList: [HULK_BULK_IMPORT_STATUS!]
   createdByIds: [ID!]
   createdAtGte: DateTime
