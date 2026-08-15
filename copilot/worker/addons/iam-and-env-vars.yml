@@ -30,7 +30,7 @@ Resources:
               - secretsmanager:GetResourcePolicy
               - secretsmanager:GetSecretValue
               - secretsmanager:DescribeSecret
-              - secretsmanager:ListSecretVersionIds,
+              - secretsmanager:ListSecretVersionIds
               - secretsmanager:ListSecrets
             # NOTE: tried with 'arn:aws:secretsmanager:::secret:*' followed by condition, did not work
             Resource:
@@ -92,7 +92,7 @@ Resources:
               - secretsmanager:GetResourcePolicy
               - secretsmanager:GetSecretValue
               - secretsmanager:DescribeSecret
-              - secretsmanager:ListSecretVersionIds,
+              - secretsmanager:ListSecretVersionIds
               - secretsmanager:ListSecrets
             Resource:
               - Fn::ImportValue: !Sub '${App}-${Env}-DatabaseSecret'
