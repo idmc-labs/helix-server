@@ -30,6 +30,7 @@ variables:
   DJANGO_DEBUG: False
   ENABLE_DEBUG_TOOLBAR: False
   USE_S3_BUCKET: True
+  HULK_DIRECT_ACCESS_BUCKETS: idmc-playground-nlp-storage
 
 logging:
   retention: 90
