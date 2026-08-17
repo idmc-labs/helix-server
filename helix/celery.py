@@ -75,6 +75,11 @@ app.conf.beat_schedule = {
         "args": [],
         **_every_hours(2),
     },
+    "generate-idu-options-dump-file": {
+        "task": "apps.contrib.tasks.generate_idu_options_dump_file",
+        "args": [],
+        **_every_hours(2),
+    },
     "save_and_delete_tracked_data_from_redis_to_db": {
         "task": "apps.contrib.tasks.save_and_delete_tracked_data_from_redis_to_db",
         "args": [],

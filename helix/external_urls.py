@@ -3,6 +3,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from rest_framework.routers import DefaultRouter
 
 from apps.entry.views import (
+    IduReferencesCachedView,
     IdusAllDisasterCachedView,
     IdusAllFlatCachedView,
     IdusFlatCachedView,
@@ -109,6 +110,15 @@ urlpatterns = [
             }
         ),
         name="idus-geojson-view",
+    ),
+    path(
+        "idus/references/",
+        IduReferencesCachedView.as_view(
+            {
+                "get": "export_json",
+            }
+        ),
+        name="idus-references-json-view",
     ),
     path("gidd/", include(router.urls)),
     # NOTE: If we do not add these manually, the are not visible in GIDD

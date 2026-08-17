@@ -1808,6 +1808,7 @@ class ExternalApiDump(models.Model):
         IDUS_ALL_DISASTER = "idus-all-disaster", _("/external-api/idus/all/disaster/")
         IDUS_ALL_DISASTER_EXCEL = "idus-all-disaster-excel", _("/external-api/idus/all/disaster-excel/")
         IDUS_ALL_DISASTER_GEOJSON = "idus-all-disaster-geojson", _("/external-api/idus/all/disaster-geojson/")
+        IDU_REFERENCES = "idu-references", _("/external-api/idus/references/")
 
         GIDD_COUNTRY_REST = "gidd-country-rest", _("/external-api/gidd/countries/")
         GIDD_CONFLICT_REST = "gidd-conflict-rest", _("/external-api/gidd/conflicts/")
@@ -2131,6 +2132,19 @@ class ExternalApiDump(models.Model):
             example_request=(
                 lambda request, client_code: request.build_absolute_uri(
                     ExternalApiDump.ExternalApiType.GIDD_DISAGGREGATION_EXPORT_EXCEL.label + f"?client_id={client_code}"
+                )
+            ),
+        ),
+        ExternalApiType.IDU_REFERENCES: Metadata(
+            response_type="JSON",
+            usage="External",
+            description=(
+                "Reference data for IDU filters: disaster types, violence types, "
+                "geographical groups and countries, updated every 2 hours"
+            ),
+            example_request=(
+                lambda request, client_code: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDU_REFERENCES.label + f"?client_id={client_code}"
                 )
             ),
         ),

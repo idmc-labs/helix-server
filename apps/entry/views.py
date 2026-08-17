@@ -625,3 +625,33 @@ class IdusAllFlatCachedView(BaseIdusCachedView):
 
 class IdusAllDisasterCachedView(BaseIdusCachedView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER
+
+
+@extend_schema(exclude=True)
+class IduReferencesCachedView(ExternalEndpointBaseCachedViewMixin, ViewSet):
+    ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDU_REFERENCES
+
+    @client_id
+    @action(detail=False, methods=["get"], url_path="export-json")
+    def export_json(self, request):
+        client_id_value = request.GET.get("client_id", None)
+        track_gidd(client_id_value, self.ENDPOINT_TYPE)
+        try:
+            api_dump = ExternalApiDump.objects.get(
+                api_type=self.ENDPOINT_TYPE,
+                include_sources=False,
+                format=ExternalApiDump.Format.JSON,
+            )
+        except ExternalApiDump.DoesNotExist:
+            return Response({}, status=status.HTTP_404_NOT_FOUND)
+
+        if api_dump.status == ExternalApiDump.Status.COMPLETED:
+            return self.download_file(request, api_dump)
+
+        if api_dump.status == ExternalApiDump.Status.FAILED:
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if api_dump.dump_file.name is not None:
+            return self.download_file(request, api_dump)
+
+        return Response({}, status=status.HTTP_202_ACCEPTED)

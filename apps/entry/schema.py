@@ -37,6 +37,7 @@ from apps.entry.filters import (
 from apps.entry.models import (
     DisaggregatedAge,
     Entry,
+    ExternalApiDump,
     Figure,
     FigureLocation,
     FigureTag,
@@ -50,6 +51,8 @@ from apps.extraction.filters import (
 )
 from apps.organization.schema import OrganizationListType
 from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
+from helix.storages import TemporaryStorageEnableAuthString, get_external_storage
+from utils.common import track_gidd
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
@@ -309,6 +312,8 @@ class FigureTagListType(CustomDjangoListObjectType):
 
 
 class Query:
+    idu_public_references = graphene.String(client_id=graphene.String(required=True))
+
     figure_tag = DjangoObjectField(FigureTagType)
     figure_tag_list = DjangoPaginatedListObjectField(
         FigureTagListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
@@ -404,3 +409,25 @@ class Query:
                 VisualizationValueType(date=k["canonical_date"], value=k["value"]) for k in nds_disaster_figure_qs
             ],
         )
+
+    @staticmethod
+    def resolve_idu_public_references(parent, info, client_id, **kwargs):
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.IDU_REFERENCES)
+        try:
+            dump = ExternalApiDump.objects.get(
+                api_type=ExternalApiDump.ExternalApiType.IDU_REFERENCES,
+                format=ExternalApiDump.Format.JSON,
+                include_sources=False,
+            )
+        except ExternalApiDump.DoesNotExist:
+            return None
+
+        if dump.status != ExternalApiDump.Status.COMPLETED or not dump.dump_file.name:
+            return None
+
+        external_storage = get_external_storage()
+        with TemporaryStorageEnableAuthString(external_storage):
+            return external_storage.url(
+                dump.dump_file.name,
+                parameters={"ResponseContentType": "application/json"},
+            )

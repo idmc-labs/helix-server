@@ -1,9 +1,11 @@
+import json
 from datetime import timedelta
 
 from rest_framework import status
 
 from apps.contrib.models import ClientTrackInfo
 from apps.contrib.tasks import (
+    generate_idu_options_dump_file,
     generate_idus_all_disaster_dump_file,
     generate_idus_all_dump_file,
     generate_idus_dump_file,
@@ -11,7 +13,15 @@ from apps.contrib.tasks import (
 )
 from apps.entry.models import ExternalApiDump
 from helix.caches import external_api_cache
-from utils.factories import ClientFactory
+from utils.factories import (
+    ClientFactory,
+    CountryFactory,
+    DisasterSubTypeFactory,
+    DisasterTypeFactory,
+    GeographicalGroupFactory,
+    ViolenceFactory,
+    ViolenceSubTypeFactory,
+)
 from utils.tests import HelixAPITestCase
 
 # All IDU exports: each dataset (last-180-days, all, all/disaster) is served as
@@ -28,6 +38,8 @@ IDU_EXPORT_URLS = [
     "/external-api/idus/all/disaster-geojson/",
 ]
 
+IDU_REFERENCES_URL = "/external-api/idus/references/"
+
 GIDD_API_URLS = [
     "/external-api/gidd/countries/",
     "/external-api/gidd/conflicts/",
@@ -41,7 +53,7 @@ GIDD_API_URLS = [
     "/external-api/gidd/disaggregations/disaggregation-export/",
 ]
 
-EXTERNAL_API_URLS = [*IDU_EXPORT_URLS, *GIDD_API_URLS]
+EXTERNAL_API_URLS = [*IDU_EXPORT_URLS, IDU_REFERENCES_URL, *GIDD_API_URLS]
 
 
 class TestExternalClientTrack(HelixAPITestCase):
@@ -191,3 +203,79 @@ class TestExternalClientTrack(HelixAPITestCase):
         # For each client track info requests per day should be 1 for each api type
         for obj in ClientTrackInfo.objects.all():
             self.assertEqual(obj.requests_per_day, 3)
+
+
+class TestIduReferencesDump(HelixAPITestCase):
+    def setUp(self):
+        super().setUp()
+        self.client1 = ClientFactory.create(code="random-code-1", is_active=True, share_source=True)
+        geo_group = GeographicalGroupFactory.create()
+        self.disaster_type = DisasterTypeFactory.create()
+        self.disaster_sub_type = DisasterSubTypeFactory.create(type=self.disaster_type)
+        self.violence = ViolenceFactory.create()
+        self.violence_sub_type = ViolenceSubTypeFactory.create(violence=self.violence)
+        self.country = CountryFactory.create(geographical_group=geo_group)
+
+    def _endpoint(self):
+        return f"{IDU_REFERENCES_URL}?client_id={self.client1.code}"
+
+    def test_returns_404_when_not_generated(self):
+        self.assertEqual(ExternalApiDump.objects.count(), 0)
+        response = self.client.get(self._endpoint())
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_returns_redirect_after_generation(self):
+        generate_idu_options_dump_file()
+        response = self.client.get(self._endpoint())
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+
+    def test_returns_202_when_pending_without_file(self):
+        generate_idu_options_dump_file()
+        ExternalApiDump.objects.filter(
+            api_type=ExternalApiDump.ExternalApiType.IDU_REFERENCES,
+        ).update(status=ExternalApiDump.Status.PENDING, dump_file=None)
+        response = self.client.get(self._endpoint())
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+    def test_dump_content_structure(self):
+        generate_idu_options_dump_file()
+        dump = ExternalApiDump.objects.get(api_type=ExternalApiDump.ExternalApiType.IDU_REFERENCES)
+        self.assertEqual(dump.status, ExternalApiDump.Status.COMPLETED)
+
+        with dump.dump_file.open("r") as f:
+            data = json.load(f)
+
+        self.assertIn("disasterTypes", data)
+        self.assertIn("disasterSubTypes", data)
+        self.assertIn("violenceTypes", data)
+        self.assertIn("violenceSubTypes", data)
+        self.assertIn("geographicalGroups", data)
+        self.assertIn("countries", data)
+
+        # Verify disaster type/subtype shape and linkage
+        d_type = next(d for d in data["disasterTypes"] if d["id"] == self.disaster_type.id)
+        self.assertIn("id", d_type)
+        self.assertIn("name", d_type)
+
+        d_sub = next(d for d in data["disasterSubTypes"] if d["id"] == self.disaster_sub_type.id)
+        self.assertIn("id", d_sub)
+        self.assertIn("name", d_sub)
+        self.assertEqual(d_sub["type_id"], self.disaster_type.id)
+
+        # Verify violence type/subtype shape and linkage
+        v_type = next(v for v in data["violenceTypes"] if v["id"] == self.violence.id)
+        self.assertIn("id", v_type)
+        self.assertIn("name", v_type)
+
+        v_sub = next(v for v in data["violenceSubTypes"] if v["id"] == self.violence_sub_type.id)
+        self.assertIn("id", v_sub)
+        self.assertIn("name", v_sub)
+        self.assertEqual(v_sub["type_id"], self.violence.id)
+
+        # Verify country shape
+        country = next(c for c in data["countries"] if c["id"] == self.country.id)
+        self.assertIn("id", country)
+        self.assertIn("idmcShortName", country)
+        self.assertIn("iso3", country)
+        self.assertIn("bbox", country)
+        self.assertIn("geographical_group_id", country)

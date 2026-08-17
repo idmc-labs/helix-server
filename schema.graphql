@@ -1831,6 +1831,7 @@ enum ExternalApiType {
   IDUS_ALL_DISASTER
   IDUS_ALL_DISASTER_EXCEL
   IDUS_ALL_DISASTER_GEOJSON
+  IDU_REFERENCES
   GIDD_COUNTRY_REST
   GIDD_CONFLICT_REST
   GIDD_DISASTER_REST
@@ -3380,6 +3381,7 @@ type Query {
   resourceGroupList: [ResourceGroupType!]
   extractionQuery(id: ID!): ExtractionQueryObjectType
   extractionQueryList(filters: ExtractionQueryFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ExtractionQueryListType
+  iduPublicReferences(clientId: String!): String
   figureTag(id: ID!): FigureTagType
   figureTagList(filters: FigureTagFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): FigureTagListType
   figure(id: ID!): FigureType
