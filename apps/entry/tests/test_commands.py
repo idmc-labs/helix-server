@@ -1,6 +1,9 @@
 import csv
 import tempfile
+from datetime import date
 
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import SimpleTestCase
 
 from apps.contrib.models import BulkApiOperation
@@ -9,8 +12,14 @@ from apps.entry.management.commands.update_ahhs import calculate_gap_filling_met
 from apps.entry.management.commands.update_figure_event import Command as UpdateFigureEventCommand
 from apps.entry.models import Figure
 from apps.event.models import Event
-from utils.factories import CountryFactory, EventFactory, FigureFactory, UnifiedReviewCommentFactory
-from utils.tests import HelixGraphQLTestCase
+from utils.factories import (
+    CountryFactory,
+    EventFactory,
+    FigureFactory,
+    HouseholdSizeFactory,
+    UnifiedReviewCommentFactory,
+)
+from utils.tests import HelixGraphQLTestCase, HelixTestCase
 
 
 class TestCalculateGapFillingMethod(SimpleTestCase):
@@ -31,6 +40,137 @@ class TestCalculateGapFillingMethod(SimpleTestCase):
             calculate_gap_filling_method(2020, 2018),
             HouseholdSize.GAP_FILLING_METHOD.FORWARD_FILLING,
         )
+
+
+class TestUpdateAhhsCommand(HelixTestCase):
+    YEAR = 2020
+
+    def setUp(self):
+        super().setUp()
+        self.country = CountryFactory.create(iso3="NPL")
+        # Current active AHHS the figures were computed against.
+        self.active_hhs = HouseholdSizeFactory.create(
+            country=self.country,
+            year=self.YEAR,
+            size=5.0,
+            is_active=True,
+            data_source_category="Census",
+            source="Src",
+            source_link="http://example.com",
+            notes="note",
+            reference_date=date(self.YEAR, 1, 1),
+            gap_filling_method=HouseholdSize.GAP_FILLING_METHOD.EXACT_YEAR,
+        )
+        # A household-unit figure whose stored household_size matches the active AHHS.
+        event = EventFactory.create(countries=[self.country])
+        self.figure = FigureFactory.create(
+            event=event,
+            country=self.country,
+            unit=Figure.UNIT.HOUSEHOLD,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            start_date=date(self.YEAR, 6, 1),
+            end_date=date(self.YEAR, 6, 30),
+            reported=10,
+            household_size=5.0,
+            total_figures=50,
+            excerpt_idu="A total of 50 people were displaced.",
+        )
+
+    def _write_csv(self, rows):
+        fields = ["Year", "AHHS", "ISO3", "Data source category", "Reference date", "Source", "Source link", "Notes"]
+        csv_file = tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False)
+        writer = csv.DictWriter(csv_file, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(rows)
+        csv_file.close()
+        return csv_file.name
+
+    def _default_row(self, ahhs="6"):
+        return {
+            "Year": str(self.YEAR),
+            "AHHS": ahhs,
+            "ISO3": "NPL",
+            "Data source category": "Census",
+            "Reference date": f"{self.YEAR}-01-01",
+            "Source": "Src",
+            "Source link": "http://example.com",
+            "Notes": "note",
+        }
+
+    def _active_hhs_qs(self):
+        return HouseholdSize.objects.filter(country=self.country, year=self.YEAR, is_active=True)
+
+    def test_numbers_mode_updates_figure_values_and_excerpt_not_note(self):
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers")
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.household_size, 6.0)
+        self.assertEqual(self.figure.total_figures, 60)
+        self.assertIn("60", self.figure.excerpt_idu)
+        self.assertNotIn("50", self.figure.excerpt_idu)
+        self.assertFalse(self.figure.calculation_logic)
+
+        active = self._active_hhs_qs()
+        self.assertEqual(active.count(), 1)
+        self.assertEqual(active.get().size, 6.0)
+
+    def test_numbers_and_note_mode_appends_calculation_logic(self):
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        call_command(
+            "update_ahhs",
+            csv_path,
+            year=self.YEAR,
+            figure_update_mode="numbers_and_note",
+            retroactive_update_date="2024-03-27",
+        )
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.total_figures, 60)
+        self.assertIn("retrospective update in AHHS", self.figure.calculation_logic)
+
+    def test_none_mode_imports_ahhs_but_leaves_figures_untouched(self):
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="none")
+
+        active = self._active_hhs_qs()
+        self.assertEqual(active.count(), 1)
+        self.assertEqual(active.get().size, 6.0)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.household_size, 5.0)
+        self.assertEqual(self.figure.total_figures, 50)
+
+    def test_unchanged_row_is_skipped(self):
+        # CSV values are identical to the current active record, so no new record is created.
+        csv_path = self._write_csv([self._default_row(ahhs="5")])
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers")
+
+        active = self._active_hhs_qs()
+        self.assertEqual(active.count(), 1)
+        self.assertEqual(active.get().pk, self.active_hhs.pk)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.household_size, 5.0)
+        self.assertEqual(self.figure.total_figures, 50)
+
+    def test_dry_run_rolls_back_all_changes(self):
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers", dry_run=True)
+
+        active = self._active_hhs_qs()
+        self.assertEqual(active.count(), 1)
+        self.assertEqual(active.get().pk, self.active_hhs.pk)
+        self.assertEqual(active.get().size, 5.0)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.household_size, 5.0)
+        self.assertEqual(self.figure.total_figures, 50)
+
+    def test_numbers_and_note_mode_requires_retroactive_update_date(self):
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        with self.assertRaises(CommandError):
+            call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers_and_note")
 
 
 class TestUpdateFigureEventMigrations(HelixGraphQLTestCase):

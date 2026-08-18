@@ -2,12 +2,13 @@ import csv
 import os
 import re
 import typing
+from collections import Counter
 from datetime import datetime
 from decimal import Decimal
 from functools import cached_property
 from typing import Union
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from requests.structures import CaseInsensitiveDict
 
@@ -32,6 +33,29 @@ DataRow = typing.TypedDict(
         "Notes": typing.Optional[str],
         "IDMC update date": typing.Optional[str],
     },
+)
+
+
+# Figure update modes for --figure-update-mode.
+FIGURE_UPDATE_MODE_NONE = "none"  # Touch no figures; import AHHS records only.
+FIGURE_UPDATE_MODE_NUMBERS = "numbers"  # Update household_size, total_figures, excerpt_idu.
+FIGURE_UPDATE_MODE_NUMBERS_AND_NOTE = "numbers_and_note"  # numbers + append the retroactive calculation_logic note.
+FIGURE_UPDATE_MODES = [
+    FIGURE_UPDATE_MODE_NONE,
+    FIGURE_UPDATE_MODE_NUMBERS,
+    FIGURE_UPDATE_MODE_NUMBERS_AND_NOTE,
+]
+
+# Data fields that decide whether an incoming AHHS row differs from the current active record.
+# Metadata churn fields (created_at/modified_at/created_by/last_modified_by/is_active) are excluded on purpose.
+HOUSEHOLD_SIZE_COMPARISON_FIELDS = (
+    "size",
+    "reference_date",
+    "gap_filling_method",
+    "data_source_category",
+    "source",
+    "source_link",
+    "notes",
 )
 
 
@@ -73,16 +97,28 @@ class Command(BaseCommand):
             help="AHHS year to be updated",
         )
         parser.add_argument(
-            "--retroactive-update-date",
-            type=str,
+            "--figure-update-mode",
+            choices=FIGURE_UPDATE_MODES,
             required=True,
-            help="Date(ISO Format) when AHHS values was retroactively changed",
+            help=(
+                "How figures are updated: "
+                f"'{FIGURE_UPDATE_MODE_NONE}' touches no figures; "
+                f"'{FIGURE_UPDATE_MODE_NUMBERS}' updates household_size, total_figures and excerpt_idu; "
+                f"'{FIGURE_UPDATE_MODE_NUMBERS_AND_NOTE}' also appends the retroactive note to calculation_logic."
+            ),
         )
         parser.add_argument(
-            "--retroactive-notes-cutoff-year",
-            type=int,
-            required=True,
-            help="Add note in calculation logic in figure before this year",
+            "--retroactive-update-date",
+            type=str,
+            help=(
+                "Date (ISO format) when AHHS values were retroactively changed. "
+                f"Required when --figure-update-mode={FIGURE_UPDATE_MODE_NUMBERS_AND_NOTE}."
+            ),
+        )
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Run the full update inside a transaction, then roll back without committing.",
         )
 
     # NOTE: This function cannot be cached
@@ -107,14 +143,37 @@ class Command(BaseCommand):
     def admin_user(self) -> User:
         return HelixInternalBot().user
 
-    def update_household_sizes(self, validated_data: typing.List[typing.Dict]):
+    @staticmethod
+    def _normalize_for_comparison(value):
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    @classmethod
+    def household_size_unchanged(cls, existing: HouseholdSize, item: typing.Dict) -> bool:
+        return all(
+            cls._normalize_for_comparison(getattr(existing, field)) == cls._normalize_for_comparison(item.get(field))
+            for field in HOUSEHOLD_SIZE_COMPARISON_FIELDS
+        )
+
+    def update_household_sizes(self, validated_data: typing.List[typing.Dict], tally: Counter) -> typing.List[typing.Dict]:
+        changed_items = []
         for item in validated_data:
-            # NOTE: deactivating previous values
-            updated_households = HouseholdSize.objects.filter(
+            existing_active = HouseholdSize.objects.filter(
                 country=item["country"],
                 year=item["year"],
                 is_active=True,
-            ).update(is_active=False)
+            )
+            # Only a single clean active record can be judged "unchanged"; dirty duplicates fall through to be replaced.
+            if existing_active.count() == 1 and self.household_size_unchanged(existing_active.get(), item):
+                tally["unchanged"] += 1
+                self.stdout.write(f"AHHS for {item['country']} is unchanged. Skipping.")
+                continue
+
+            # NOTE: deactivating previous values
+            updated_households = existing_active.update(is_active=False)
             if updated_households > 0:
                 self.stdout.write(
                     self.style.SUCCESS(
@@ -131,7 +190,10 @@ class Command(BaseCommand):
                 last_modified_by=item["last_modified_by"],
                 modified_at=item["modified_at"],
             )
+            tally["created"] += 1
+            changed_items.append(item)
             self.stdout.write(self.style.SUCCESS(f"Created AHHS item for {item['country']}"))
+        return changed_items
 
     def process_household_size_row(self, row: DataRow, year: int) -> typing.Optional[typing.Dict]:
         if row["Year"] != str(year):
@@ -174,7 +236,7 @@ class Command(BaseCommand):
             "is_active": True,
         }
 
-    def update_household_sizes_from_csv(self, file_path: str, year: int) -> tuple:
+    def update_household_sizes_from_csv(self, file_path: str, year: int, tally: Counter) -> typing.List[typing.Dict]:
         with open(file_path, "r") as file:
             reader = csv.DictReader(file)
 
@@ -196,11 +258,10 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(f"Processed {len(processed_rows)} out of {total} AHHS items from CSV")
 
-            household_values = []
+            changed_items = []
             serializer = HouseholdSizeCliImportSerializer(data=processed_rows, many=True)
             if serializer.is_valid():
-                household_values = serializer.validated_data
-                self.update_household_sizes(serializer.validated_data)
+                changed_items = self.update_household_sizes(serializer.validated_data, tally)
             else:
                 for i, errors in enumerate(serializer.errors):
                     if errors:
@@ -210,7 +271,7 @@ class Command(BaseCommand):
                         self.stdout.write(self.style.ERROR(f"'{field}': {error}"))
                 raise Exception("Import failed")
 
-            return household_values
+            return changed_items
 
     def update_figure(
         self,
@@ -218,8 +279,9 @@ class Command(BaseCommand):
         figure: Figure,
         old_household_sizes: typing.Dict[str, typing.Optional[HouseholdSize]],
         new_household_sizes: typing.Dict[str, typing.Optional[HouseholdSize]],
-        retroactive_update_date: datetime,
-        retroactive_notes_cutoff_year: int,
+        retroactive_update_date: typing.Optional[datetime],
+        mode: str,
+        tally: Counter,
     ):
         old_household_size = old_household_sizes.get(figure.country.iso3)
         if old_household_size is not None and figure.household_size != old_household_size.size:
@@ -229,6 +291,7 @@ class Command(BaseCommand):
                     f" Expected {figure.household_size} but found {old_household_size.size}. Skipping."
                 )
             )
+            tally["skipped"] += 1
             return
 
         old_household_size = figure.household_size
@@ -239,12 +302,15 @@ class Command(BaseCommand):
                     f"In figure <{figure.pk}>, new household size not found for country {figure.country.iso3}. Skipping."
                 )
             )
+            tally["skipped"] += 1
             return
 
         if old_household_size == new_household_size.size:
+            tally["unchanged"] += 1
             return
 
         if new_household_size.size == 0:
+            tally["skipped"] += 1
             return
 
         self.stdout.write(
@@ -255,6 +321,7 @@ class Command(BaseCommand):
         old_total_figures = figure.total_figures
         new_total_figures = int(round_half_up(figure.reported * Decimal(str(figure.household_size))))
         figure.total_figures = new_total_figures
+        tally["changed"] += 1
 
         if old_total_figures != new_total_figures:
             self.stdout.write(
@@ -279,8 +346,7 @@ class Command(BaseCommand):
 
                 figure.excerpt_idu = new_excerpt_idu
 
-            figure_year = figure.gidd_year()
-            if figure_year and figure_year < retroactive_notes_cutoff_year:
+            if mode == FIGURE_UPDATE_MODE_NUMBERS_AND_NOTE:
                 append_calculation_logic = (
                     f"On {retroactive_update_date.day} of {retroactive_update_date.strftime('%B')} "
                     f"{retroactive_update_date.year}, there was a retrospective update in AHHS; "
@@ -292,6 +358,7 @@ class Command(BaseCommand):
                     figure.calculation_logic = f"{figure.calculation_logic}\n\n{append_calculation_logic}"
                 else:
                     figure.calculation_logic = append_calculation_logic
+                tally["note_appended"] += 1
 
         bulk_mgr.add(figure)
 
@@ -301,11 +368,15 @@ class Command(BaseCommand):
         old_household_sizes: typing.Dict[str, typing.Optional[HouseholdSize]],
         new_household_sizes: typing.Dict[str, typing.Optional[HouseholdSize]],
         filter_countries: typing.Set[str],
-        retroactive_update_date: datetime,
-        retroactive_notes_cutoff_year: int,
+        retroactive_update_date: typing.Optional[datetime],
+        mode: str,
+        tally: Counter,
     ):
+        update_fields = ["household_size", "total_figures", "excerpt_idu"]
+        if mode == FIGURE_UPDATE_MODE_NUMBERS_AND_NOTE:
+            update_fields.append("calculation_logic")
         bulk_mgr = BulkUpdateManager(
-            ["household_size", "total_figures", "excerpt_idu", "calculation_logic"],
+            update_fields,
             chunk_size=1000,
         )
 
@@ -322,11 +393,33 @@ class Command(BaseCommand):
                 old_household_sizes,
                 new_household_sizes,
                 retroactive_update_date,
-                retroactive_notes_cutoff_year,
+                mode,
+                tally,
             )
 
         bulk_mgr.done()
         self.stdout.write(self.style.SUCCESS(f"Updated figures: {bulk_mgr.summary()}"))
+
+    def print_summary(
+        self,
+        household_tally: Counter,
+        figure_tally: typing.Optional[Counter],
+        dry_run: bool,
+    ):
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"AHHS: created {household_tally['created']}, unchanged {household_tally['unchanged']}"
+            )
+        )
+        if figure_tally is not None:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Figures: changed {figure_tally['changed']}, skipped {figure_tally['skipped']}, "
+                    f"unchanged {figure_tally['unchanged']}, notes appended {figure_tally['note_appended']}"
+                )
+            )
+        if dry_run:
+            self.stdout.write(self.style.WARNING("DRY RUN: all changes rolled back; nothing was committed."))
 
     @transaction.atomic()
     def handle(self, *args, **kwargs):
@@ -335,33 +428,39 @@ class Command(BaseCommand):
         """
         csv_file_path = kwargs["csv_file_path"]
         year = kwargs["year"]
-
+        mode = kwargs["figure_update_mode"]
+        dry_run = kwargs["dry_run"]
         retroactive_update_date = kwargs["retroactive_update_date"]
-        retroactive_notes_cutoff_year = kwargs["retroactive_notes_cutoff_year"]
 
-        # FIXME: these assertions are not required
-        assert year is not None, "year is required"
-        assert retroactive_update_date is not None, "retroactive_update_date is required"
-        assert retroactive_notes_cutoff_year is not None, "retroactive_notes_cutoff_year is required"
+        if mode == FIGURE_UPDATE_MODE_NUMBERS_AND_NOTE and not retroactive_update_date:
+            raise CommandError(
+                f"--retroactive-update-date is required when --figure-update-mode={FIGURE_UPDATE_MODE_NUMBERS_AND_NOTE}"
+            )
 
         if not os.path.exists(csv_file_path):
-            self.stdout.write(self.style.ERROR(f"CSV file path does not exist: {csv_file_path}"))
-            return
+            raise CommandError(f"CSV file path does not exist: {csv_file_path}")
 
+        household_tally: Counter = Counter()
         old_household_sizes_map = self.iso3_to_household_sizes(year)
 
-        new_household_sizes = self.update_household_sizes_from_csv(csv_file_path, year)
+        changed_household_sizes = self.update_household_sizes_from_csv(csv_file_path, year, household_tally)
 
-        countries_set = set([x["country"].pk for x in new_household_sizes])
+        figure_tally: typing.Optional[Counter] = None
+        if mode != FIGURE_UPDATE_MODE_NONE:
+            countries_set = set(x["country"].pk for x in changed_household_sizes)
+            new_household_sizes_map = self.iso3_to_household_sizes(year)
+            figure_tally = Counter()
+            self.update_figures(
+                year,
+                old_household_sizes_map,
+                new_household_sizes_map,
+                countries_set,
+                format_date(retroactive_update_date) if retroactive_update_date else None,
+                mode,
+                figure_tally,
+            )
 
-        # FIXME: We may need to clear cache
-        new_household_sizes_map = self.iso3_to_household_sizes(year)
+        self.print_summary(household_tally, figure_tally, dry_run)
 
-        self.update_figures(
-            year,
-            old_household_sizes_map,
-            new_household_sizes_map,
-            countries_set,
-            format_date(retroactive_update_date),
-            retroactive_notes_cutoff_year,
-        )
+        if dry_run:
+            transaction.set_rollback(True)
