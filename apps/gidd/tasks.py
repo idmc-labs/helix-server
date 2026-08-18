@@ -30,7 +30,9 @@ from .models import (
     Conflict,
     Disaster,
     DisplacementData,
+    GiddDisplacement,
     GiddEvent,
+    GiddEventDisplacement,
     GiddFigure,
     IdpsSaddEstimate,
     PublicFigureAnalysis,
@@ -677,6 +679,265 @@ def update_gidd_event_and_gidd_figure_data():
         )
 
 
+def update_new_gidd_tables():
+    # TODO: Route existing GIDD stats/listing endpoints to use these tables — deferred
+
+    figure_queryset = Figure.objects.filter(role=Figure.ROLE.RECOMMENDED)
+    event_displacement_rows = []
+
+    for year in get_gidd_years():
+        nd_figure_qs = Figure.filtered_nd_figures(
+            qs=figure_queryset,
+            start_date=datetime.datetime(year=year, month=1, day=1),
+            end_date=datetime.datetime(year=year, month=12, day=31),
+        )
+        stock_figure_qs = Figure.filtered_idp_figures(
+            qs=figure_queryset,
+            start_date=datetime.datetime(year=year, month=1, day=1),
+            end_date=datetime.datetime(year=year, month=12, day=31),
+        )
+
+        def _event_codes_subquery():
+            return Coalesce(
+                Subquery(
+                    EventCode.objects.filter(event_id=OuterRef("event__id"), country_id=OuterRef("country"))
+                    .order_by()
+                    .values("event")
+                    .annotate(
+                        code=ArrayAgg(
+                            Array(
+                                F("event_code"),
+                                Cast(models.F("event_code_type"), models.CharField()),
+                                F("country__iso3"),
+                                output_field=ArrayField(models.CharField()),
+                            ),
+                            distinct=True,
+                        ),
+                    )
+                    .values("code")[:1],
+                ),
+                [],
+            )
+
+        def _figure_sums():
+            return dict(
+                new_displacement=Sum(
+                    Case(
+                        When(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT, then=F("total_figures")),
+                        output_field=IntegerField(),
+                    )
+                ),
+                total_displacement=Sum(
+                    Case(
+                        When(category=Figure.FIGURE_CATEGORY_TYPES.IDPS, then=F("total_figures")),
+                        output_field=IntegerField(),
+                    )
+                ),
+                year=Value(year, output_field=IntegerField()),
+            )
+
+        # ── CONFLICT ──────────────────────────────────────────────────────────
+        conflict_qs = Figure.objects.filter(
+            id__in=((nd_figure_qs | stock_figure_qs).filter(event__event_type=Crisis.CRISIS_TYPE.CONFLICT).values("id"))
+        )
+
+        conflict_events = (
+            conflict_qs.values(
+                "event__id",
+                "event__name",
+                "event__start_date",
+                "event__end_date",
+                "event__violence",
+                "event__violence__name",
+                "event__violence_sub_type",
+                "event__violence_sub_type__name",
+                "country",
+                "country__iso3",
+                "country__idmc_short_name",
+            )
+            .order_by()
+            .annotate(
+                event_codes=_event_codes_subquery(),
+                **_figure_sums(),
+            )
+        )
+
+        for item in conflict_events:
+            event_code = extract_event_code_data_list(item["event_codes"])
+            event_displacement_rows.append(
+                GiddEventDisplacement(
+                    event_id=item["event__id"],
+                    event_raw_id=item["event__id"],
+                    event_name=item["event__name"] or "",
+                    year=year,
+                    cause=Crisis.CRISIS_TYPE.CONFLICT,
+                    country_id=item["country"],
+                    iso3=item["country__iso3"],
+                    country_name=item["country__idmc_short_name"],
+                    start_date=item["event__start_date"],
+                    end_date=item["event__end_date"],
+                    event_codes=event_code["code"],
+                    violence_id=item["event__violence"],
+                    violence_name=item["event__violence__name"],
+                    violence_sub_type_id=item["event__violence_sub_type"],
+                    violence_sub_type_name=item["event__violence_sub_type__name"],
+                    new_displacement=item["new_displacement"],
+                    new_displacement_rounded=round_and_remove_zero(item["new_displacement"]),
+                    total_displacement=item["total_displacement"],
+                    total_displacement_rounded=round_and_remove_zero(item["total_displacement"]),
+                )
+            )
+
+        # ── DISASTER ──────────────────────────────────────────────────────────
+        disaster_qs = Figure.objects.filter(
+            id__in=((nd_figure_qs | stock_figure_qs).filter(event__event_type=Crisis.CRISIS_TYPE.DISASTER).values("id"))
+        )
+
+        disaster_events = (
+            disaster_qs.values(
+                "event__id",
+                "event__name",
+                "event__start_date",
+                "event__end_date",
+                "event__disaster_category",
+                "event__disaster_category__name",
+                "event__disaster_sub_category",
+                "event__disaster_sub_category__name",
+                "event__disaster_type",
+                "event__disaster_type__name",
+                "event__disaster_sub_type",
+                "event__disaster_sub_type__name",
+                "country",
+                "country__iso3",
+                "country__idmc_short_name",
+            )
+            .order_by()
+            .annotate(
+                event_codes=_event_codes_subquery(),
+                **_figure_sums(),
+            )
+        )
+
+        for item in disaster_events:
+            event_code = extract_event_code_data_list(item["event_codes"])
+            event_displacement_rows.append(
+                GiddEventDisplacement(
+                    event_id=item["event__id"],
+                    event_raw_id=item["event__id"],
+                    event_name=item["event__name"] or "",
+                    year=year,
+                    cause=Crisis.CRISIS_TYPE.DISASTER,
+                    country_id=item["country"],
+                    iso3=item["country__iso3"],
+                    country_name=item["country__idmc_short_name"],
+                    start_date=item["event__start_date"],
+                    end_date=item["event__end_date"],
+                    event_codes=event_code["code"],
+                    hazard_category_id=item["event__disaster_category"],
+                    hazard_category_name=item["event__disaster_category__name"],
+                    hazard_sub_category_id=item["event__disaster_sub_category"],
+                    hazard_sub_category_name=item["event__disaster_sub_category__name"],
+                    hazard_type_id=item["event__disaster_type"],
+                    hazard_type_name=item["event__disaster_type__name"],
+                    hazard_sub_type_id=item["event__disaster_sub_type"],
+                    hazard_sub_type_name=item["event__disaster_sub_type__name"],
+                    new_displacement=item["new_displacement"],
+                    new_displacement_rounded=round_and_remove_zero(item["new_displacement"]),
+                    total_displacement=item["total_displacement"],
+                    total_displacement_rounded=round_and_remove_zero(item["total_displacement"]),
+                )
+            )
+
+    GiddEventDisplacement.objects.bulk_create(event_displacement_rows)
+
+    # Derive GiddDisplacement by aggregating GiddEventDisplacement
+    disaggregated_displacement_rows = []
+
+    conflict_agg = (
+        GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.CONFLICT)
+        .values(
+            "year",
+            "cause",
+            "country_id",
+            "iso3",
+            "country_name",
+            "violence_id",
+            "violence_name",
+            "violence_sub_type_id",
+            "violence_sub_type_name",
+        )
+        .order_by()
+        .annotate(nd=Sum("new_displacement"), td=Sum("total_displacement"))
+    )
+    for item in conflict_agg:
+        disaggregated_displacement_rows.append(
+            GiddDisplacement(
+                year=item["year"],
+                cause=item["cause"],
+                country_id=item["country_id"],
+                iso3=item["iso3"],
+                country_name=item["country_name"],
+                violence_id=item["violence_id"],
+                violence_name=item["violence_name"],
+                violence_sub_type_id=item["violence_sub_type_id"],
+                violence_sub_type_name=item["violence_sub_type_name"],
+                new_displacement=item["nd"],
+                new_displacement_rounded=round_and_remove_zero(item["nd"]),
+                total_displacement=item["td"],
+                total_displacement_rounded=round_and_remove_zero(item["td"]),
+            )
+        )
+
+    disaster_agg = (
+        GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.DISASTER)
+        .values(
+            "year",
+            "cause",
+            "country_id",
+            "iso3",
+            "country_name",
+            "hazard_category_id",
+            "hazard_category_name",
+            "hazard_sub_category_id",
+            "hazard_sub_category_name",
+            "hazard_type_id",
+            "hazard_type_name",
+            "hazard_sub_type_id",
+            "hazard_sub_type_name",
+        )
+        .order_by()
+        .annotate(nd=Sum("new_displacement"), td=Sum("total_displacement"))
+    )
+    for item in disaster_agg:
+        disaggregated_displacement_rows.append(
+            GiddDisplacement(
+                year=item["year"],
+                cause=item["cause"],
+                country_id=item["country_id"],
+                iso3=item["iso3"],
+                country_name=item["country_name"],
+                hazard_category_id=item["hazard_category_id"],
+                hazard_category_name=item["hazard_category_name"],
+                hazard_sub_category_id=item["hazard_sub_category_id"],
+                hazard_sub_category_name=item["hazard_sub_category_name"],
+                hazard_type_id=item["hazard_type_id"],
+                hazard_type_name=item["hazard_type_name"],
+                hazard_sub_type_id=item["hazard_sub_type_id"],
+                hazard_sub_type_name=item["hazard_sub_type_name"],
+                new_displacement=item["nd"],
+                new_displacement_rounded=round_and_remove_zero(item["nd"]),
+                total_displacement=item["td"],
+                total_displacement_rounded=round_and_remove_zero(item["td"]),
+            )
+        )
+
+    GiddDisplacement.objects.bulk_create(disaggregated_displacement_rows)
+    logger.info(
+        f"New GIDD tables populated: {len(event_displacement_rows)} GiddEventDisplacement rows, "
+        f"{len(disaggregated_displacement_rows)} GiddDisplacement rows"
+    )
+
+
 @celery_app.task
 def update_gidd_data(log_id):
     try:
@@ -693,6 +954,9 @@ def update_gidd_data(log_id):
             GiddFigure.objects.all().delete()
             # -- Delete all the GiddEvent objects
             GiddEvent.objects.all().delete()
+            # -- Delete new disaggregated tables
+            GiddEventDisplacement.objects.all().delete()
+            GiddDisplacement.objects.all().delete()
 
             # Create new data for GIDD
             update_conflict_and_disaster_data()
@@ -700,6 +964,7 @@ def update_gidd_data(log_id):
             update_displacement_data()
             update_idps_sadd_estimates_country_names()
             update_gidd_event_and_gidd_figure_data()
+            update_new_gidd_tables()
             StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.SUCCESS, completed_at=timezone.now())
         logger.info("GIDD data updated.")
     except Exception as e:

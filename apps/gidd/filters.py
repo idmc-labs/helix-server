@@ -1,18 +1,17 @@
 import typing
 
 import django_filters
-from django.db.models import Q
 from rest_framework import serializers
 
 from apps.crisis.models import Crisis
 from apps.entry.models import ExternalApiDump
 from utils.filters import IDListFilter, StringListFilter
 
-from .enums import CRISIS_TYPE_PUBLIC
 from .models import (
     Conflict,
     Disaster,
-    DisplacementData,
+    GiddDisplacement,
+    GiddEventDisplacement,
     PublicFigureAnalysis,
     ReleaseMetadata,
     StatusLog,
@@ -177,18 +176,26 @@ class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
         }
 
 
-class DisplacementDataFilter(ReleaseMetadataFilter):
+
+class GiddDisplacementFilter(ReleaseMetadataFilter):
+    cause = django_filters.CharFilter(method="filter_cause")
+    countries_iso3 = StringListFilter(method="filter_countries_iso3")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
-    countries_iso3 = StringListFilter(method="filter_countries_iso3")
-    cause = django_filters.ChoiceFilter(
-        method="filter_cause",
-        choices=get_name_choices(CRISIS_TYPE_PUBLIC),
-    )
+    hazard_types = IDListFilter(method="filter_hazard_types")
+    hazard_sub_types = IDListFilter(method="filter_hazard_sub_types")
+    violence_types = IDListFilter(method="filter_violence_types")
+    violence_sub_types = IDListFilter(method="filter_violence_sub_types")
 
     class Meta:
-        model = DisplacementData
-        fields = ()
+        model = GiddDisplacement
+        fields = {}
+
+    def filter_cause(self, queryset, name, value):
+        return queryset.filter(cause=value)
+
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(iso3__in=value)
 
     def filter_start_year(self, queryset, name, value):
         return queryset.filter(year__gte=value)
@@ -196,37 +203,71 @@ class DisplacementDataFilter(ReleaseMetadataFilter):
     def filter_end_year(self, queryset, name, value):
         return queryset.filter(year__lte=value)
 
+    def filter_hazard_types(self, queryset, name, value):
+        return queryset.filter(hazard_type__in=value)
+
+    def filter_hazard_sub_types(self, queryset, name, value):
+        return queryset.filter(hazard_sub_type__in=value)
+
+    def filter_violence_types(self, queryset, name, value):
+        return queryset.filter(violence__in=value)
+
+    def filter_violence_sub_types(self, queryset, name, value):
+        return queryset.filter(violence_sub_type__in=value)
+
+
+class GiddEventDisplacementFilter(ReleaseMetadataFilter):
+    cause = django_filters.CharFilter(method="filter_cause")
+    countries_iso3 = StringListFilter(method="filter_countries_iso3")
+    start_year = django_filters.NumberFilter(method="filter_start_year")
+    end_year = django_filters.NumberFilter(method="filter_end_year")
+    hazard_types = IDListFilter(method="filter_hazard_types")
+    hazard_sub_types = IDListFilter(method="filter_hazard_sub_types")
+    violence_types = IDListFilter(method="filter_violence_types")
+    violence_sub_types = IDListFilter(method="filter_violence_sub_types")
+    event_name = django_filters.CharFilter(method="filter_event_name")
+
+    class Meta:
+        model = GiddEventDisplacement
+        fields = {}
+
+    def filter_cause(self, queryset, name, value):
+        return queryset.filter(cause=value)
+
     def filter_countries_iso3(self, queryset, name, value):
         return queryset.filter(iso3__in=value)
 
-    def filter_cause(self, queryset, name, value):
-        if value.lower() == Crisis.CRISIS_TYPE.CONFLICT.name.lower():
-            return queryset.filter(Q(conflict_new_displacement__gt=0) | Q(conflict_total_displacement__gt=0))
-        elif value.lower() == Crisis.CRISIS_TYPE.DISASTER.name.lower():
-            return queryset.filter(Q(disaster_new_displacement__gt=0) | Q(disaster_total_displacement__gt=0))
-        return queryset
+    def filter_start_year(self, queryset, name, value):
+        return queryset.filter(year__gte=value)
 
-    @property
-    def qs(self):
-        qs = super().qs
-        if "cause" not in self.data:
-            return qs.filter(
-                Q(conflict_new_displacement__gt=0)
-                | Q(conflict_total_displacement__gt=0)
-                | Q(disaster_new_displacement__gt=0)
-                | Q(disaster_total_displacement__gt=0)
-            )
-        return qs
+    def filter_end_year(self, queryset, name, value):
+        return queryset.filter(year__lte=value)
+
+    def filter_hazard_types(self, queryset, name, value):
+        return queryset.filter(hazard_type__in=value)
+
+    def filter_hazard_sub_types(self, queryset, name, value):
+        return queryset.filter(hazard_sub_type__in=value)
+
+    def filter_violence_types(self, queryset, name, value):
+        return queryset.filter(violence__in=value)
+
+    def filter_violence_sub_types(self, queryset, name, value):
+        return queryset.filter(violence_sub_type__in=value)
+
+    def filter_event_name(self, queryset, name, value):
+        return queryset.filter(event_name__icontains=value)
 
 
 # Gidd filtets to api type map
 GIDD_TRACKING_FILTERS = {
     DisasterFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_GRAPHQL,
     ConflictFilter: ExternalApiDump.ExternalApiType.GIDD_CONFLICT_GRAPHQL,
-    DisplacementDataFilter: ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_DATA_GRAPHQL,
     PublicFigureAnalysisFilter: ExternalApiDump.ExternalApiType.GIDD_PFA_GRAPHQL,
     DisasterStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL,
     ConflictStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL,
+    GiddDisplacementFilter: ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_GRAPHQL,
+    GiddEventDisplacementFilter: ExternalApiDump.ExternalApiType.GIDD_NEW_EVENTS_GRAPHQL,
 }
 
 GIDD_API_TYPE_MAP = {

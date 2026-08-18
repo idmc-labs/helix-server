@@ -735,3 +735,119 @@ class GiddFigure(MetaInformationAbstractModel):
 
     def __str__(self):
         return self.iso3
+
+
+class GiddDisplacement(models.Model):
+    """
+    Displacement figures aggregated by country + year + cause + violence/hazard subtype.
+    Conflict rows: violence + violence_sub_type set; hazard fields null.
+    Disaster rows: hazard_type + hazard_sub_type set; violence fields null.
+    """
+
+    country = models.ForeignKey("country.Country", related_name="gidd_displacements", on_delete=models.PROTECT)
+    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
+    country_name = models.CharField(verbose_name=_("Country name"), max_length=256)
+    year = models.IntegerField()
+    cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_("Cause"))
+
+    # Conflict fields (null for disaster rows)
+    violence = models.ForeignKey("event.Violence", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
+    violence_name = models.CharField(max_length=256, blank=True, null=True)
+    violence_sub_type = models.ForeignKey(
+        "event.ViolenceSubType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    violence_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
+
+    # Disaster fields (null for conflict rows)
+    hazard_category = models.ForeignKey(
+        "event.DisasterCategory", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    hazard_category_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_sub_category = models.ForeignKey(
+        "event.DisasterSubCategory", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    hazard_sub_category_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_type = models.ForeignKey("event.DisasterType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
+    hazard_type_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_sub_type = models.ForeignKey(
+        "event.DisasterSubType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    hazard_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
+
+    new_displacement = models.BigIntegerField(blank=True, null=True)
+    new_displacement_rounded = models.BigIntegerField(blank=True, null=True)
+    total_displacement = models.BigIntegerField(blank=True, null=True)
+    total_displacement_rounded = models.BigIntegerField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("GIDD Disaggregated Displacement")
+        verbose_name_plural = _("GIDD Disaggregated Displacements")
+
+    def __str__(self):
+        return f"{self.iso3} - {self.year} - {self.cause}"
+
+
+class GiddEventDisplacement(models.Model):
+    """
+    Displacement figures per event + country + year + cause + violence/hazard subtype.
+    Unified event-level table for both conflict and disaster.
+    Conflict rows: violence + violence_sub_type set; hazard fields null.
+    Disaster rows: hazard_type + hazard_sub_type set; violence fields null.
+    """
+
+    event = models.ForeignKey("event.Event", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
+    event_raw_id = models.IntegerField(null=True, blank=True)
+    event_name = models.CharField(verbose_name=_("Event name"), max_length=256)
+
+    country = models.ForeignKey("country.Country", related_name="gidd_event_displacements", on_delete=models.PROTECT)
+    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
+    country_name = models.CharField(verbose_name=_("Country name"), max_length=256)
+    year = models.IntegerField()
+    cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_("Cause"))
+
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
+
+    event_codes = ArrayField(models.CharField(verbose_name=_("Event Codes"), max_length=256), default=list)
+
+    # Conflict fields (null for disaster rows)
+    violence = models.ForeignKey("event.Violence", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
+    violence_name = models.CharField(max_length=256, blank=True, null=True)
+    violence_sub_type = models.ForeignKey(
+        "event.ViolenceSubType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    violence_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
+
+    # Disaster fields (null for conflict rows)
+    hazard_category = models.ForeignKey(
+        "event.DisasterCategory", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    hazard_category_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_sub_category = models.ForeignKey(
+        "event.DisasterSubCategory", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    hazard_sub_category_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_type = models.ForeignKey("event.DisasterType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
+    hazard_type_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_sub_type = models.ForeignKey(
+        "event.DisasterSubType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    hazard_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
+
+    new_displacement = models.BigIntegerField(blank=True, null=True)
+    new_displacement_rounded = models.BigIntegerField(blank=True, null=True)
+    total_displacement = models.BigIntegerField(blank=True, null=True)
+    total_displacement_rounded = models.BigIntegerField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("GIDD Event Displacement")
+        verbose_name_plural = _("GIDD Event Displacements")
+
+    def __str__(self):
+        return f"{self.event_name} - {self.iso3} - {self.year}"

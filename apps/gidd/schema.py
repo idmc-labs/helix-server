@@ -22,7 +22,8 @@ from .filters import (
     ConflictStatisticsFilter,
     DisasterFilter,
     DisasterStatisticsFilter,
-    DisplacementDataFilter,
+    GiddDisplacementFilter,
+    GiddEventDisplacementFilter,
     GiddStatusLogFilter,
     PublicFigureAnalysisFilter,
     ReleaseMetadataFilter,
@@ -30,7 +31,8 @@ from .filters import (
 from .models import (
     Conflict,
     Disaster,
-    DisplacementData,
+    GiddDisplacement,
+    GiddEventDisplacement,
     PublicFigureAnalysis,
     ReleaseMetadata,
     StatusLog,
@@ -248,6 +250,145 @@ class GiddPublicFigureAnalysisListType(CustomDjangoListObjectType):
         filterset_class = PublicFigureAnalysisFilter
 
 
+class GiddDisplacementType(RelationBatchedDjangoObjectType):
+    country_id = graphene.ID(required=True)
+    cause = graphene.Field(CrisisTypeGrapheneEnum)
+    cause_display = EnumDescription(source="get_cause_display")
+    violence_id = graphene.ID()
+    violence_sub_type_id = graphene.ID()
+    hazard_category_id = graphene.ID()
+    hazard_sub_category_id = graphene.ID()
+    hazard_type_id = graphene.ID()
+    hazard_sub_type_id = graphene.ID()
+
+    class Meta:
+        model = GiddDisplacement
+        fields = (
+            "id",
+            "iso3",
+            "country_name",
+            "year",
+            "violence_name",
+            "violence_sub_type_name",
+            "hazard_category_name",
+            "hazard_sub_category_name",
+            "hazard_type_name",
+            "hazard_sub_type_name",
+            "new_displacement",
+            "new_displacement_rounded",
+            "total_displacement",
+            "total_displacement_rounded",
+        )
+
+    @staticmethod
+    def resolve_country_id(root, info, **kwargs):
+        return root.country_id
+
+    @staticmethod
+    def resolve_violence_id(root, info, **kwargs):
+        return root.violence_id
+
+    @staticmethod
+    def resolve_violence_sub_type_id(root, info, **kwargs):
+        return root.violence_sub_type_id
+
+    @staticmethod
+    def resolve_hazard_category_id(root, info, **kwargs):
+        return root.hazard_category_id
+
+    @staticmethod
+    def resolve_hazard_sub_category_id(root, info, **kwargs):
+        return root.hazard_sub_category_id
+
+    @staticmethod
+    def resolve_hazard_type_id(root, info, **kwargs):
+        return root.hazard_type_id
+
+    @staticmethod
+    def resolve_hazard_sub_type_id(root, info, **kwargs):
+        return root.hazard_sub_type_id
+
+
+class GiddDisplacementListType(CustomDjangoListObjectType):
+    class Meta:
+        model = GiddDisplacement
+        filterset_class = GiddDisplacementFilter
+
+
+class GiddEventDisplacementType(RelationBatchedDjangoObjectType):
+    country_id = graphene.ID(required=True)
+    event_id = graphene.ID()
+    cause = graphene.Field(CrisisTypeGrapheneEnum)
+    cause_display = EnumDescription(source="get_cause_display")
+    violence_id = graphene.ID()
+    violence_sub_type_id = graphene.ID()
+    hazard_category_id = graphene.ID()
+    hazard_sub_category_id = graphene.ID()
+    hazard_type_id = graphene.ID()
+    hazard_sub_type_id = graphene.ID()
+
+    class Meta:
+        model = GiddEventDisplacement
+        fields = (
+            "id",
+            "event_name",
+            "iso3",
+            "country_name",
+            "year",
+            "start_date",
+            "end_date",
+            "event_codes",
+            "violence_name",
+            "violence_sub_type_name",
+            "hazard_category_name",
+            "hazard_sub_category_name",
+            "hazard_type_name",
+            "hazard_sub_type_name",
+            "new_displacement",
+            "new_displacement_rounded",
+            "total_displacement",
+            "total_displacement_rounded",
+        )
+
+    @staticmethod
+    def resolve_country_id(root, info, **kwargs):
+        return root.country_id
+
+    @staticmethod
+    def resolve_event_id(root, info, **kwargs):
+        return root.event_raw_id
+
+    @staticmethod
+    def resolve_violence_id(root, info, **kwargs):
+        return root.violence_id
+
+    @staticmethod
+    def resolve_violence_sub_type_id(root, info, **kwargs):
+        return root.violence_sub_type_id
+
+    @staticmethod
+    def resolve_hazard_category_id(root, info, **kwargs):
+        return root.hazard_category_id
+
+    @staticmethod
+    def resolve_hazard_sub_category_id(root, info, **kwargs):
+        return root.hazard_sub_category_id
+
+    @staticmethod
+    def resolve_hazard_type_id(root, info, **kwargs):
+        return root.hazard_type_id
+
+    @staticmethod
+    def resolve_hazard_sub_type_id(root, info, **kwargs):
+        return root.hazard_sub_type_id
+
+
+class GiddEventDisplacementListType(CustomDjangoListObjectType):
+    class Meta:
+        model = GiddEventDisplacement
+        filterset_class = GiddEventDisplacementFilter
+
+
 class GiddReleaseMetadataType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReleaseMetadata
@@ -274,30 +415,6 @@ class GiddHazardSubCategoryType(graphene.ObjectType):
     id = graphene.ID(required=True)
     name = graphene.String(required=True)
 
-
-class GiddDisplacementDataType(RelationBatchedDjangoObjectType):
-    class Meta:
-        model = DisplacementData
-        fields = (
-            "id",
-            "iso3",
-            "country_name",
-            "year",
-            "conflict_total_displacement",
-            "conflict_new_displacement",
-            "disaster_new_displacement",
-            "disaster_total_displacement",
-            "conflict_total_displacement_rounded",
-            "conflict_new_displacement_rounded",
-            "disaster_new_displacement_rounded",
-            "disaster_total_displacement_rounded",
-        )
-
-
-class GiddDisplacementDataListType(CustomDjangoListObjectType):
-    class Meta:
-        model = DisplacementData
-        filterset_class = DisplacementDataFilter
 
 
 class GiddYearType(graphene.ObjectType):
@@ -383,11 +500,6 @@ class Query(graphene.ObjectType):
         pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
         client_id=graphene.String(required=True),
     )
-    gidd_public_displacements = DjangoPaginatedListObjectField(
-        GiddDisplacementDataListType,
-        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
-        client_id=graphene.String(required=True),
-    )
     gidd_public_year = graphene.Field(
         graphene.NonNull(GiddYearType),
         release_environment=graphene.String(required=True),
@@ -403,6 +515,16 @@ class Query(graphene.ObjectType):
         GiddCombinedStatisticsType,
         **get_filtering_args_from_filterset(DisasterStatisticsFilter, GiddCombinedStatisticsType),
         required=True,
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_displacements = DjangoPaginatedListObjectField(
+        GiddDisplacementListType,
+        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize", page_size=50),
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_events = DjangoPaginatedListObjectField(
+        GiddEventDisplacementListType,
+        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize", page_size=50),
         client_id=graphene.String(required=True),
     )
 

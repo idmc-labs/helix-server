@@ -44,6 +44,8 @@ class Migration(migrations.Migration):
                     ('gidd-combined-stat-graphql', 'query.giddPublicCombinedStatistics'),
                     ('gidd-release-meta-data-graphql', 'query.giddPublicReleaseMetaData'),
                     ('gidd-public-countries-graphql', 'query.giddPublicCountries'),
+                    ('gidd-displacement-graphql', 'query.giddPublicDisplacements'),
+                    ('gidd-new-events-graphql', 'query.giddPublicNewEvents'),
                 ],
                 max_length=40,
             ),

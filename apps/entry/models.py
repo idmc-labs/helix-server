@@ -1841,6 +1841,8 @@ class ExternalApiDump(models.Model):
         GIDD_COMBINED_STAT_GRAPHQL = "gidd-combined-stat-graphql", _("query.giddPublicCombinedStatistics")
         GIDD_RELEASE_META_DATA_GRAPHQL = "gidd-release-meta-data-graphql", _("query.giddPublicReleaseMetaData")
         GIDD_PUBLIC_COUNTRIES_GRAPHQL = "gidd-public-countries-graphql", _("query.giddPublicCountries")
+        GIDD_DISPLACEMENT_GRAPHQL = "gidd-displacement-graphql", _("query.giddPublicDisplacements")
+        GIDD_NEW_EVENTS_GRAPHQL = "gidd-new-events-graphql", _("query.giddPublicEvents")
 
     class Status(models.IntegerChoices):
         PENDING = 0, "Pending"
@@ -2147,6 +2149,18 @@ class ExternalApiDump(models.Model):
                     ExternalApiDump.ExternalApiType.IDU_REFERENCES.label + f"?client_id={client_code}"
                 )
             ),
+        ),
+        ExternalApiType.GIDD_DISPLACEMENT_GRAPHQL: Metadata(
+            response_type="GraphQL - JSON",
+            usage=(lambda _, client_code: "IDMC Website" if client_code == IDMC_WEBSITE_CLIENT_CODE else "IDMC Widgets"),
+            description="",
+            example_request="",
+        ),
+        ExternalApiType.GIDD_NEW_EVENTS_GRAPHQL: Metadata(
+            response_type="GraphQL - JSON",
+            usage=(lambda _, client_code: "IDMC Website" if client_code == IDMC_WEBSITE_CLIENT_CODE else "IDMC Widgets"),
+            description="",
+            example_request="",
         ),
     }
 
