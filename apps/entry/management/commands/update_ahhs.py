@@ -36,9 +36,9 @@ DataRow = typing.TypedDict(
 
 
 def calculate_gap_filling_method(year, reference_year):
-    if reference_year == year:
-        return HouseholdSize.GAP_FILLING_METHOD.EXACT
-    if reference_year > year:
+    if year == reference_year:
+        return HouseholdSize.GAP_FILLING_METHOD.EXACT_YEAR
+    if year < reference_year:
         return HouseholdSize.GAP_FILLING_METHOD.BACKWARD_FILLING
     return HouseholdSize.GAP_FILLING_METHOD.FORWARD_FILLING
 
