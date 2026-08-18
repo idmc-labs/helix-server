@@ -7,6 +7,7 @@ from graphene_django_extras import DjangoObjectField
 
 from apps.country.models import Country
 from apps.crisis.enums import CrisisTypeGrapheneEnum
+from apps.crisis.models import Crisis
 from apps.entry.enums import FigureCategoryTypeEnum
 from apps.entry.models import ExternalApiDump
 from utils.common import round_and_remove_zero, track_gidd
@@ -671,6 +672,8 @@ class Query(graphene.ObjectType):
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL)
 
         disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
+        # Save year values before popping so the event count query can reuse them
+        event_filter_data = dict(kwargs)
         start_year = kwargs.pop("start_year", None)
         end_year = kwargs.pop("end_year", None)
         filters = custom_date_filters(start_year, end_year)
@@ -740,12 +743,13 @@ class Query(graphene.ObjectType):
             total_displacements=disaster_total_displacement_qs.aggregate(
                 total=Coalesce(models.Sum("total_displacement", output_field=models.IntegerField()), 0)
             )["total"],
-            total_events=disaster_new_displacement_qs.filter(
-                models.Q(new_displacement__gt=0) | models.Q(total_displacement__gt=0)
+            total_events=GiddEventDisplacementFilter(data=event_filter_data)
+            .qs.filter(
+                cause=Crisis.CRISIS_TYPE.DISASTER,
+                **filters.get("nd_date_filters"),
             )
-            .values("event__name")
-            .annotate(events=models.Count("id"))
-            .aggregate(total_events=Coalesce(models.Sum("events", output_field=models.IntegerField()), 0))["total_events"],
+            .filter(models.Q(new_displacement__gt=0) | models.Q(total_displacement__gt=0))
+            .count(),
             total_displacement_countries=disaster_total_displacement_qs.distinct("iso3").count(),
             internal_displacement_countries=disaster_new_displacement_qs.distinct("iso3").count(),
             new_displacement_timeseries_by_year=[
@@ -808,9 +812,12 @@ class Query(graphene.ObjectType):
                 id=hazard["hazard_type__id"],
                 name=hazard["hazard_type__name"],
             )
-            for hazard in Disaster.objects.values("hazard_type__id", "hazard_type__name").distinct(
-                "hazard_type__id", "hazard_type__name"
+            for hazard in GiddDisplacement.objects.filter(
+                cause=Crisis.CRISIS_TYPE.DISASTER,
+                hazard_type__isnull=False,
             )
+            .values("hazard_type__id", "hazard_type__name")
+            .distinct("hazard_type__id", "hazard_type__name")
         ]
 
     @staticmethod
@@ -921,12 +928,17 @@ class Query(graphene.ObjectType):
             disaster_internal_displacement_qs.order_by().values_list("iso3", flat=True).distinct()
         )
 
-        # Conflict doesn't has hazard_type
-        if kwargs.get("hazard_type"):
-            kwargs = kwargs.pop("hazard_type")
+        # Conflict has no hazard filters — strip them before passing to ConflictStatisticsFilter
+        conflict_kwargs = {k: v for k, v in kwargs.items()}
+        conflict_kwargs.pop("hazard_types", None)
+        conflict_kwargs.pop("hazard_sub_types", None)
 
-        conflict_total_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
-        conflict_internal_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
+        conflict_total_displacement_qs = ConflictStatisticsFilter(data=conflict_kwargs).qs.filter(
+            **filters.get("idps_date_filters")
+        )
+        conflict_internal_displacement_qs = ConflictStatisticsFilter(data=conflict_kwargs).qs.filter(
+            **filters.get("nd_date_filters")
+        )
 
         conflict_total_displacement_stats = conflict_total_displacement_qs.aggregate(
             models.Sum("total_displacement"),

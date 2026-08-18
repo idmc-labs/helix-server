@@ -106,9 +106,11 @@ class ConflictStatisticsFilter(ReleaseMetadataFilter):
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
+    violence_types = IDListFilter(method="filter_violence_types")
+    violence_sub_types = IDListFilter(method="filter_violence_sub_types")
 
     class Meta:
-        model = Conflict
+        model = GiddDisplacement
         fields = ()
 
     def filter_countries(self, queryset, name, value):
@@ -123,20 +125,34 @@ class ConflictStatisticsFilter(ReleaseMetadataFilter):
     def filter_countries_iso3(self, queryset, name, value):
         return queryset.filter(iso3__in=value)
 
+    def filter_violence_types(self, queryset, name, value):
+        return queryset.filter(violence__in=value)
+
+    def filter_violence_sub_types(self, queryset, name, value):
+        return queryset.filter(violence_sub_type__in=value)
+
+    @property
+    def qs(self):
+        return super().qs.filter(cause=Crisis.CRISIS_TYPE.CONFLICT)
+
 
 class DisasterStatisticsFilter(ReleaseMetadataFilter):
     hazard_types = IDListFilter(method="filter_hazard_types")
+    hazard_sub_types = IDListFilter(method="filter_hazard_sub_types")
     countries = StringListFilter(method="filter_countries")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
 
     class Meta:
-        model = Disaster
+        model = GiddDisplacement
         fields = ()
 
     def filter_hazard_types(self, queryset, name, value):
         return queryset.filter(hazard_type__in=value)
+
+    def filter_hazard_sub_types(self, queryset, name, value):
+        return queryset.filter(hazard_sub_type__in=value)
 
     def filter_countries(self, queryset, name, value):
         return queryset.filter(country__in=value)
@@ -149,6 +165,10 @@ class DisasterStatisticsFilter(ReleaseMetadataFilter):
 
     def filter_countries_iso3(self, queryset, name, value):
         return queryset.filter(iso3__in=value)
+
+    @property
+    def qs(self):
+        return super().qs.filter(cause=Crisis.CRISIS_TYPE.DISASTER)
 
 
 class GiddStatusLogFilter(django_filters.FilterSet):

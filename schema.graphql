@@ -3447,8 +3447,8 @@ type Query {
   hulkBulkImports(filters: HulkBulkImportFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): HulkBulkImportListType
   giddPublicConflicts(filters: ConflictFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
   giddPublicDisasters(filters: DisasterFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
-  giddPublicConflictStatistics(releaseEnvironment: String, countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddConflictStatisticsType!
-  giddPublicDisasterStatistics(releaseEnvironment: String, hazardTypes: [ID!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddDisasterStatisticsType!
+  giddPublicConflictStatistics(releaseEnvironment: String, countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], violenceTypes: [ID!], violenceSubTypes: [ID!], clientId: String!): GiddConflictStatisticsType!
+  giddPublicDisasterStatistics(releaseEnvironment: String, hazardTypes: [ID!], hazardSubTypes: [ID!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddDisasterStatisticsType!
   giddLog(id: ID!): GiddStatusLogType
   giddLogs(filters: GiddStatusLogFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
   giddPublicReleaseMetaData(clientId: String!): GiddReleaseMetadataType
@@ -3459,7 +3459,7 @@ type Query {
   giddPublicDisplacements(filters: DisplacementDataFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
   giddPublicYear(releaseEnvironment: String!, clientId: String!): GiddYearType!
   giddPublicEvent(eventId: ID!, releaseEnvironment: String, clientId: String!): GiddEventType
-  giddPublicCombinedStatistics(releaseEnvironment: String, hazardTypes: [ID!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddCombinedStatisticsType!
+  giddPublicCombinedStatistics(releaseEnvironment: String, hazardTypes: [ID!], hazardSubTypes: [ID!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddCombinedStatisticsType!
   giddPublicNewDisplacements(filters: GiddDisaggregatedDisplacementFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisaggregatedDisplacementListType
   giddPublicNewEvents(filters: GiddEventDisplacementFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddEventDisplacementListType
   notification(id: ID!): GenericNotificationType
