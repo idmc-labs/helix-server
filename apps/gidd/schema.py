@@ -1,6 +1,7 @@
 # types.py
 import graphene
 from django.db import models
+from django.db.models import Q
 from django.db.models.functions import Coalesce
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django_extras import DjangoObjectField
@@ -23,6 +24,7 @@ from .filters import (
     ConflictStatisticsFilter,
     DisasterFilter,
     DisasterStatisticsFilter,
+    GiddCountryDisplacementFilter,
     GiddDisplacementFilter,
     GiddEventDisplacementFilter,
     GiddStatusLogFilter,
@@ -451,6 +453,20 @@ class GiddEventType(graphene.ObjectType):
     )
 
 
+class GiddCountryDisplacementType(graphene.ObjectType):
+    iso3 = graphene.String(required=True)
+    country_name = graphene.String(required=True)
+    country_id = graphene.ID(required=True)
+    conflict_new_displacement = graphene.Int()
+    conflict_new_displacement_rounded = graphene.Int()
+    conflict_total_displacement = graphene.Int()
+    conflict_total_displacement_rounded = graphene.Int()
+    disaster_new_displacement = graphene.Int()
+    disaster_new_displacement_rounded = graphene.Int()
+    disaster_total_displacement = graphene.Int()
+    disaster_total_displacement_rounded = graphene.Int()
+
+
 class Query(graphene.ObjectType):
     gidd_public_conflicts = DjangoPaginatedListObjectField(
         GiddConflictListType,
@@ -526,6 +542,13 @@ class Query(graphene.ObjectType):
     gidd_public_events = DjangoPaginatedListObjectField(
         GiddEventDisplacementListType,
         pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize", page_size=50),
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_country_displacements = graphene.Field(
+        graphene.List(graphene.NonNull(GiddCountryDisplacementType)),
+        **get_filtering_args_from_filterset(GiddCountryDisplacementFilter, GiddCountryDisplacementType),
+        hazard_types=graphene.List(graphene.NonNull(graphene.ID)),
+        violence_types=graphene.List(graphene.NonNull(graphene.ID)),
         client_id=graphene.String(required=True),
     )
 
@@ -983,3 +1006,52 @@ class Query(graphene.ObjectType):
                 )
             ),
         )
+
+    @staticmethod
+    def resolve_gidd_public_country_displacements(parent, info, **kwargs):
+        client_id = kwargs.pop("client_id")
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_COUNTRY_DISPLACEMENT_GRAPHQL)
+
+        hazard_types = kwargs.pop("hazard_types", None)
+        violence_types = kwargs.pop("violence_types", None)
+
+        qs = GiddCountryDisplacementFilter(data=kwargs).qs
+
+        conflict_filter = Q(cause=Crisis.CRISIS_TYPE.CONFLICT)
+        if violence_types:
+            conflict_filter &= Q(violence__in=violence_types)
+
+        disaster_filter = Q(cause=Crisis.CRISIS_TYPE.DISASTER)
+        if hazard_types:
+            disaster_filter &= Q(hazard_type__in=hazard_types)
+
+        rows = (
+            qs.values("iso3", "country_name", "country_id")
+            .annotate(
+                conflict_nd=Coalesce(models.Sum("new_displacement", filter=conflict_filter), 0),
+                conflict_idp=Coalesce(models.Sum("total_displacement", filter=conflict_filter), 0),
+                disaster_nd=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
+                disaster_idp=Coalesce(models.Sum("total_displacement", filter=disaster_filter), 0),
+            )
+            .filter(
+                Q(conflict_nd__gt=0) | Q(conflict_idp__gt=0) | Q(disaster_nd__gt=0) | Q(disaster_idp__gt=0)
+            )
+            .order_by("iso3")
+        )
+
+        return [
+            GiddCountryDisplacementType(
+                iso3=row["iso3"],
+                country_name=row["country_name"],
+                country_id=row["country_id"],
+                conflict_new_displacement=row["conflict_nd"] or None,
+                conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_nd"]),
+                conflict_total_displacement=row["conflict_idp"] or None,
+                conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_idp"]),
+                disaster_new_displacement=row["disaster_nd"] or None,
+                disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_nd"]),
+                disaster_total_displacement=row["disaster_idp"] or None,
+                disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_idp"]),
+            )
+            for row in rows
+        ]
