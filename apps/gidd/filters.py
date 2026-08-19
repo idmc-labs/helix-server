@@ -166,7 +166,7 @@ class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
 
 
 class GiddDisplacementFilter(ReleaseMetadataFilter):
-    cause = django_filters.CharFilter(method="filter_cause")
+    cause = django_filters.ChoiceFilter(method="filter_cause", choices=get_name_choices(Crisis.CRISIS_TYPE))
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
@@ -180,7 +180,9 @@ class GiddDisplacementFilter(ReleaseMetadataFilter):
         fields = {}
 
     def filter_cause(self, queryset, name, value):
-        return queryset.filter(cause=value)
+        if not value:
+            return queryset
+        return queryset.filter(cause=Crisis.CRISIS_TYPE.get(value.upper()).value)
 
     def filter_countries_iso3(self, queryset, name, value):
         return queryset.filter(iso3__in=value)
@@ -205,7 +207,7 @@ class GiddDisplacementFilter(ReleaseMetadataFilter):
 
 
 class GiddEventDisplacementFilter(ReleaseMetadataFilter):
-    cause = django_filters.CharFilter(method="filter_cause")
+    cause = django_filters.ChoiceFilter(method="filter_cause", choices=get_name_choices(Crisis.CRISIS_TYPE))
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
@@ -221,7 +223,9 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
         fields = {}
 
     def filter_cause(self, queryset, name, value):
-        return queryset.filter(cause=value)
+        if not value:
+            return queryset
+        return queryset.filter(cause=Crisis.CRISIS_TYPE.get(value.upper()).value)
 
     def filter_countries_iso3(self, queryset, name, value):
         return queryset.filter(iso3__in=value)
