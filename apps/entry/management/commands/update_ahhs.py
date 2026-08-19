@@ -74,6 +74,22 @@ def format_date(date: Union[str, datetime]) -> datetime:
     return datetime.strptime(date, "%Y-%m-%d")
 
 
+def total_figures_pattern(total: int) -> typing.Pattern:
+    """
+    Match `total` in prose at word boundaries, tolerating any thousands-comma placement.
+    `1000` becomes `1,?0,?0,?0`, so both "1000" and "1,000" match.
+    """
+    return re.compile("\\b" + ",?".join(str(total)) + "\\b")
+
+
+def rewrite_excerpt_idu(excerpt: str, old_total: int, new_total: int) -> str:
+    """
+    Replace every occurrence of `old_total` in `excerpt` with `new_total`.
+    Returns `excerpt` unchanged when the old total is not stated.
+    """
+    return total_figures_pattern(old_total).sub(str(new_total), excerpt)
+
+
 class Command(BaseCommand):
     help = "Update AHHS based on new household size data."
     required_csv_headers = {
@@ -328,10 +344,7 @@ class Command(BaseCommand):
                 f"In figure <{figure.pk}>, updating total figures from {old_total_figures} to {new_total_figures}"
             )
             if figure.excerpt_idu:
-                # Match the figure value at a word boundary
-                # We are adding a hack so that 1000 becomes 1,?0,?0,?0 and it matches any kind of comma separators
-                excerpt_regex = re.compile("\\b" + ",?".join(list(str(old_total_figures))) + "\\b")
-                new_excerpt_idu = re.sub(excerpt_regex, str(new_total_figures), figure.excerpt_idu)
+                new_excerpt_idu = rewrite_excerpt_idu(figure.excerpt_idu, old_total_figures, new_total_figures)
 
                 if figure.excerpt_idu == new_excerpt_idu:
                     self.stdout.write(
@@ -407,9 +420,7 @@ class Command(BaseCommand):
         dry_run: bool,
     ):
         self.stdout.write(
-            self.style.SUCCESS(
-                f"AHHS: created {household_tally['created']}, unchanged {household_tally['unchanged']}"
-            )
+            self.style.SUCCESS(f"AHHS: created {household_tally['created']}, unchanged {household_tally['unchanged']}")
         )
         if figure_tally is not None:
             self.stdout.write(

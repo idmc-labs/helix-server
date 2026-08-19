@@ -8,7 +8,7 @@ from django.test import SimpleTestCase
 
 from apps.contrib.models import BulkApiOperation
 from apps.country.models import HouseholdSize
-from apps.entry.management.commands.update_ahhs import calculate_gap_filling_method
+from apps.entry.management.commands.update_ahhs import calculate_gap_filling_method, rewrite_excerpt_idu
 from apps.entry.management.commands.update_figure_event import Command as UpdateFigureEventCommand
 from apps.entry.models import Figure
 from apps.event.models import Event
@@ -39,6 +39,51 @@ class TestCalculateGapFillingMethod(SimpleTestCase):
         self.assertEqual(
             calculate_gap_filling_method(2020, 2018),
             HouseholdSize.GAP_FILLING_METHOD.FORWARD_FILLING,
+        )
+
+
+class TestRewriteExcerptIdu(SimpleTestCase):
+    def test_plain_digits_are_replaced(self):
+        self.assertEqual(
+            rewrite_excerpt_idu("a total of 1200 people were displaced", 1200, 1500),
+            "a total of 1500 people were displaced",
+        )
+
+    def test_comma_separated_value_is_replaced(self):
+        self.assertEqual(
+            rewrite_excerpt_idu("around 1,200 people", 1200, 1500),
+            "around 1500 people",
+        )
+
+    def test_absent_total_leaves_excerpt_untouched(self):
+        excerpt = "2 houses were destroyed"
+        self.assertEqual(rewrite_excerpt_idu(excerpt, 7, 5), excerpt)
+
+    def test_word_boundary_prevents_matching_inside_a_longer_number(self):
+        self.assertEqual(
+            rewrite_excerpt_idu("50 of 1500 households", 50, 60),
+            "60 of 1500 households",
+        )
+
+    def test_every_occurrence_is_replaced(self):
+        self.assertEqual(
+            rewrite_excerpt_idu("120 displaced; 120 returned", 120, 90),
+            "90 displaced; 90 returned",
+        )
+
+    def test_replacement_drops_the_thousands_separator(self):
+        # Current behaviour: the replacement is the bare integer, so prose formatting is lost.
+        self.assertEqual(
+            rewrite_excerpt_idu("around 2,051 people", 2051, 1743),
+            "around 1743 people",
+        )
+
+    def test_a_total_that_matches_a_day_of_month_rewrites_the_date(self):
+        # Current behaviour: the pattern has no notion of context, so a total in 1-31 collides
+        # with a calendar day. Observed on 22 of 786 real rewrites in the 2026-08 diagnostic.
+        self.assertEqual(
+            rewrite_excerpt_idu("on 21 July 2025, a total of 21 people", 21, 20),
+            "on 20 July 2025, a total of 20 people",
         )
 
 
