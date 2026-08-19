@@ -102,7 +102,6 @@ class DisasterFilter(ReleaseMetadataFilter):
 
 
 class ConflictStatisticsFilter(ReleaseMetadataFilter):
-    countries = StringListFilter(method="filter_countries")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
@@ -112,9 +111,6 @@ class ConflictStatisticsFilter(ReleaseMetadataFilter):
     class Meta:
         model = GiddDisplacement
         fields = ()
-
-    def filter_countries(self, queryset, name, value):
-        return queryset.filter(country__in=value)
 
     def filter_start_year(self, queryset, name, value):
         return queryset.filter(year__gte=value)
@@ -139,7 +135,6 @@ class ConflictStatisticsFilter(ReleaseMetadataFilter):
 class DisasterStatisticsFilter(ReleaseMetadataFilter):
     hazard_types = IDListFilter(method="filter_hazard_types")
     hazard_sub_types = IDListFilter(method="filter_hazard_sub_types")
-    countries = StringListFilter(method="filter_countries")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
@@ -153,9 +148,6 @@ class DisasterStatisticsFilter(ReleaseMetadataFilter):
 
     def filter_hazard_sub_types(self, queryset, name, value):
         return queryset.filter(hazard_sub_type__in=value)
-
-    def filter_countries(self, queryset, name, value):
-        return queryset.filter(country__in=value)
 
     def filter_start_year(self, queryset, name, value):
         return queryset.filter(year__gte=value)
@@ -188,12 +180,29 @@ class GiddStatusLogFilter(django_filters.FilterSet):
 
 
 class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
+    countries_iso3 = StringListFilter(method="filter_countries_iso3")
+    years = IDListFilter(method="filter_years")
+    figure_cause = django_filters.CharFilter(method="filter_figure_cause")
+    figure_category = django_filters.CharFilter(method="filter_figure_category")
+
     class Meta:
         model = PublicFigureAnalysis
         fields = {
             "iso3": ["exact"],
             "year": ["exact"],
         }
+
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(iso3__in=value)
+
+    def filter_years(self, queryset, name, value):
+        return queryset.filter(year__in=value)
+
+    def filter_figure_cause(self, queryset, name, value):
+        return queryset.filter(figure_cause=value)
+
+    def filter_figure_category(self, queryset, name, value):
+        return queryset.filter(figure_category=value)
 
 
 
@@ -246,6 +255,7 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
     violence_types = IDListFilter(method="filter_violence_types")
     violence_sub_types = IDListFilter(method="filter_violence_sub_types")
     event_name = django_filters.CharFilter(method="filter_event_name")
+    events = IDListFilter(method="filter_events")
 
     class Meta:
         model = GiddEventDisplacement
@@ -277,6 +287,9 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
 
     def filter_event_name(self, queryset, name, value):
         return queryset.filter(event_name__icontains=value)
+
+    def filter_events(self, queryset, name, value):
+        return queryset.filter(event_raw_id__in=value)
 
 
 # Gidd filtets to api type map
