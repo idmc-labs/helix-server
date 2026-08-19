@@ -203,6 +203,7 @@ THIRD_PARTY_APPS = [
     "health_check.contrib.migrations",
     "health_check.contrib.redis",  # requires Redis broker
     "banjo_utils",
+    "django_celery_beat",
 ]
 
 INSTALLED_APPS = (
@@ -549,6 +550,11 @@ RESOURCEGROUP_NUMBER = GRAPHENE_DJANGO_EXTRAS["MAX_PAGE_SIZE"]
 FIGURE_NUMBER = GRAPHENE_DJANGO_EXTRAS["MAX_PAGE_SIZE"]
 
 # CELERY
+
+# Beat entries live in helix.celery.app.conf.beat_schedule and are written into
+# django_celery_beat's tables on every beat start. The `enabled` flag is the one
+# field the sync leaves alone, so the admin panel owns it.
+CELERY_BEAT_SCHEDULER = "helix.celery_beat.HelixDatabaseScheduler"
 
 # NOTE: These queue names must match the worker container command
 # CELERY_DEFAULT_QUEUE = LOW_PRIO_QUEUE = env('LOW_PRIO_QUEUE_NAME', 'celery_low')
