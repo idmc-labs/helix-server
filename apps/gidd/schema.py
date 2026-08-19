@@ -82,6 +82,13 @@ class DisplacementByHazardType(graphene.ObjectType):
     new_displacements_rounded = graphene.Int()
 
 
+class DisplacementByViolenceType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    label = graphene.String(required=True)
+    new_displacements = graphene.Int()
+    new_displacements_rounded = graphene.Int()
+
+
 class GiddConflictStatisticsType(graphene.ObjectType):
     new_displacements = graphene.Int()
     new_displacements_rounded = graphene.Int()
@@ -89,6 +96,7 @@ class GiddConflictStatisticsType(graphene.ObjectType):
     total_displacements_rounded = graphene.Int()
     total_displacement_countries = graphene.Int()
     internal_displacement_countries = graphene.Int()
+    displacements_by_violence_sub_type = graphene.List(graphene.NonNull(DisplacementByViolenceType))
     new_displacement_timeseries_by_year = graphene.List(graphene.NonNull(GiddTimeSeriesStatisticsByYearType))
     new_displacement_timeseries_by_country = graphene.List(graphene.NonNull(GiddTimeSeriesStatisticsByCountryType))
     total_displacement_timeseries_by_year = graphene.List(graphene.NonNull(GiddTimeSeriesStatisticsByYearType))
@@ -568,6 +576,19 @@ class Query(graphene.ObjectType):
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
+        violence_categories_qs = (
+            conflict_qs.values("violence_sub_type", "violence_sub_type__id")
+            .annotate(
+                total=Coalesce(models.Sum("new_displacement", output_field=models.IntegerField()), 0),
+                label=models.Case(
+                    models.When(violence_sub_type=None, then=models.Value("Not labeled")),
+                    default=models.F("violence_sub_type_name"),
+                    output_field=models.CharField(),
+                ),
+            )
+            .filter(total__gt=0)
+        )
+
         return GiddConflictStatisticsType(
             new_displacements_rounded=round_and_remove_zero(
                 conflict_new_displacement_qs.aggregate(
@@ -587,6 +608,15 @@ class Query(graphene.ObjectType):
             )["total"],
             total_displacement_countries=conflict_total_displacement_qs.distinct("iso3").count(),
             internal_displacement_countries=conflict_new_displacement_qs.distinct("iso3").count(),
+            displacements_by_violence_sub_type=[
+                DisplacementByViolenceType(
+                    id=item["violence_sub_type__id"],
+                    label=item["label"],
+                    new_displacements=item["total"],
+                    new_displacements_rounded=round_and_remove_zero(item["total"]),
+                )
+                for item in violence_categories_qs
+            ],
             new_displacement_timeseries_by_year=[
                 GiddTimeSeriesStatisticsByYearType(
                     year=item["year"],

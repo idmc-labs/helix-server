@@ -1340,6 +1340,13 @@ type DisplacementByHazardType {
   newDisplacementsRounded: Int
 }
 
+type DisplacementByViolenceType {
+  id: ID!
+  label: String!
+  newDisplacements: Int
+  newDisplacementsRounded: Int
+}
+
 type DjangoDebug {
   sql: [DjangoDebugSQL]
 }
@@ -2435,6 +2442,7 @@ type GiddConflictStatisticsType {
   totalDisplacementsRounded: Int
   totalDisplacementCountries: Int
   internalDisplacementCountries: Int
+  displacementsByViolenceSubType: [DisplacementByViolenceType!]
   newDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
   newDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
   totalDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
