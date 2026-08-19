@@ -682,6 +682,11 @@ def update_gidd_event_and_gidd_figure_data():
 def update_new_gidd_tables():
     # TODO: Route existing GIDD stats/listing endpoints to use these tables — deferred
 
+    # Idempotent: clear prior rows so repeated/standalone runs don't accumulate duplicates
+    # (the orchestrator update_gidd_data also clears these, this makes direct calls safe too).
+    GiddEventDisplacement.objects.all().delete()
+    GiddDisplacement.objects.all().delete()
+
     figure_queryset = Figure.objects.filter(role=Figure.ROLE.RECOMMENDED)
     event_displacement_rows = []
 
@@ -799,6 +804,9 @@ def update_new_gidd_tables():
                 "event__name",
                 "event__start_date",
                 "event__end_date",
+                "event__start_date_accuracy",
+                "event__end_date_accuracy",
+                "event__glide_numbers",
                 "event__disaster_category",
                 "event__disaster_category__name",
                 "event__disaster_sub_category",
@@ -814,6 +822,11 @@ def update_new_gidd_tables():
             .order_by()
             .annotate(
                 event_codes=_event_codes_subquery(),
+                _displacement_occurred=ArrayAgg(
+                    F("displacement_occurred"),
+                    distinct=True,
+                    filter=Q(displacement_occurred__isnull=False),
+                ),
                 **_figure_sums(),
             )
         )
@@ -832,7 +845,12 @@ def update_new_gidd_tables():
                     country_name=item["country__idmc_short_name"],
                     start_date=item["event__start_date"],
                     end_date=item["event__end_date"],
+                    start_date_accuracy=item["event__start_date_accuracy"],
+                    end_date_accuracy=item["event__end_date_accuracy"],
+                    glide_numbers=item["event__glide_numbers"] or list(),
+                    displacement_occurred=item["_displacement_occurred"] or [],
                     event_codes=event_code["code"],
+                    event_codes_type=event_code["code_type"],
                     hazard_category_id=item["event__disaster_category"],
                     hazard_category_name=item["event__disaster_category__name"],
                     hazard_sub_category_id=item["event__disaster_sub_category"],

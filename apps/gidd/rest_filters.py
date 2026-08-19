@@ -7,9 +7,8 @@ from apps.crisis.models import Crisis
 from .enums import CRISIS_TYPE_PUBLIC
 from .filters import ReleaseMetadataFilter, get_name_choices
 from .models import (
-    Conflict,
-    Disaster,
-    DisplacementData,
+    GiddDisplacement,
+    GiddEventDisplacement,
     GiddFigure,
     IdpsSaddEstimate,
     PublicFigureAnalysis,
@@ -22,9 +21,8 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
     end_year = django_filters.NumberFilter(field_name="end_year", method="filter_end_year")
 
     class Meta:
-        model = Conflict
+        model = GiddDisplacement
         fields = {
-            "id": ["iexact"],
             "iso3": ["iexact"],
         }
 
@@ -53,7 +51,7 @@ class RestDisasterFilterSet(ReleaseMetadataFilter):
     )
 
     class Meta:
-        model = Disaster
+        model = GiddEventDisplacement
         fields = {
             "event_name": ["icontains"],
             "iso3": ["in"],
@@ -100,7 +98,7 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
     )
 
     class Meta:
-        model = DisplacementData
+        model = GiddDisplacement
         fields = {
             "iso3": ["in"],
         }

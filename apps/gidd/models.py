@@ -812,6 +812,16 @@ class GiddEventDisplacement(models.Model):
     end_date = models.DateField(blank=True, null=True)
 
     event_codes = ArrayField(models.CharField(verbose_name=_("Event Codes"), max_length=256), default=list)
+    # REST-only fields — mirror the old Disaster table so the /gidd/disasters/ dump stays identical.
+    # Not exposed in GraphQL.
+    start_date_accuracy = models.TextField(blank=True, null=True)
+    end_date_accuracy = models.TextField(blank=True, null=True)
+    event_codes_type = ArrayField(models.CharField(verbose_name=_("Event Code Types"), max_length=256), default=list)
+    glide_numbers = ArrayField(models.CharField(verbose_name=_("Glide Numbers"), max_length=256), default=list)
+    displacement_occurred = ArrayField(
+        base_field=enum.EnumField(Figure.DISPLACEMENT_OCCURRED, verbose_name=_("Displacement occurred")),
+        default=list,
+    )
 
     # Conflict fields (null for disaster rows)
     violence = models.ForeignKey("event.Violence", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)

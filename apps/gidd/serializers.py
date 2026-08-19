@@ -1,8 +1,12 @@
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.common.utils import extract_event_code_data_list
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
+from utils.common import round_and_remove_zero
 
 from .models import (
     Conflict,
@@ -42,7 +46,7 @@ class ConflictSerializer(serializers.ModelSerializer):
 
     year = serializers.IntegerField(help_text="Indicates the year for which displacement data are reported.")
 
-    new_displacement_rounded = serializers.IntegerField(
+    new_displacement_rounded = serializers.SerializerMethodField(
         help_text="Total number of internal displacements reported "
         '"(rounded figures at national level)" as a result of conflict '
         "and violence over the reporting year. Units are recorded as 'internal displacement flows'."
@@ -54,7 +58,7 @@ class ConflictSerializer(serializers.ModelSerializer):
         "reporting year. Units are recorded as 'internal displacement flows'."
     )
 
-    total_displacement_rounded = serializers.IntegerField(
+    total_displacement_rounded = serializers.SerializerMethodField(
         help_text='Total number of IDPs "(rounded figures at the national level)" '
         "as a result of conflict and violence as of the end of the reporting year. "
         "Units are recorded as 'People'."
@@ -65,6 +69,14 @@ class ConflictSerializer(serializers.ModelSerializer):
         "as a result of conflict and violence as of the end of the reporting year."
         "Units are recorded as 'People'."
     )
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_new_displacement_rounded(self, obj):
+        return round_and_remove_zero(obj["new_displacement"])
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_total_displacement_rounded(self, obj):
+        return round_and_remove_zero(obj["total_displacement"])
 
     class Meta:
         model = Conflict
@@ -114,12 +126,12 @@ class DisasterSerializer(serializers.ModelSerializer):
         "over the reporting year. Units are recorded as 'internal displacement flows' or 'internal displacement movements'."
     )
 
-    event_codes = serializers.ListField(
-        child=serializers.CharField(),
+    event_codes = serializers.SerializerMethodField(
         help_text="Unique codes such as the GLIDE number and "
         "other database-specific codes used to identify "
         "and track specific events across various databases.",
     )
+    event_codes_type = serializers.SerializerMethodField()
     start_date = serializers.DateField(help_text="Approximated start date of the event.")
     end_date = serializers.DateField(help_text="Approximated end date of the event.")
     start_date_accuracy = serializers.CharField(
@@ -130,6 +142,16 @@ class DisasterSerializer(serializers.ModelSerializer):
         help_text="This field describes the potential timeframe within which "
         "the event likely ended. The values indicate the period around the date."
     )
+
+    # event_codes / event_codes_type reproduce the old cross-country behaviour from the
+    # `_all_event_codes` annotation added by DisasterViewSet.get_queryset.
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_event_codes(self, obj):
+        return extract_event_code_data_list(obj._all_event_codes)["code"]
+
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_event_codes_type(self, obj):
+        return extract_event_code_data_list(obj._all_event_codes)["code_type"]
 
     class Meta:
         model = Disaster
@@ -169,7 +191,7 @@ class DisplacementDataSerializer(serializers.ModelSerializer):
 
     year = serializers.IntegerField(help_text="Indicates the year for which displacement data are reported.")
 
-    conflict_total_displacement_rounded = serializers.IntegerField(
+    conflict_total_displacement_rounded = serializers.SerializerMethodField(
         help_text='Total number of IDPs "(rounded figures at the national level)" '
         "as a result of conflict and violence as of the end of the reporting year. "
         "Units are recorded as 'People'."
@@ -181,7 +203,7 @@ class DisplacementDataSerializer(serializers.ModelSerializer):
         "Units are recorded as 'People'."
     )
 
-    conflict_new_displacement_rounded = serializers.IntegerField(
+    conflict_new_displacement_rounded = serializers.SerializerMethodField(
         help_text="Total number of internal displacements reported "
         '"(rounded figures at national level)" as a result of conflict '
         "and violence over the reporting year. Units are recorded as 'internal displacement flows'."
@@ -193,7 +215,7 @@ class DisplacementDataSerializer(serializers.ModelSerializer):
         "reporting year. Units are recorded as 'internal displacement flows'."
     )
 
-    disaster_new_displacement_rounded = serializers.IntegerField(
+    disaster_new_displacement_rounded = serializers.SerializerMethodField(
         help_text="Total number of internal displacements reported "
         '"(rounded figures at national level)" as a result of disasters over the reporting year. '
         "Units are recorded as 'internal displacement flows'."
@@ -205,7 +227,7 @@ class DisplacementDataSerializer(serializers.ModelSerializer):
         "Units are recorded as 'internal displacement flows'."
     )
 
-    disaster_total_displacement_rounded = serializers.IntegerField(
+    disaster_total_displacement_rounded = serializers.SerializerMethodField(
         help_text='Total number of IDPs "(rounded figures at national level)" as a '
         "result of disasters as of the end of the reporting year. "
         "Units are recorded as 'People'."
@@ -215,6 +237,22 @@ class DisplacementDataSerializer(serializers.ModelSerializer):
         help_text='Total number of IDPs "(not rounded)" as a result'
         "of disasters as of the end of the reporting year. Units are recorded as 'People'."
     )
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_conflict_new_displacement_rounded(self, obj):
+        return round_and_remove_zero(obj["conflict_new_displacement"])
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_conflict_total_displacement_rounded(self, obj):
+        return round_and_remove_zero(obj["conflict_total_displacement"])
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_disaster_new_displacement_rounded(self, obj):
+        return round_and_remove_zero(obj["disaster_new_displacement"])
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_disaster_total_displacement_rounded(self, obj):
+        return round_and_remove_zero(obj["disaster_total_displacement"])
 
     class Meta:
         model = DisplacementData
