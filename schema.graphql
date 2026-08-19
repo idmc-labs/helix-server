@@ -1324,6 +1324,7 @@ type DisasterSubObjectListType {
 type DisasterSubObjectType {
   id: ID!
   name: String!
+  iduName: String
   disasters: [GiddDisasterType!]!
 }
 
@@ -2770,6 +2771,32 @@ enum IDENTIFIER {
   ORIGIN_AND_DESTINATION
 }
 
+type IDUGenerate {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: String
+}
+
+input IDUGenerateInputType {
+  mainTrigger: CRISIS_TYPE
+  quantifier: QUANTIFIER
+  figure: Int
+  unit: UNIT
+  displacementTerm: FIGURE_TERMS
+  locations: [IDUGenerateLocationInputType!]
+  startDate: Date
+  endDate: Date
+  sources: [Int!]
+  disasterSubType: String
+  violenceSubType: String
+  otherSubType: String
+}
+
+input IDUGenerateLocationInputType {
+  identifier: IDENTIFIER
+  displayName: String
+}
+
 scalar JSONString
 
 type Login {
@@ -2876,6 +2903,7 @@ type Mutation {
   approveFigure(id: ID!): ApproveFigure
   unapproveFigure(id: ID!): UnapproveFigure
   reRequestReviewFigure(id: ID!): ReRequestReviewFigure
+  generateIdu(data: IDUGenerateInputType!): IDUGenerate
   createEvent(data: EventCreateInputType!): CreateEvent
   updateEvent(data: EventUpdateInputType!): UpdateEvent
   deleteEvent(id: ID!): DeleteEvent
@@ -3126,6 +3154,7 @@ type OtherSubTypeObjectType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
+  iduName: String
 }
 
 enum PARKING_LOT_SOURCE {
@@ -4296,6 +4325,7 @@ type ViolenceSubObjectListType {
 type ViolenceSubObjectType {
   id: ID!
   name: String!
+  iduName: String
 }
 
 input ViolenceSubTypeFilterDataInputType {

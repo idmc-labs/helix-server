@@ -11,11 +11,15 @@ from utils.factories import (
     AttachmentFactory,
     ContextOfViolenceFactory,
     CountryFactory,
+    DisasterSubTypeFactory,
     EntryFactory,
     EventFactory,
     FigureFactory,
     OrganizationFactory,
+    OrganizationKindFactory,
     TagFactory,
+    ViolenceFactory,
+    ViolenceSubTypeFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, HelixTestCase, create_user_with_role, snapshot_in_class  # noqa: F401
@@ -384,3 +388,97 @@ class TestEntryTypeFields(HelixTestCase):
         from apps.entry.schema import EntryType
 
         self.assertNotIn("figures", EntryType._meta.fields)
+
+
+class TestIDUGenerate(HelixGraphQLTestCase):
+    """The generateIdu mutation is a permissive live preview.
+
+    It tolerates partial input and emits placeholders instead of rejecting.
+    Byte-for-byte parity of the generator itself is covered in
+    apps/entry/tests/test_idu_text.py.
+    """
+
+    def setUp(self) -> None:
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.force_login(self.editor)
+        self.org_kind_gov = OrganizationKindFactory.create(name="Government")
+        self.org_kind_local_auth = OrganizationKindFactory.create(name="Local Authority")
+        self.source_local = OrganizationFactory.create(name="City Hall", organization_kind=self.org_kind_local_auth)
+        self.source_gov = OrganizationFactory.create(name="Ministry", organization_kind=self.org_kind_gov)
+        self.disaster_sub_type = DisasterSubTypeFactory.create(idu_name="an earthquake")
+        self.violence = ViolenceFactory.create(name="International armed conflict (IAC)")
+        self.violence_sub_type = ViolenceSubTypeFactory.create(
+            violence=self.violence, idu_name="international armed conflict"
+        )
+        self.mutation = """
+            mutation MyMutation($data: IDUGenerateInputType!) {
+                generateIdu(data: $data) {
+                    ok
+                    errors
+                    result
+                }
+            }
+        """
+
+    def _data(self, **overrides):
+        data = {
+            "mainTrigger": Crisis.CRISIS_TYPE.DISASTER.name,
+            "disasterSubType": str(self.disaster_sub_type.id),
+            "quantifier": Figure.QUANTIFIER.APPROXIMATELY.name,
+            "figure": 1,
+            "sources": [self.source_local.id, self.source_gov.id],
+            "displacementTerm": Figure.FIGURE_TERMS.PARTIALLY_DESTROYED_HOUSING.name,
+            "unit": Figure.UNIT.HOUSEHOLD.name,
+            "locations": [
+                {
+                    "identifier": "ORIGIN",
+                    "displayName": "Kathmandu, Kathmandu, Bagmati, Central Development Region, Nepal",
+                }
+            ],
+            "startDate": "2025-01-11",
+            "endDate": "2025-01-16",
+        }
+        data.update(overrides)
+        return data
+
+    def test_generate_idu_using_figure_data(self):
+        response = self.query(self.mutation, variables={"data": self._data()})
+        self.assertResponseNoErrors(response)
+        content = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(content["data"]["generateIdu"]["ok"])
+        self.assertEqual(
+            content["data"]["generateIdu"]["result"],
+            "According to local authorities and national authorities, one house was partially destroyed "
+            "in Kathmandu due to an earthquake between the 11th and 16th of January 2025.",
+        )
+
+    def test_generate_idu_conflict_cause(self):
+        data = self._data(
+            mainTrigger=Crisis.CRISIS_TYPE.CONFLICT.name,
+            disasterSubType=None,
+            violenceSubType=str(self.violence_sub_type.id),
+            figure=10,
+            displacementTerm=Figure.FIGURE_TERMS.DISPLACED.name,
+            unit=Figure.UNIT.PERSON.name,
+        )
+        response = self.query(self.mutation, variables={"data": data})
+        self.assertResponseNoErrors(response)
+        content = response.json()
+        self.assertTrue(content["data"]["generateIdu"]["ok"])
+        self.assertEqual(
+            content["data"]["generateIdu"]["result"],
+            "According to local authorities and national authorities, around 10 people were displaced "
+            "in Kathmandu due to international armed conflict between the 11th and 16th of January 2025.",
+        )
+
+    def test_generate_idu_partial_input_emits_placeholders(self):
+        response = self.query(self.mutation, variables={"data": {}})
+        self.assertResponseNoErrors(response)
+        content = response.json()
+        self.assertTrue(content["data"]["generateIdu"]["ok"])
+        self.assertEqual(
+            content["data"]["generateIdu"]["result"],
+            "According to (Source), (Quantifier) (Figure) (People or Household) were (Term) (Location) due to "
+            "(Main trigger) (Date of Event DD/MM/YYY).",
+        )

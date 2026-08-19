@@ -19,6 +19,7 @@ from apps.entry.serializers import (
     FigureSerializer,
     FigureTagCreateSerializer,
     FigureTagUpdateSerializer,
+    IDUGenerateSerializer,
 )
 from apps.extraction.filters import (
     EntryExtractionFilterDataInputType,
@@ -45,6 +46,11 @@ FigureUpdateInputType = generate_input_type_for_serializer(
     "FigureUpdateInputType",
     serializer_class=FigureSerializer,
     partial=True,
+)
+
+IDUGenerateInputType = generate_input_type_for_serializer(
+    "IDUGenerateInputType",
+    serializer_class=IDUGenerateSerializer,
 )
 
 
@@ -536,6 +542,26 @@ class BulkUpdateFigures(BulkUpdateMutation):
             return super().mutate(*args, **kwargs, context={"bulk_manager": bulk_manager})
 
 
+class IDUGenerate(graphene.Mutation):
+    class Arguments:
+        data = IDUGenerateInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.String()
+
+    @staticmethod
+    @is_authenticated()
+    def mutate(root, info, data):
+        serializer = IDUGenerateSerializer(data=data, context={"request": info.context.request})
+        if errors := mutation_is_not_valid(serializer):
+            return IDUGenerate(errors=errors, ok=False, result=None)
+
+        idu_instance = serializer.save()
+
+        return IDUGenerate(ok=True, result=idu_instance.idu)
+
+
 class Mutation(object):
     create_entry = CreateEntry.Field()
     update_entry = UpdateEntry.Field()
@@ -556,3 +582,5 @@ class Mutation(object):
     approve_figure = ApproveFigure.Field()
     unapprove_figure = UnapproveFigure.Field()
     re_request_review_figure = ReRequestReviewFigure.Field()
+    # generate IDU
+    generate_idu = IDUGenerate.Field()

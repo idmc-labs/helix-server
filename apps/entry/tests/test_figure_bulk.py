@@ -1358,12 +1358,14 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
 
     def test_figure_include_idu_validation(self, *_):
         """
-        If includeIdu is True, excerptIdu must be provided.
+        excerptIdu is no longer mandatory when includeIdu is True; a blank
+        excerpt auto-generates on create instead of raising an error.
         """
-        # Pass invalid input and test
+        # includeIdu True with a blank excerpt: no error, excerpt auto-generated.
         figure_item_input = copy(self.figure_item_input)
         figure_item_input.update(
             {
+                "uuid": str(uuid4()),
                 "includeIdu": True,
                 "excerptIdu": "  ",
             }
@@ -1376,11 +1378,17 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             },
         )
         content_data = response.json()["data"]["bulkUpdateFigures"]
-        assert "excerptIdu" in get_first_error_fields(content_data["errors"])
+        assert "excerptIdu" not in get_first_error_fields(content_data["errors"])
+        created_id = content_data["result"][0]["id"]
+        created_figure = Figure.objects.get(id=created_id)
+        assert created_figure.include_idu is True
+        assert created_figure.excerpt_idu
+        assert created_figure.excerpt_idu.strip()
 
-        # Pass correct value and test
+        # includeIdu False clears the excerpt.
         figure_item_input.update(
             {
+                "uuid": str(uuid4()),
                 "includeIdu": False,
                 "excerptIdu": "  ",
             }
@@ -1394,6 +1402,8 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         )
         content_data = response.json()["data"]["bulkUpdateFigures"]
         assert "excerptIdu" not in get_first_error_fields(content_data["errors"])
+        created_id = content_data["result"][0]["id"]
+        assert Figure.objects.get(id=created_id).excerpt_idu is None
 
     @patch("apps.entry.serializers.send_figure_notifications")
     def test_should_update_event_in_figure(
