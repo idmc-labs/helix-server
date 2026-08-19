@@ -129,7 +129,7 @@ class CountryType(RelationBatchedDjangoObjectType):
         # organizations is unbounded fan-out (420 organizations on the widest country); read them
         # via organizationList(filters: {countries: [id]}), a strict membership test over the M2M
         # through table that reproduces the removed set exactly.
-        exclude_fields = ("country_conflict", "country_disaster", "displacements", "organizations")
+        exclude_fields = ("organizations",)
 
     last_summary = graphene.Field(SummaryType)
     last_contextual_analysis = graphene.Field(ContextualAnalysisType)

@@ -1843,9 +1843,10 @@ class TestCoreData(HelixGraphQLTestCase):
 
         query = """
             query DisasterData($clientId: String!){
-                giddPublicDisasters(
-                    filters: {},
+                giddPublicEvents(
+                    filters: {cause: "disaster"},
                     clientId: $clientId,
+                    pageSize: 10000,
                 ){
                     results {
                         id
@@ -1862,7 +1863,7 @@ class TestCoreData(HelixGraphQLTestCase):
             }
         """
         response = self.query_json(query, variables={"clientId": self.gidd_client.code})
-        r_data = response["data"]["giddPublicDisasters"]["results"]
+        r_data = response["data"]["giddPublicEvents"]["results"]
         system_data = [
             {
                 "id": i["eventId"],
@@ -1876,8 +1877,11 @@ class TestCoreData(HelixGraphQLTestCase):
             }
             for i in r_data
         ]
-        # NOTE: Removing idps as it's not generated in GIDD right now
-        assert [{**row, "disaster_idps": None} for row in disaster_data] == system_data
+        # NOTE: Removing idps as it's not generated in GIDD right now. giddPublicEvents replaces the
+        # removed giddPublicDisasters; it is unordered, so compare order-independently.
+        expected = [{**row, "disaster_idps": None} for row in disaster_data]
+        _key = lambda d: (d["iso3"], d["year"], str(d["id"]))  # noqa: E731
+        assert sorted(expected, key=_key) == sorted(system_data, key=_key)
 
     @RuntimeProfile()
     def test_chart_aggregations(self):

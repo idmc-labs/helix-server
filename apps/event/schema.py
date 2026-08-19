@@ -267,7 +267,7 @@ class EventType(RelationBatchedDjangoObjectType):
         # reportSet/extractionquerySet are the reports and saved extraction queries whose stored
         # figure filter names this event; reportList and extractionQueryList cannot filter on that
         # selection, so neither has a bounded replacement.
-        exclude_fields = ("figures", "gidd_events", "glide_numbers", "report_set", "extractionquery_set")
+        exclude_fields = ("figures", "glide_numbers", "report_set", "extractionquery_set")
 
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
     event_type_display = EnumDescription(source="get_event_type_display")

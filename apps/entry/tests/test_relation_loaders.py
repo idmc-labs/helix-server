@@ -275,7 +275,9 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
         # Floors, not exact counts: legitimate additions must not fail, while a drop means a
         # type lost the auto-wiring base.
         self.assertGreaterEqual(fk_count, 126, "auto-wired forward-FK resolvers regressed")
-        self.assertGreaterEqual(list_count, 87, "auto-wired reverse-FK/M2M resolvers regressed")
+        # Dropped to 81 when the gidd Conflict/Disaster/DisplacementData models (and their
+        # reverse-FK/M2M relations) were removed.
+        self.assertGreaterEqual(list_count, 81, "auto-wired reverse-FK/M2M resolvers regressed")
 
         # Spot-check critical FigureType fields are loader-wired by name.
         from apps.entry.schema import FigureType
@@ -336,7 +338,8 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
                 ref_to_specs[ref].add(spec)
                 checked += 1
 
-        self.assertGreaterEqual(checked, 87, "list-relation field walk shrank unexpectedly")
+        # Dropped to 81 when the gidd Conflict/Disaster/DisplacementData models were removed.
+        self.assertGreaterEqual(checked, 81, "list-relation field walk shrank unexpectedly")
         collisions = {ref: specs for ref, specs in ref_to_specs.items() if len(specs) > 1}
         self.assertFalse(
             collisions,
