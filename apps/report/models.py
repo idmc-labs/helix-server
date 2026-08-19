@@ -56,6 +56,23 @@ EXCEL_FORMULAE = {
 
 
 class Report(MetaInformationArchiveAbstractModel, QueryAbstractModel, FigureDisaggregationAbstractModel, models.Model):
+    # reportList. total_disaggregation__{total_flow_conflict_sum, total_flow_disaster_sum,
+    # total_stock_conflict_sum, total_stock_disaster_sum} are deliberately absent:
+    # Report.total_disaggregation is a Python property resolved by a dataloader, so there is
+    # no ORM path to order by. The client's column definitions for them have had `sortable`
+    # commented out since the file was created, so nothing sends them.
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "created_by__full_name",
+            "filter_figure_end_before",
+            "filter_figure_start_after",
+            "id",
+            "modified_at",
+            "name",
+        }
+    )
+
     class REPORT_TYPE(enum.Enum):
         GROUP = 0
         MASTERFACT = 1
@@ -315,15 +332,12 @@ class Report(MetaInformationArchiveAbstractModel, QueryAbstractModel, FigureDisa
 
     @property
     def total_disaggregation(self) -> dict:
-        return self.report_figures.annotate(
-            **self.TOTAL_FIGURE_DISAGGREGATIONS,
-        ).aggregate(
-            total_stock_conflict_sum=Sum("total_stock_conflict"),
-            total_flow_conflict_sum=Sum("total_flow_conflict"),
-            total_flow_disaster_sum=Sum("total_flow_disaster"),
-            total_stock_disaster_sum=Sum("total_stock_disaster"),
-            total_flow_sum=Sum("total_flow"),
-            total_stock_sum=Sum("total_stock"),
+        # Single-pass aggregate. TOTAL_FIGURE_DISAGGREGATIONS are already conditional
+        # Sum()s, so aggregate them directly (renamed to *_sum) instead of
+        # annotate-then-Sum, which forced a redundant inner GROUP BY over every figure
+        # row + the event join. Output keys and values are unchanged.
+        return self.report_figures.aggregate(
+            **{f"{key}_sum": aggregate for key, aggregate in self.TOTAL_FIGURE_DISAGGREGATIONS.items()}
         )
 
     @property
@@ -376,7 +390,7 @@ class Report(MetaInformationArchiveAbstractModel, QueryAbstractModel, FigureDisa
                     )
                 )
             )
-            .order_by("-created_at")
+            .order_by("-created_at", "-id")
             .first()
         )
 
@@ -403,6 +417,14 @@ class Report(MetaInformationArchiveAbstractModel, QueryAbstractModel, FigureDisa
 
     class Meta:
         # TODO: implement the side effects of report sign off
+        indexes = [
+            # The report list is paginated with created_at DESC NULLS LAST ordering
+            # (the client default, applied by nulls_last_order_queryset). A plain
+            # ascending index cannot serve DESC NULLS LAST, so the list seq-scanned
+            # all reports + top-N sorted on every request. This expression index
+            # matches the ordering, turning it into an index scan.
+            models.Index(models.F("created_at").desc(nulls_last=True), name="report_created_at_desc_idx"),
+        ]
         permissions = (
             ("sign_off_report", "Can sign off the report"),
             ("approve_report", "Can approve the report"),
@@ -414,6 +436,15 @@ class Report(MetaInformationArchiveAbstractModel, QueryAbstractModel, FigureDisa
 
 
 class ReportComment(MetaInformationArchiveAbstractModel, models.Model):
+    # comments (nested on report)
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "modified_at",
+        }
+    )
+
     body = models.TextField(verbose_name=_("Body"))
     report = models.ForeignKey("Report", verbose_name=_("Report"), related_name="comments", on_delete=models.CASCADE)
 
@@ -425,6 +456,16 @@ class ReportComment(MetaInformationArchiveAbstractModel, models.Model):
 
 
 class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
+    # reportGeneration.approvals
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "is_approved",
+            "modified_at",
+        }
+    )
+
     generation = models.ForeignKey(
         "ReportGeneration", verbose_name=_("Report"), related_name="approvals", on_delete=models.CASCADE
     )
@@ -450,6 +491,15 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     """
     A report can be generated multiple times, each called a generation
     """
+
+    # generations (nested on report)
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "modified_at",
+        }
+    )
 
     class REPORT_GENERATION_STATUS(enum.Enum):
         PENDING = 0

@@ -15,7 +15,9 @@ dependencies = [
     "celery~=5.3",
     "colorlog",
     "django-admin-autocomplete-filter",
+    "django-celery-beat==2.9.0",
     "django-cors-headers==4.3.1",
+    "django-cte>=1.3.3",
     "django-debug-toolbar==2.2",
     "django-enumfield==3.1",
     "django-environ",
@@ -49,10 +51,15 @@ dependencies = [
     "turfpy==0.0.6",
     "uWSGI==2.0.31",
     "banjo-utils",
+    "syrupy>=3.0.6",
+    "httpx",
+    "pydantic~=2.10",
+    "pyhelix",
 ]
 
 [tool.uv.sources]
 banjo-utils = { git = "https://github.com/toggle-corp/banjo-utils", tag = "v0.2.0" }
+pyhelix = { path = "libs/pyhelix", editable = true }
 
 [dependency-groups]
 dev = [
@@ -62,7 +69,7 @@ dev = [
 ]
 
 [tool.pyright]
-extraPaths = ["apps"]
+extraPaths = ["apps", "libs/pyhelix"]
 exclude = [
     "**/node_modules",
     "**/__pycache__",

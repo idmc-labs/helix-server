@@ -1,4 +1,5 @@
 from django.contrib.postgres.fields import ArrayField
+from django.core.cache import cache
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -139,38 +140,99 @@ class QueryAbstractModel(models.Model):
         default=None,
     )
 
+    # Bounded staleness window for the cached filter kwargs. Every live edit path
+    # (serializer/admin) saves the instance first (auto_now bumps modified_at), so the
+    # cache key rotates on edit and the TTL only matters for out-of-band writes
+    # (e.g. a data migration touching the filter M2Ms directly).
+    FILTER_KWARGS_CACHE_TTL = 6 * 60 * 60
+
+    def filter_kwargs_cache_key(self):
+        """Cache key of this instance's computed filter kwargs, None for an unsaved one.
+
+        Keyed on (model, pk, modified_at): a save rotates `modified_at`, so an edit
+        invalidates by construction.
+        """
+        if self.pk is None:
+            return None
+        modified_at = getattr(self, "modified_at", None)  # from the MetaInformation mixins
+        stamp = modified_at.isoformat() if modified_at else "na"
+        return f"query_filter_kwargs:v1:{self._meta.label_lower}:{self.pk}:{stamp}"
+
+    @classmethod
+    def with_uncached_filter_kwargs(cls, instances):
+        """The instances whose filter kwargs are not cached, read in one cache round trip.
+
+        The ~18 filter M2Ms are read only for these, so a caller batching many instances
+        can restrict eager loading to them.
+        """
+        keys = [instance.filter_kwargs_cache_key() for instance in instances]
+        cached = cache.get_many([key for key in keys if key])
+        return [instance for instance, key in zip(instances, keys) if key not in cached]
+
     @property
     def get_filter_kwargs(self):
+        # The stored filter definition only changes when the instance is edited, but
+        # reading it costs one query per M2M filter field (~18) — a fixed tax on every
+        # report-scoped list/figure query. Cache the computed kwargs. (Prefetching
+        # instead was measured as a regression — there is no N to amortize on the
+        # single-report path.)
+        key = self.filter_kwargs_cache_key()
+        if key is None:
+            return self._compute_filter_kwargs()
+        data = cache.get(key)
+        if data is None:
+            data = self._compute_filter_kwargs()
+            cache.set(key, data, self.FILTER_KWARGS_CACHE_TTL)
+        return data
+
+    def _compute_filter_kwargs(self):
+        # NOTE: M2M filter values are read as id lists (values_list) rather than
+        # full model instances. The figure filterset only needs the ids (it filters
+        # with `__in`), so this avoids materializing fat rows (e.g. country geometry,
+        # full event/crisis/organization records) just to check/apply each filter.
+        #
+        # If the relation was prefetched (e.g. ReportTotalDisaggregationLoader prefetches
+        # all filter M2Ms with .only("id") to batch a report list), read the ids from the
+        # prefetch cache instead — values_list() would ignore the cache and re-query per
+        # relation per report (the N+1 this avoids). Falls back to the lean values_list
+        # when not prefetched (the single-report figureList path is unchanged).
+        prefetched = getattr(self, "_prefetched_objects_cache", {})
+
+        def ids(manager):
+            if getattr(manager, "prefetch_cache_name", None) in prefetched:
+                return [obj.pk for obj in manager.all()]
+            return list(manager.values_list("id", flat=True))
+
         return dict(
-            filter_figure_countries=self.filter_figure_countries.all(),
-            filter_figure_regions=self.filter_figure_regions.all(),
-            filter_figure_geographical_groups=self.filter_figure_geographical_groups.all(),
-            filter_figure_events=self.filter_figure_events.all(),
-            filter_figure_crises=self.filter_figure_crises.all(),
+            filter_figure_countries=ids(self.filter_figure_countries),
+            filter_figure_regions=ids(self.filter_figure_regions),
+            filter_figure_geographical_groups=ids(self.filter_figure_geographical_groups),
+            filter_figure_events=ids(self.filter_figure_events),
+            filter_figure_crises=ids(self.filter_figure_crises),
             filter_figure_categories=self.filter_figure_categories,
-            filter_figure_tags=self.filter_figure_tags.all(),
+            filter_figure_tags=ids(self.filter_figure_tags),
             filter_figure_roles=self.filter_figure_roles,
             filter_figure_start_after=self.filter_figure_start_after,
             filter_figure_end_before=self.filter_figure_end_before,
             filter_entry_article_title=self.filter_entry_article_title,
             filter_figure_crisis_types=self.filter_figure_crisis_types,
             filter_figure_terms=self.filter_figure_terms,
-            filter_figure_disaster_categories=self.filter_figure_disaster_categories.all(),
-            filter_figure_disaster_sub_categories=self.filter_figure_disaster_sub_categories.all(),
-            filter_figure_disaster_types=self.filter_figure_disaster_types.all(),
-            filter_figure_disaster_sub_types=self.filter_figure_disaster_sub_types.all(),
-            filter_figure_violence_types=self.filter_figure_violence_types.all(),
-            filter_figure_violence_sub_types=self.filter_figure_violence_sub_types.all(),
-            filter_figure_osv_sub_types=self.filter_figure_osv_sub_types.all(),
+            filter_figure_disaster_categories=ids(self.filter_figure_disaster_categories),
+            filter_figure_disaster_sub_categories=ids(self.filter_figure_disaster_sub_categories),
+            filter_figure_disaster_types=ids(self.filter_figure_disaster_types),
+            filter_figure_disaster_sub_types=ids(self.filter_figure_disaster_sub_types),
+            filter_figure_violence_types=ids(self.filter_figure_violence_types),
+            filter_figure_violence_sub_types=ids(self.filter_figure_violence_sub_types),
+            filter_figure_osv_sub_types=ids(self.filter_figure_osv_sub_types),
             filter_figure_category_types=self.filter_figure_category_types,
             filter_figure_has_disaggregated_data=self.filter_figure_has_disaggregated_data,
-            filter_figure_context_of_violence=self.filter_figure_context_of_violence.all(),
+            filter_figure_context_of_violence=ids(self.filter_figure_context_of_violence),
             filter_figure_is_to_be_reviewed=self.filter_figure_is_to_be_reviewed,
-            filter_figure_approved_by=self.filter_figure_approved_by.all(),
+            filter_figure_approved_by=ids(self.filter_figure_approved_by),
             filter_figure_glide_number=self.filter_figure_glide_number,
-            filter_figure_created_by=self.filter_figure_created_by.all(),
-            filter_figure_sources=self.filter_figure_sources.all(),
-            filter_entry_publishers=self.filter_entry_publishers.all(),
+            filter_figure_created_by=ids(self.filter_figure_created_by),
+            filter_figure_sources=ids(self.filter_figure_sources),
+            filter_entry_publishers=ids(self.filter_entry_publishers),
             filter_figure_review_status=self.filter_figure_review_status,
             filter_figure_has_excerpt_idu=self.filter_figure_has_excerpt_idu,
             filter_figure_has_housing_destruction=self.filter_figure_has_housing_destruction,
@@ -201,4 +263,13 @@ class QueryAbstractModel(models.Model):
 
 
 class ExtractionQuery(MetaInformationAbstractModel, QueryAbstractModel):
+    # extractionQueryList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "modified_at",
+        }
+    )
+
     name = models.CharField(verbose_name=_("Name"), max_length=128)

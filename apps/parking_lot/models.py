@@ -12,6 +12,21 @@ User = get_user_model()
 
 
 class ParkedItem(MetaInformationAbstractModel):
+    # parkedItemList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "assigned_to__full_name",
+            "comments",
+            "created_at",
+            "created_by__full_name",
+            "id",
+            "modified_at",
+            "status",
+            "title",
+            "url",
+        }
+    )
+
     class PARKING_LOT_STATUS(enum.Enum):
         TO_BE_REVIEWED = 0
         REVIEWED = 1

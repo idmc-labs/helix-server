@@ -70,6 +70,8 @@ class MarkBigAttachmentFileUploadedSerializer(MetaInformationSerializerMixin, se
 
         attrs["mimetype"] = verified_attachment_meta["mimetype"]
         attrs["file_size"] = verified_attachment_meta["file_size"]
+        attrs["encoding"] = verified_attachment_meta["encoding"]
+        attrs["filetype_detail"] = verified_attachment_meta["filetype_detail"]
 
         return attrs
 
@@ -77,10 +79,16 @@ class MarkBigAttachmentFileUploadedSerializer(MetaInformationSerializerMixin, se
         instance.mimetype = validated_data["mimetype"]
         instance.is_file_uploaded = True
         instance.file_size = validated_data["file_size"]
+        # Same libmagic-derived fields the small-upload AttachmentSerializer
+        # sets, so a big upload isn't left with them blank.
+        instance.encoding = validated_data["encoding"]
+        instance.filetype_detail = validated_data["filetype_detail"]
         instance.save(
             update_fields=[
                 "file_size",
                 "mimetype",
+                "encoding",
+                "filetype_detail",
                 "is_file_uploaded",
             ],
         )
@@ -121,7 +129,7 @@ class BigAttachmentSerializer(MetaInformationSerializerMixin, serializers.ModelS
         return instance
 
 
-class AttachmentSerializer(serializers.ModelSerializer):
+class AttachmentSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Attachment
         fields = "__all__"
@@ -143,6 +151,10 @@ class AttachmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"nonFieldErrors": f"Invalid attachment type, {mimetype}"})
 
     def validate(self, attrs) -> dict:
+        # Chain to MetaInformationSerializerMixin so created_by / last_modified_by
+        # get populated from request.user; without this attachments are saved
+        # with NULL created_by and lose attribution.
+        attrs = super().validate(attrs)
         attachment = attrs["attachment"]
         self._validate_file_size(attrs, attachment)
         byte_stream = attachment.file.read()
@@ -162,23 +174,30 @@ class AttachmentSerializer(serializers.ModelSerializer):
 
 
 class SourcePreviewSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
+    # When True, always create a fresh SourcePreview instead of reusing a recent
+    # in-progress one for the same url/user. Used by the hulk bulk path so that each
+    # imported row gets its own entity (the hulk relation is OneToOne on entity_id).
+    skip_recent_reuse = serializers.BooleanField(default=False, write_only=True)
+
     class Meta:
         model = SourcePreview
         fields = "__all__"
 
     def create(self, validated_data):
+        skip_recent_reuse = validated_data.pop("skip_recent_reuse", False)
         filter_params = dict(
             url=validated_data["url"],
-            created_by=validated_data["created_by"],
+            created_by=self.context["request"].user,
             status=SourcePreview.PREVIEW_STATUS.IN_PROGRESS,
             created_at__gte=timezone.now() - timedelta(seconds=PDF_TASK_TIMEOUT),
         )
 
-        if SourcePreview.objects.filter(**filter_params).exists():
-            return SourcePreview.objects.filter(**filter_params).first()
+        if not skip_recent_reuse and (existing_preview := SourcePreview.objects.filter(**filter_params).first()):
+            return existing_preview
         return SourcePreview.get_pdf(validated_data)
 
     def update(self, instance, validated_data):
+        validated_data.pop("skip_recent_reuse", None)
         return SourcePreview.get_pdf(validated_data, instance=instance)
 
 
@@ -233,17 +252,6 @@ class ClientSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
     Serializer for Client objects, including custom validation and creation logic.
     """
 
-    contact_name = serializers.CharField(required=True)
-    contact_email = serializers.EmailField(required=True)
-    use_cases = serializers.ListField(
-        child=serializers.ChoiceField(choices=Client.USE_CASE_TYPES.choices()),
-        required=True,
-    )
-    type = serializers.ChoiceField(
-        choices=Client.CLIENT_TYPE.choices(),
-        required=True,
-    )
-
     class Meta:
         model = Client
         fields = (
@@ -261,6 +269,12 @@ class ClientSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
             "description",
             "type",
         )
+        extra_kwargs = {
+            "contact_name": {"required": True},
+            "contact_email": {"required": True},
+            "use_cases": {"required": True, "allow_empty": False},
+            "type": {"required": True},
+        }
 
     def validate(self, attrs):
         """
@@ -268,8 +282,11 @@ class ClientSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
         """
         attrs = super().validate(attrs)
         use_cases = attrs.get("use_cases", [])
-        if Client.USE_CASE_TYPES.OTHER.value in use_cases and not attrs.get("other_notes"):
-            raise serializers.ValidationError({"other_notes": "Required when 'Other' is selected in use cases."})
+        if Client.USE_CASE_TYPES.OTHER.value in use_cases:
+            if not attrs.get("other_notes"):
+                raise serializers.ValidationError({"other_notes": "Required when 'Other' is selected in use cases."})
+        else:
+            attrs["other_notes"] = None
         return attrs
 
     def create(self, validated_data):

@@ -4,6 +4,14 @@ from django_enumfield import enum
 
 
 class Notification(models.Model):
+    # notifications
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+        }
+    )
+
     class Type(enum.Enum):
         FIGURE_RE_REQUESTED_REVIEW = 0
         FIGURE_CREATED_IN_APPROVED_EVENT = 1

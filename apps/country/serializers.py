@@ -15,6 +15,7 @@ class ContextualAnalysisSerializer(MetaInformationSerializerMixin, serializers.M
     class Meta:
         model = ContextualAnalysis
         fields = "__all__"
+        extra_kwargs = {"crisis_type": {"required": True}, "update": {"required": True}}
 
 
 class HouseholdSizeCliImportSerializer(serializers.ModelSerializer):

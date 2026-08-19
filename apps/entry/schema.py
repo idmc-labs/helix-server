@@ -5,7 +5,6 @@ from django.db.models import Case, ExpressionWrapper, JSONField, Q, Sum, When, f
 from django.db.models.functions import ExtractYear
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 from graphene_django_extras.converter import convert_django_field
 
@@ -24,6 +23,7 @@ from apps.entry.enums import (
     GenderTypeGrapheneEnum,
     GeocoderGrapheneEnum,
     IdentifierGrapheneEnum,
+    PcodeAccuracyGrapheneEnum,
     QuantifierGrapheneEnum,
     RoleGrapheneEnum,
     UnitGrapheneEnum,
@@ -53,6 +53,7 @@ from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 logger = logging.getLogger(__name__)
@@ -64,9 +65,13 @@ def convert_json_field_to_scalar(field, registry=None):
     return GenericScalar()
 
 
-class DisaggregatedAgeType(DjangoObjectType):
+class DisaggregatedAgeType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisaggregatedAge
+        # entry_figure_related and report_report_related are unbounded fan-out. figureList has no
+        # disaggregated-age filter, and reportList cannot filter on a report's stored age
+        # disaggregation, so neither has a bounded replacement.
+        exclude_fields = ("entry_figure_related", "report_report_related")
 
     uuid = graphene.String(required=True)
     age_from = graphene.Field(graphene.Int)
@@ -87,9 +92,12 @@ class DisaggregatedStratumType(ObjectType):
     value = graphene.Int()
 
 
-class FigureLocationType(DjangoObjectType):
+class FigureLocationType(RelationBatchedDjangoObjectType):
     class Meta:
         model = FigureLocation
+        # figures is unbounded fan-out; figureList has no geo-location filter, so there is
+        # no bounded replacement for it.
+        exclude_fields = ("figures",)
 
     accuracy = graphene.Field(AccuracyGrapheneEnum)
     accuracy_display = EnumDescription(source="get_accuracy_display")
@@ -97,6 +105,8 @@ class FigureLocationType(DjangoObjectType):
     identifier_display = EnumDescription(source="get_identifier_display")
     geocoder = graphene.Field(GeocoderGrapheneEnum)
     geocoder_display = EnumDescription(source="get_geocoder_display")
+    pcode_accuracy = graphene.Field(PcodeAccuracyGrapheneEnum)
+    pcode_accuracy_display = EnumDescription(source="get_pcode_accuracy_display")
 
 
 class FigureLocationListType(CustomDjangoListObjectType):
@@ -105,9 +115,13 @@ class FigureLocationListType(CustomDjangoListObjectType):
         filterset_class = FigureLocationFilter
 
 
-class FigureTagType(DjangoObjectType):
+class FigureTagType(RelationBatchedDjangoObjectType):
     class Meta:
         model = FigureTag
+        # figure_set is unbounded fan-out; figures are read via
+        # figureList(filters: {filterFigureTags: [id]}), a strict membership test that reproduces
+        # the removed set exactly (895 figures on the widest tag).
+        exclude_fields = ("figure_set",)
 
 
 class FigureLastReviewCommentStatusType(ObjectType):
@@ -116,9 +130,11 @@ class FigureLastReviewCommentStatusType(ObjectType):
     comment_type = graphene.Field(ReviewCommentTypeEnum, required=True)
 
 
-class FigureType(DjangoObjectType):
+class FigureType(RelationBatchedDjangoObjectType):
     class Meta:
-        exclude_fields = ("figure_reviews",)
+        # report_set is unbounded fan-out: the reports that pinned this figure into their figure
+        # set. reportList cannot filter by a member figure, so it has no bounded replacement.
+        exclude_fields = ("figure_reviews", "report_set")
         model = Figure
 
     quantifier = graphene.Field(QuantifierGrapheneEnum)
@@ -148,7 +164,9 @@ class FigureType(DjangoObjectType):
     other_sub_type = graphene.Field(OtherSubTypeObjectType)
     figure_typology = graphene.String()
     sources = DjangoPaginatedListObjectField(
-        OrganizationListType, related_name="sources", reverse_related_name="sourced_figures"
+        OrganizationListType,
+        related_name="sources",
+        reverse_related_name="sourced_figures",
     )
     stock_date = graphene.Date()
     stock_reporting_date = graphene.Date()
@@ -163,6 +181,13 @@ class FigureType(DjangoObjectType):
     event_id = graphene.ID(required=True, source="event_id")
     entry = graphene.Field("apps.entry.schema.EntryType", required=True)
     entry_id = graphene.ID(required=True, source="entry_id")
+    # UUID of the hulk relation row, or null if the entity was not created
+    # through the pyhelix (hulk/bulk) interface. Presence flags a hulk import;
+    # the value tallies against the bulk-import input dataset.
+    hulk_uuid = graphene.UUID()
+
+    def resolve_hulk_uuid(root, info, **kwargs):
+        return info.context.figure_hulk_dataloader.load(root.id).then(lambda row: row.uuid if row else None)
 
     def resolve_stock_date(root, info, **kwargs):
         if root.category in Figure.stock_list():
@@ -192,8 +217,7 @@ class FigureType(DjangoObjectType):
     def resolve_last_review_comment_status(root, info, **kwargs):
         return info.context.last_review_comment_status_loader.load(root.id)
 
-    def resolve_entry(root, info, **kwargs):
-        return info.context.figure_entry_loader.load(root.id)
+    # entry (forward FK) is auto-wired via RelationBatchedDjangoObjectType -> RelationNodeLoader.
 
 
 class FigureListType(CustomDjangoListObjectType):
@@ -209,7 +233,7 @@ class TotalFigureFilterInputType(graphene.InputObjectType):
     roles = graphene.List(graphene.NonNull(graphene.String))
 
 
-class EntryType(DjangoObjectType):
+class EntryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Entry
         exclude_fields = (
@@ -217,58 +241,28 @@ class EntryType(DjangoObjectType):
             "review_status",
             "review_comments",
             "reviewing",
+            # Unbounded fan-out (an entry can own hundreds of figures) and no client
+            # uses it: figures are read via figureList(filterFigureEntry). Without the
+            # exclude, graphene-django auto-exposes the reverse relation as a plain list.
+            "figures",
         )
 
     created_by = graphene.Field("apps.users.schema.UserType")
     last_modified_by = graphene.Field("apps.users.schema.UserType")
     publishers = DjangoPaginatedListObjectField(
-        OrganizationListType, related_name="publishers", reverse_related_name="published_entries"
+        OrganizationListType,
+        related_name="publishers",
+        reverse_related_name="published_entries",
     )
-    figures = graphene.List(graphene.NonNull(FigureType))
     preview = graphene.Field("apps.entry.schema.SourcePreviewType")
+    # See FigureType.hulk_uuid.
+    hulk_uuid = graphene.UUID()
 
-    def resolve_figures(root, info, **kwargs):
-        # FIXME: this might be wrong
-        return (
-            Figure.objects.filter(entry=root.id)
-            .select_related(
-                "event",
-                "violence",
-                "violence_sub_type",
-                "disaster_category",
-                "disaster_sub_category",
-                "disaster_type",
-                "disaster_sub_type",
-                "disaster_category",
-                "disaster_sub_category",
-                "other_sub_type",
-                "osv_sub_type",
-                "approved_by",
-                "country",
-                "event__disaster_category",
-                "event__disaster_sub_category",
-                "event__disaster_type",
-                "event__disaster_sub_type",
-                "event__disaster_category",
-            )
-            .prefetch_related(
-                "tags",
-                "context_of_violence",
-                "geo_locations",
-                "event__disaster_sub_category",
-                "event__countries",
-                "event__context_of_violence",
-                "sources",
-                "sources__countries",
-                "sources__organization_kind",
-            )
-        )
+    def resolve_hulk_uuid(root, info, **kwargs):
+        return info.context.entry_hulk_dataloader.load(root.id).then(lambda row: row.uuid if row else None)
 
-    def resolve_document(root, info, **kwargs):
-        return info.context.entry_document_loader.load(root.id)
-
-    def resolve_preview(root, info, **kwargs):
-        return info.context.entry_preview_loader.load(root.id)
+    # document + preview (forward FKs) are auto-wired via RelationBatchedDjangoObjectType ->
+    # RelationNodeLoader (no explicit resolver needed).
 
 
 class EntryListType(CustomDjangoListObjectType):
@@ -277,13 +271,18 @@ class EntryListType(CustomDjangoListObjectType):
         filterset_class = EntryExtractionFilterSet
 
 
-class SourcePreviewType(DjangoObjectType):
+class SourcePreviewType(RelationBatchedDjangoObjectType):
     class Meta:
         model = SourcePreview
         exclude_fields = ("entry", "token")
 
     status = graphene.Field(PreviewStatusGrapheneEnum)
     status_display = EnumDescription(source="get_status_display")
+    # See FigureType.hulk_uuid.
+    hulk_uuid = graphene.UUID()
+
+    def resolve_hulk_uuid(root, info, **kwargs):
+        return info.context.source_preview_hulk_dataloader.load(root.id).then(lambda row: row.uuid if row else None)
 
     def resolve_pdf(root, info, **kwargs):
         if root.status == SourcePreview.PREVIEW_STATUS.COMPLETED:

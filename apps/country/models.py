@@ -6,10 +6,12 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Count, OuterRef, Subquery
+from django.db.models import Count, Exists, OuterRef, Subquery
 from django.db.models.query import QuerySet
+from django.db.models.sql.constants import LOUTER
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django_cte import CTEManager, With
 from django_enumfield import enum
 
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR, EXTERNAL_TUPLE_SEPARATOR
@@ -22,6 +24,14 @@ from utils.fields import generate_full_media_url
 
 
 class GeographicalGroup(models.Model):
+    # geographicalGroupList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
+
     name = models.CharField(verbose_name=_("Name"), max_length=256)
 
     def __str__(self):
@@ -29,6 +39,14 @@ class GeographicalGroup(models.Model):
 
 
 class CountryRegion(models.Model):
+    # countryRegionList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
+
     # NOTE: following are the figure disaggregation fields
     ND_CONFLICT_ANNOTATE = "total_flow_conflict"
     ND_DISASTER_ANNOTATE = "total_flow_disaster"
@@ -129,6 +147,14 @@ class CountryRegion(models.Model):
 
 
 class MonitoringSubRegion(models.Model):
+    # monitoringSubRegionList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "name",
+        }
+    )
+
     name = models.CharField(verbose_name=_("Name"), max_length=256)
 
     countries: models.QuerySet["Country"]
@@ -241,12 +267,31 @@ class CountrySubRegion(models.Model):
 
 
 class Country(models.Model):
+    # countryList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "geographical_group__name",
+            "id",
+            "idmc_short_name",
+            "region__name",
+            "total_flow_conflict",
+            "total_flow_disaster",
+            "total_stock_conflict",
+            "total_stock_disaster",
+        }
+    )
+
     GEOJSON_PATH = "geojsons"
     # NOTE: following are the figure disaggregation fields
     ND_CONFLICT_ANNOTATE = "total_flow_conflict"
     ND_DISASTER_ANNOTATE = "total_flow_disaster"
     IDP_CONFLICT_ANNOTATE = "total_stock_conflict"
     IDP_DISASTER_ANNOTATE = "total_stock_disaster"
+
+    # CTEManager so the list queryset can render WITH clauses (used by the figure-count
+    # ordering CTE in annotate_total_figure_disaggregation_via_cte), matching
+    # Figure/Event/Crisis. Manager-only change (no migration).
+    objects = CTEManager()
 
     name = models.CharField(verbose_name=_("Name"), max_length=256)
     geographical_group = models.ForeignKey(
@@ -374,6 +419,101 @@ class Country(models.Model):
         }
 
     @classmethod
+    def annotate_total_figure_disaggregation_via_cte(cls, queryset):
+        """Set-based equivalent of `_total_figure_disaggregation_subquery` (default current-year
+        scope) for the list sort path: replaces four per-country correlated subqueries with one
+        hash aggregation over `entry_figure` grouped by `country_id` (a direct FK — no join),
+        LEFT-JOINed onto `queryset` under the same four field names (`total_{flow,stock}_{conflict,
+        disaster}`).
+
+        Differs from event/crisis: direct FK (no two-hop join); a *fixed* this-year end date (no
+        per-row DESC-NULLS-FIRST reference date, so no reference CTE); four counts split by
+        `event__event_type` (CONFLICT/DISASTER) x category (flow/stock). Values match the subquery
+        exactly (NULL year-difference excluded for ND; IDP keyed on the fixed end date).
+
+        Default scope only — `aggregate_figures` (filtered set / year / report) must use the subquery.
+        """
+        rec = Figure.ROLE.RECOMMENDED.value
+        idps = Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+        nd = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
+        conflict = Crisis.CRISIS_TYPE.CONFLICT.value
+        disaster = Crisis.CRISIS_TYPE.DISASTER.value
+
+        # Default current-year date range (matches _total_figure_disaggregation_subquery
+        # when no year / aggregate_figures is supplied).
+        start_date = datetime(year=timezone.now().year, month=1, day=1)
+        end_date = datetime(year=timezone.now().year, month=12, day=31)
+
+        # ND (flow) date/category predicate, mirroring Figure._nd_figures_q for a single
+        # category (NEW_DISPLACEMENT) with the default current-year bounds. year_difference
+        # is annotated on the base queryset below via Figure.with_year_difference.
+        nd_same_year = models.Q(
+            year_difference__lt=1,
+            start_date__gte=start_date,
+            start_date__lte=end_date,
+        )
+        nd_multi_year = models.Q(
+            year_difference__gte=1,
+            end_date__gte=start_date,
+            end_date__lte=end_date,
+        )
+        nd_date_q = nd_same_year | nd_multi_year
+
+        # IDP (stock) date/category predicate, mirroring Figure._idp_figures_q for a single
+        # category (IDPS) with end_date_lookup="exact": end_date >= start_date AND
+        # end_date == end_date (fixed this-year end).
+        idp_date_q = models.Q(end_date__gte=start_date, end_date=end_date)
+
+        base = Figure.with_year_difference(Figure.objects.all())
+        figure_count_cte = With(
+            base.order_by()
+            .values("country")
+            .annotate(
+                **{
+                    cls.ND_CONFLICT_ANNOTATE: models.Sum(
+                        "total_figures",
+                        filter=models.Q(category=nd, role=rec, event__event_type=conflict) & nd_date_q,
+                    ),
+                    cls.ND_DISASTER_ANNOTATE: models.Sum(
+                        "total_figures",
+                        filter=models.Q(category=nd, role=rec, event__event_type=disaster) & nd_date_q,
+                    ),
+                    cls.IDP_CONFLICT_ANNOTATE: models.Sum(
+                        "total_figures",
+                        filter=models.Q(category=idps, role=rec, event__event_type=conflict) & idp_date_q,
+                    ),
+                    cls.IDP_DISASTER_ANNOTATE: models.Sum(
+                        "total_figures",
+                        filter=models.Q(category=idps, role=rec, event__event_type=disaster) & idp_date_q,
+                    ),
+                }
+            )
+            .values(
+                "country",
+                cls.ND_CONFLICT_ANNOTATE,
+                cls.ND_DISASTER_ANNOTATE,
+                cls.IDP_CONFLICT_ANNOTATE,
+                cls.IDP_DISASTER_ANNOTATE,
+            ),
+            name="country_figure_count",
+        )
+
+        # queryset is a CTEQuerySet (Country.objects = CTEManager()), so the join renders
+        # the WITH clause directly — same pattern as the event/crisis figure-count CTEs.
+        return (
+            figure_count_cte.join(queryset, id=figure_count_cte.col.country_id, _join_type=LOUTER)
+            .with_cte(figure_count_cte)
+            .annotate(
+                **{
+                    cls.ND_CONFLICT_ANNOTATE: getattr(figure_count_cte.col, cls.ND_CONFLICT_ANNOTATE),
+                    cls.ND_DISASTER_ANNOTATE: getattr(figure_count_cte.col, cls.ND_DISASTER_ANNOTATE),
+                    cls.IDP_CONFLICT_ANNOTATE: getattr(figure_count_cte.col, cls.IDP_CONFLICT_ANNOTATE),
+                    cls.IDP_DISASTER_ANNOTATE: getattr(figure_count_cte.col, cls.IDP_DISASTER_ANNOTATE),
+                }
+            )
+        )
+
+    @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.country.filters import CountryFilter
 
@@ -404,37 +544,41 @@ class Country(models.Model):
                 cls.ND_DISASTER_ANNOTATE: f"ND disaster figure {str_year}",
             },
         )
-        data = (
-            CountryFilter(
-                data=filters,
-                request=DummyRequest(user=User.objects.get(id=user_id)),
-            )
-            .qs.annotate(
-                crises_count=Count("crises", distinct=True),
-                events_count=Count("events", distinct=True),
-                # NOTE: Subquery was relatively faster than JOINs
-                # entries_count=Count('events__entries', distinct=True),
-                entries_count=models.Subquery(
-                    Entry.objects.filter(figures__country=OuterRef("pk"))
-                    .order_by()
-                    .values("figures__country")
-                    .annotate(_count=Count("figures__entry", distinct=True))
-                    .values("_count")[:1],
-                    output_field=models.IntegerField(),
-                ),
-                figures_count=models.Subquery(
-                    Figure.objects.filter(country=OuterRef("pk"))
-                    .order_by()
-                    .values("country")
-                    .annotate(_count=Count("pk"))
-                    .values("_count")[:1],
-                    output_field=models.IntegerField(),
-                ),
-                # contacts_count=Count('contacts', distinct=True),
-                # operating_contacts_count=Count('operating_contacts', distinct=True),
-            )
-            .order_by("idmc_short_name")
-        )
+        country_qs = CountryFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs
+        # The filter qs no longer annotates the figure disaggregation by default (it is
+        # dataloader-resolved for the list); the excel export reads these columns
+        # directly. When the export filter carries aggregate_figures the qs already
+        # annotates them (dated to that aggregate), so only add the default (current-year)
+        # annotation when it is absent, to avoid a duplicate-annotation conflict.
+        if cls.IDP_DISASTER_ANNOTATE not in country_qs.query.annotations:
+            country_qs = country_qs.annotate(**cls._total_figure_disaggregation_subquery())
+        data = country_qs.annotate(
+            crises_count=Count("crises", distinct=True),
+            events_count=Count("events", distinct=True),
+            # NOTE: Subquery was relatively faster than JOINs
+            # entries_count=Count('events__entries', distinct=True),
+            entries_count=models.Subquery(
+                Entry.objects.filter(figures__country=OuterRef("pk"))
+                .order_by()
+                .values("figures__country")
+                .annotate(_count=Count("figures__entry", distinct=True))
+                .values("_count")[:1],
+                output_field=models.IntegerField(),
+            ),
+            figures_count=models.Subquery(
+                Figure.objects.filter(country=OuterRef("pk"))
+                .order_by()
+                .values("country")
+                .annotate(_count=Count("pk"))
+                .values("_count")[:1],
+                output_field=models.IntegerField(),
+            ),
+            # contacts_count=Count('contacts', distinct=True),
+            # operating_contacts_count=Count('operating_contacts', distinct=True),
+        ).order_by("idmc_short_name")
 
         return {
             "headers": headers,
@@ -456,7 +600,9 @@ class Country(models.Model):
 
     @property
     def entries(self) -> QuerySet:
-        return Entry.objects.filter(figures__event__countries=self.pk).distinct()
+        # Exists on the figures->event->countries path keeps one row per entry
+        # (the path is to-many), so no .distinct() is needed.
+        return Entry.objects.filter(Exists(Figure.objects.filter(entry_id=OuterRef("pk"), event__countries=self.pk)))
 
     @property
     def last_contextual_analysis(self):
@@ -497,6 +643,15 @@ class CountryPopulation(models.Model):
 
 
 class ContextualAnalysis(MetaInformationArchiveAbstractModel, models.Model):
+    # contextualAnalyses (nested on country)
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "modified_at",
+        }
+    )
+
     country = models.ForeignKey(
         "Country", verbose_name=_("Country"), on_delete=models.CASCADE, related_name="contextual_analyses"
     )
@@ -506,11 +661,33 @@ class ContextualAnalysis(MetaInformationArchiveAbstractModel, models.Model):
 
 
 class Summary(MetaInformationArchiveAbstractModel, models.Model):
+    # summaries (nested on country)
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "modified_at",
+        }
+    )
+
     country = models.ForeignKey("Country", verbose_name=_("Country"), on_delete=models.CASCADE, related_name="summaries")
     summary = models.TextField(verbose_name=_("Summary"), blank=False)
 
 
 class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
+    # householdSizeList
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "country",
+            "created_at",
+            "id",
+            "modified_at",
+            "reference_date",
+            "size",
+            "year",
+        }
+    )
+
     class GAP_FILLING_METHOD(enum.Enum):
         EXACT_YEAR = 0
         BACKWARD_FILLING = 1

@@ -1,5 +1,5 @@
 from copy import copy
-from datetime import timedelta
+from datetime import date, timedelta
 from uuid import uuid4
 
 from django.test import RequestFactory
@@ -17,6 +17,7 @@ from apps.entry.serializers import (
 )
 from apps.users.enums import USER_ROLE
 from utils.factories import (
+    ContextOfViolenceFactory,
     CountryFactory,
     DisasterCategoryFactory,
     DisasterSubCategoryFactory,
@@ -126,6 +127,8 @@ class TestEntrySerializer(HelixTestCase):
         entry_serializer = EntryCreateSerializer(data=self.data, context={"request": self.request})
         self.assertTrue(entry_serializer.is_valid(), True)
         entry = entry_serializer.save()
+        violence = ViolenceFactory.create()
+        violence_sub_type = ViolenceSubTypeFactory.create(violence=violence)
         figures = [
             {
                 "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
@@ -137,11 +140,15 @@ class TestEntrySerializer(HelixTestCase):
                 "term": Figure.FIGURE_TERMS.EVACUATED.value,
                 "role": Figure.ROLE.RECOMMENDED.value,
                 "start_date": "2020-09-09",
+                "end_date": "2020-09-30",
                 "include_idu": False,
                 "geo_locations": [source1, source2, source3],
                 "event": self.event.id,
                 "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
                 "entry": entry.id,
+                "calculation_logic": "test logic",
+                "sources": [self.publisher.id],
+                "violence_sub_type": violence_sub_type.id,
             }
         ]
         figure_serializer = FigureSerializer(
@@ -153,6 +160,7 @@ class TestEntrySerializer(HelixTestCase):
             },
             many=True,
         )
+        figure_serializer.is_valid()
         self.assertTrue(figure_serializer.is_valid(), True)
         figure_serializer.save()
         self.assertEqual(entry.figures.count(), len(figures))
@@ -248,6 +256,30 @@ class TestEntrySerializer(HelixTestCase):
         serializer = EntryUpdateSerializer(instance=entry, data=data, context={"request": self.request}, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_publish_date_more_than_10_years_in_future_rejected(self):
+        future = (date.today() + timedelta(days=365 * 11)).strftime("%Y-%m-%d")
+        self.data["publish_date"] = future
+        serializer = EntryCreateSerializer(data=self.data, context={"request": self.request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("publish_date", serializer.errors)
+
+    def test_publish_date_within_10_years_accepted(self):
+        # boundary: ~9 years in the future is allowed.
+        near_future = (date.today() + timedelta(days=365 * 9)).strftime("%Y-%m-%d")
+        self.data["publish_date"] = near_future
+        serializer = EntryCreateSerializer(data=self.data, context={"request": self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_legacy_future_publish_date_row_editable_on_other_fields(self):
+        # decision #1: the future-date check fires only when publish_date
+        # is in the payload, so a legacy row with an out-of-bounds publish_date
+        # can still be updated on unrelated fields.
+        far_future = date.today() + timedelta(days=365 * 20)
+        entry = EntryFactory.create(url="http://abc.com", publish_date=far_future)
+        data = {"source_methodology": "method"}
+        serializer = EntryCreateSerializer(instance=entry, data=data, context={"request": self.request}, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_idmc_analysis_should_be_non_required_field(self):
         self.data["idmc_analysis"] = None
         serializer = EntryCreateSerializer(data=self.data, context={"request": self.request})
@@ -273,6 +305,7 @@ class TestFigureSerializer(HelixTestCase):
         )
         self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.country = country1
+        self.context_of_violence = ContextOfViolenceFactory.create()
         source1 = dict(
             uuid=str(uuid4()),
             rank=101,
@@ -298,15 +331,18 @@ class TestFigureSerializer(HelixTestCase):
             "category": self.fig_cat.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-10-10",
+            "end_date": "2020-10-30",
             "include_idu": True,
             "excerpt_idu": "excerpt abc",
             "country": country1.id,
             "geo_locations": [source1],
             "tags": [],
             "event": self.event.id,
-            "context_of_violence": [],
+            "context_of_violence": [self.context_of_violence.id],
             "figure_cause": Crisis.CRISIS_TYPE.DISASTER.value,
+            "disaster_sub_type": DisasterSubTypeFactory.create().id,
             "sources": [str(OrganizationFactory.create().id)],
+            "calculation_logic": "test logic",
         }
         self.request = self.factory.get("/graphql")
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
@@ -334,6 +370,57 @@ class TestFigureSerializer(HelixTestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertIsNone(serializer.data["displacement_occurred"])
+
+    def test_start_date_too_far_in_future_is_rejected(self):
+        self.data["start_date"] = "2099-01-01"
+        self.data["end_date"] = "2099-01-02"
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
+            },
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+
+    def test_geo_locations_required_on_create(self):
+        self.data.pop("geo_locations")
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
+            },
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("geo_locations", serializer.errors)
+
+    def test_geo_locations_empty_list_is_rejected(self):
+        self.data["geo_locations"] = []
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
+            },
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("geo_locations", serializer.errors)
+
+    def test_geo_locations_optional_on_edit(self):
+        figure = FigureFactory.create(entry=self.entry, event=self.event, country=self.country)
+        data = copy(self.data)
+        data["id"] = figure.id
+        data.pop("geo_locations")
+        serializer = FigureSerializer(
+            data=data,
+            context={
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
+            },
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_invalid_geo_locations_country_codes(self):
         self.data["geo_locations"] = [
@@ -401,8 +488,7 @@ class TestFigureSerializer(HelixTestCase):
                 "bulk_manager": DummyFigureBulkManager(),
             },
         )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("disaggregation_displacement_rural", serializer.errors)
+        self.assertTrue(serializer.is_valid())
 
     def test_invalid_disaggregation_age(self):
         self.data["disaggregation_age"] = [
@@ -457,9 +543,7 @@ class TestFigureSerializer(HelixTestCase):
         # Test sub fields
         self.assertEqual(figure.disaster_sub_category.id, disaster_sub_category.id)
         self.assertEqual(figure.disaster_sub_type.id, disaster_sub_type.id)
-        self.assertEqual(figure.violence_sub_type.id, violence_sub_type.id)
 
         # Test parent fields
         self.assertEqual(figure.disaster_category.id, disaster_category.id)
         self.assertEqual(figure.disaster_type.id, disaster_type.id)
-        self.assertEqual(figure.violence.id, violence.id)

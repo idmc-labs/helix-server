@@ -2,8 +2,10 @@ import django_filters
 import graphene
 from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.db import models
-from django.db.models import Count, Q
+from django.db.models import Exists, Max, Min, OuterRef, Q
+from django.db.models.sql.constants import LOUTER
 from django.http import HttpRequest
+from django_cte import With
 
 from apps.common.enums import QA_RULE_TYPE
 from apps.crisis.models import Crisis
@@ -32,6 +34,7 @@ from utils.figure_filter import (
     FigureFilterHelper,
 )
 from utils.filters import (
+    AcceptsOrdering,
     IDFilter,
     IDListFilter,
     MultiWordSearchFilterSet,
@@ -41,12 +44,13 @@ from utils.filters import (
 )
 
 
-class EventFilter(MultiWordSearchFilterSet):
+class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     crisis_by_ids = IDListFilter(method="filter_crises")
     event_types = StringListFilter(method="filter_event_types")
     countries = IDListFilter(method="filter_countries")
 
     osv_sub_type_by_ids = IDListFilter(method="filter_osv_sub_types")
+    other_sub_types = IDListFilter(method="filter_other_sub_types")
     # used in report entry table
     disaster_sub_types = IDListFilter(method="filter_disaster_sub_types")
     violence_types = IDListFilter(method="filter_violence_types")
@@ -83,34 +87,38 @@ class EventFilter(MultiWordSearchFilterSet):
     def filter_countries(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(countries__in=value).distinct()
+        # M2M: test membership with Exists (no join fan-out) so no .distinct() is needed.
+        return qs.filter(
+            models.Exists(Event.countries.through.objects.filter(event_id=models.OuterRef("pk"), country_id__in=value))
+        )
 
     def filter_disaster_sub_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_type__in=value)).distinct()
+        # disaster_sub_type is a to-one FK: the join can't fan out, so no .distinct().
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_type__in=value))
 
     def filter_violence_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence__in=value)).distinct()
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence__in=value))
 
     def filter_violence_sub_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_sub_type__in=value)).distinct()
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_sub_type__in=value))
 
     def filter_crises(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(crisis__in=value).distinct()
+        return qs.filter(crisis__in=value)
 
     def filter_event_types(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
                 # internal filtering
-                return qs.filter(event_type__in=value).distinct()
-            return qs.filter(event_type__in=[Crisis.CRISIS_TYPE.get(item).value for item in value]).distinct()
+                return qs.filter(event_type__in=value)
+            return qs.filter(event_type__in=[Crisis.CRISIS_TYPE.get(item).value for item in value])
         return qs
 
     def filter_review_status(self, qs, name, value):
@@ -138,73 +146,97 @@ class EventFilter(MultiWordSearchFilterSet):
                     Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED.value,
                 ]
             if isinstance(value[0], int):
-                return qs.filter(review_status__in=value).distinct()
+                return qs.filter(review_status__in=value)
             return qs.filter(
                 review_status__in=[
                     # NOTE: item is string. eg: 'REVIEW_IN_PROGRESS'
                     Event.EVENT_REVIEW_STATUS.get(item).value
                     for item in value
                 ]
-            ).distinct()
+            )
         return qs
 
     def filter_osv_sub_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(violence__name=OSV) | Q(osv_sub_type__in=value)).distinct()
+            return qs.filter(~Q(violence__name=OSV) | Q(osv_sub_type__in=value))
         return qs
+
+    def filter_other_sub_types(self, qs, name, value):
+        if not value:
+            return qs
+        # Same shape as the violence/disaster sub-type filters: an event of another type is not
+        # narrowed by a sub-type that cannot apply to it. Pair with `event_types` to read one
+        # sub-type's events, which is how `OtherSubTypeObjectType.events` is replaced.
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.OTHER.value) | Q(other_sub_type__in=value))
 
     def filter_qa_rule(self, qs, name, value):
         if QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name == value:
-            return qs.annotate(
-                figure_count=Count(
-                    "figures",
-                    filter=Q(
-                        figures__category__in=[
+            # Exists rather than a filtered Count over `figures__geo_locations`: an aggregate whose
+            # filter spans that path puts the geolocation join in the outer FROM, where every other
+            # aggregate over `figures` then sees one row per (figure, geolocation) -- which is why
+            # the review counts need no `distinct` once this filter stops doing it.
+            return qs.filter(
+                Q(ignore_qa=True)
+                | ~Exists(
+                    Figure.objects.filter(
+                        event=OuterRef("pk"),
+                        category__in=[
                             Figure.FIGURE_CATEGORY_TYPES.IDPS,
                             Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                         ],
-                        ignore_qa=False,
-                        figures__role=Figure.ROLE.RECOMMENDED,
-                        figures__geo_locations__isnull=False,
-                    ),
-                )
-            ).filter(figure_count=0)
-        elif QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name == value:
-            events_id_qs = (
-                Figure.objects.filter(
-                    category__in=[
-                        Figure.FIGURE_CATEGORY_TYPES.IDPS,
-                        Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                    ],
-                    event__ignore_qa=False,
-                    role=Figure.ROLE.RECOMMENDED,
-                    geo_locations__isnull=False,
-                )
-                .annotate(
-                    locations=models.Subquery(
-                        Figure.geo_locations.through.objects.filter(figure=models.OuterRef("pk"))
-                        .order_by()
-                        .values("figure")
-                        .annotate(
-                            locations=ArrayAgg("figurelocation__name", distinct=True, ordering="figurelocation__name"),
-                        )
-                        .values("locations")[:1],
-                        output_field=models.CharField(),
-                    ),
-                )
-                .order_by()
-                .values("event", "category", "locations")
-                .annotate(
-                    count=Count("id", distinct=True),
+                        role=Figure.ROLE.RECOMMENDED,
+                        geo_locations__isnull=False,
+                    )
                 )
             )
-            return qs.filter(id__in=events_id_qs.filter(count__gt=1).values("event").distinct())
+        elif QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name == value:
+            # Two figures are duplicates when they share an event, a category and the same set of
+            # geolocation names. The signature is built once for every figure by a single grouped
+            # pass over the through table, then joined: as a correlated subquery it was rebuilt for
+            # each qualifying figure instead (1128ms -> 502ms on 186k figures, same event set).
+            signature = With(
+                Figure.geo_locations.through.objects.order_by()
+                .values("figure")
+                .annotate(
+                    locations=ArrayAgg("figurelocation__name", distinct=True, ordering="figurelocation__name"),
+                )
+                .values("figure", "locations"),
+                name="figure_location_signature",
+            )
+            duplicated = (
+                signature.join(
+                    Figure.objects.filter(
+                        category__in=[
+                            Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                            Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                        ],
+                        event__ignore_qa=False,
+                        role=Figure.ROLE.RECOMMENDED,
+                    ),
+                    id=signature.col.figure_id,
+                )
+                .with_cte(signature)
+                .annotate(locations=signature.col.locations)
+                .order_by()
+                .values("event", "category", "locations")
+                .annotate(count=models.Count("id", distinct=True))
+                .filter(count__gt=1)
+                .values("event")
+            )
+            return qs.filter(id__in=duplicated)
         return qs
 
     def filter_context_of_violences(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(context_of_violence__in=value).distinct()
+        # M2M: Exists membership test, no fan-out -> no .distinct() needed.
+        return qs.filter(
+            models.Exists(
+                Event.context_of_violence.through.objects.filter(
+                    event_id=models.OuterRef("pk"), contextofviolence_id__in=value
+                )
+            )
+        )
 
     def filter_assigners(self, qs, name, value):
         if not value:
@@ -223,29 +255,88 @@ class EventFilter(MultiWordSearchFilterSet):
 
     @property
     def qs(self):
+        queryset = super().qs
+
         figure_qs, reference_date = FigureFilterHelper.aggregate_data_generate(
             self.data.get("aggregate_figures"),
             self.request,
         )
-        return (
-            super()
-            .qs.annotate(
-                **Event._total_figure_disaggregation_subquery(
-                    figures=figure_qs,
-                    reference_date=reference_date,
-                ),
-                **Event.annotate_review_figures_count(),
-                entry_count=models.Subquery(
-                    Figure.objects.filter(event=models.OuterRef("pk"))
-                    .order_by()
-                    .values("event")
-                    .annotate(count=models.Count("entry", distinct=True))
-                    .values("count")[:1],
-                    output_field=models.IntegerField(),
-                ),
-            )
-            .prefetch_related("figures", "context_of_violence")
+        # nd/idp totals are annotated only when needed: aggregate_figures set, or sorting by them
+        # (else resolvers read the default dataloaders). We need BOTH a subquery and a CTE; a CTE
+        # alone can't do it — it is fixed to the default unfiltered scope, so aggregate_figures'
+        # filtered values must come from the parametrized subquery. When sorting, the CTE is much
+        # the cheaper of the two: its cost is one grouped pass over the figure table, while the
+        # subquery's is per event row. The same holds on crisis and country, where the row count is
+        # small but each row still drives its own aggregation over the whole figure table.
+        # TODO: move aggregate_figures onto dataloaders -> the subquery arm goes away.
+        figure_disaggregation = Event._total_figure_disaggregation_subquery(
+            figures=figure_qs,
+            reference_date=reference_date,
         )
+        figure_count_sort_fields = {Event.ND_FIGURES_ANNOTATE, Event.IDP_FIGURES_ANNOTATE}
+        has_figure_scope = figure_qs is not None
+        if has_figure_scope:
+            queryset = queryset.annotate(**figure_disaggregation)
+        elif self.ordering_fields & figure_count_sort_fields:
+            queryset = Event.annotate_total_figure_disaggregation_via_cte(queryset)
+
+        # The review-figure counts are an expensive aggregation over the whole Figure table. They
+        # are only needed in the queryset when the list is ordered by one of them; otherwise the
+        # review_count field is resolved via EventReviewCountLoader. Sorting reads every event, so
+        # the set-based CTE is the cheaper shape here (the loader keeps the id-scoped aggregate).
+        if self.ordering_fields & Event.REVIEW_FIGURES_COUNT_ANNOTATIONS:
+            queryset = Event.annotate_review_figures_count_via_cte(queryset)
+
+        # entry_count is resolved via EventEntryCountLoader unless ordered by it. Sorting needs the
+        # count for every event, which one grouped pass over `entry_figure` delivers; a correlated
+        # subquery recomputes it per row instead (357ms -> 139ms on a 50-row page, same values).
+        # No coalesce: an event with no figures has no CTE row, and the subquery it replaces is
+        # equally NULL there (731 of 40468 events on prod-like data).
+        if "entry_count" in self.ordering_fields:
+            entry_count_cte = With(
+                Figure.objects.order_by()
+                .values("event")
+                .annotate(entry_count=models.Count("entry", distinct=True))
+                .values("event", "entry_count"),
+                name="event_entry_count",
+            )
+            queryset = (
+                entry_count_cte.join(queryset, id=entry_count_cte.col.event_id, _join_type=LOUTER)
+                .with_cte(entry_count_cte)
+                .annotate(entry_count=entry_count_cte.col.entry_count)
+            )
+
+        # Ordering by `countries__idmc_short_name` (M2M) would JOIN-fan-out one event into
+        # one row per country. Denormalize the sort key into a per-event scalar via a
+        # whole-table CTE, LEFT JOIN by id, and order by that scalar — one row per event,
+        # deterministic, no global DISTINCT. Alias == the ordering token so
+        # order_by("countries__idmc_short_name") binds to this annotation, not the M2M path.
+        #
+        # The scalar is Min or Max of the country name, picked by the sort direction, because
+        # that is exactly where the fan-out join placed the event: sorting all its duplicated
+        # rows ascending, the event first appears at its alphabetically smallest country;
+        # descending, at its greatest. Any other reduction (a concatenation of all the names,
+        # say) changes the ranking — descending would rank by the smallest name reversed, and
+        # ascending would break ties between a name and a name that prefixes it.
+        if "countries__idmc_short_name" in self.ordering_fields:
+            sort_key = Max if "countries__idmc_short_name" in self.descending_ordering_fields else Min
+            cte = With(
+                Event.objects.values("id").annotate(countries_idmc_short_name=sort_key("countries__idmc_short_name")),
+                name="event_countries_name_agg",
+            )
+            queryset = (
+                cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
+                .with_cte(cte)
+                .annotate(**{"countries__idmc_short_name": cte.col.countries_idmc_short_name})
+            )
+
+        # NOTE: no prefetch_related("figures"): EventType excludes the `figures` field
+        # (apps/event/schema.py), and the figure-count fields resolve via annotations or
+        # dataloaders, so nothing serializes root.figures. prefetch_related is eager, so
+        # keeping it ran an extra query + hydrated every figure of the page's events for
+        # nothing (~211 figure rows at pageSize 100). context_of_violence IS an exposed
+        # field, so it stays.
+        return queryset.prefetch_related("context_of_violence")
 
 
 class ActorFilter(MultiWordSearchFilterSet):

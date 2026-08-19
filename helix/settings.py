@@ -46,6 +46,21 @@ env = environ.Env(
     S3_BUCKET_NAME=str,
     EXTERNAL_S3_BUCKET_NAME=str,
     AWS_S3_PROXY=(str, None),
+    # NOTE: Hulk bulk-import: S3 buckets eligible for server-side copying of `file_url`.
+    # This is an authorization boundary: copies use Helix's credentials and become
+    # Attachments visible to all Helix users. List only buckets safe to expose.
+    # Empty (default) means no *external* bucket is copyable — those rows use
+    # download/upload instead, as they also do when a listed bucket is unreadable.
+    # Helix's own storage endpoint (AWS_S3_ENDPOINT_URL) is always eligible and
+    # needs no entry here; see HulkHelixAttachmentImportHandler._resolve_copy_source.
+    HULK_DIRECT_ACCESS_BUCKETS=(list, []),
+    # NOTE: Hulk bulk-import: hosts whose `file_url` may be downloaded even though
+    # they resolve to a private/internal address. Downloads are otherwise restricted
+    # to publicly routable addresses so a row cannot make the worker fetch internal
+    # endpoints (cloud instance metadata, admin ports) and publish the response as an
+    # Attachment. Helix's own storage endpoint (AWS_S3_ENDPOINT_URL) is always allowed
+    # and needs no entry here; see apps.hulk.bulk.url_guard.
+    HULK_FETCH_ALLOWED_HOSTS=(list, []),
     # Redis URL
     DJANGO_CACHE_REDIS_URL=str,  # redis://redis:6379/1
     DJANGO_EXTERNAL_API_CACHE_REDIS_URL=str,  # redis://redis:6379/1
@@ -88,10 +103,14 @@ env = environ.Env(
     ENABLE_DANGER_MODE=(bool, False),
     # Exports
     EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT=(int, 10),
+    GIDD_EXPORT_CACHE_DISABLED=(bool, False),
     GOOGLE_ANALYTICS_ID=(str, None),
 )
 
 ENABLE_DANGER_MODE = env("ENABLE_DANGER_MODE")
+
+# GIDD
+GIDD_EXPORT_CACHE_DISABLED = env("GIDD_EXPORT_CACHE_DISABLED")
 
 # Attachment Size Limits
 DJANGO_MAX_UPLOAD_SIZE = 20971520  # Size defined in bytes (20 MB)
@@ -155,6 +174,7 @@ LOCAL_APPS = [
     "notification",
     "gidd",
     "common",
+    "hulk",
 ]
 
 THIRD_PARTY_APPS = [
@@ -183,6 +203,7 @@ THIRD_PARTY_APPS = [
     "health_check.contrib.migrations",
     "health_check.contrib.redis",  # requires Redis broker
     "banjo_utils",
+    "django_celery_beat",
 ]
 
 INSTALLED_APPS = (
@@ -260,6 +281,7 @@ CACHES = {
     },
 }
 
+
 REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
@@ -318,6 +340,19 @@ else:
             "PORT": env("POSTGRES_PORT"),
         }
     }
+
+if TESTING:
+    # `Client.save()` writes the whole `client_ids` list from its own database into this cache,
+    # and `track_gidd` refuses any client absent from it. The write happens outside the test
+    # transaction, so a rollback cannot undo it: two pytest processes sharing this redis --
+    # different test databases, one cache -- clobber each other's list, and the loser's GIDD
+    # queries start failing with "Client is not registered". Namespacing per process keeps
+    # concurrent runs (several checkouts, or several agents) from seeing each other's keys.
+    # Keyed by database, not by pid: these keys have no TTL and container pids are small and
+    # reused, so a later process inherits a dead one's namespace along with its stale list.
+    CACHES[EXTERNAL_API_CACHE_ALIAS]["KEY_PREFIX"] = "external_api_test_{}_{}".format(
+        DATABASES["default"]["NAME"], PYTEST_XDIST_WORKER or "main"
+    )
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -475,6 +510,14 @@ GZIP_CONTENT_TYPES = [
     "application/pdf",
 ]
 
+# Hulk bulk-import: buckets a row may be server-side copied from, using helix's
+# credentials, into an Attachment all users can read (see envvar docstring above).
+HULK_DIRECT_ACCESS_BUCKETS = [b.strip() for b in env("HULK_DIRECT_ACCESS_BUCKETS") if b.strip()]
+
+# Hulk bulk-import: hosts exempt from the "must resolve to a public address" rule
+# applied to every downloaded `file_url` (see envvar docstring above).
+HULK_FETCH_ALLOWED_HOSTS = [h.strip() for h in env("HULK_FETCH_ALLOWED_HOSTS") if h.strip()]
+
 # HEALTH-CHECK
 REDIS_URL = DJANGO_CACHE_REDIS_URL
 
@@ -507,6 +550,11 @@ RESOURCEGROUP_NUMBER = GRAPHENE_DJANGO_EXTRAS["MAX_PAGE_SIZE"]
 FIGURE_NUMBER = GRAPHENE_DJANGO_EXTRAS["MAX_PAGE_SIZE"]
 
 # CELERY
+
+# Beat entries live in helix.celery.app.conf.beat_schedule and are written into
+# django_celery_beat's tables on every beat start. The `enabled` flag is the one
+# field the sync leaves alone, so the admin panel owns it.
+CELERY_BEAT_SCHEDULER = "helix.celery_beat.HelixDatabaseScheduler"
 
 # NOTE: These queue names must match the worker container command
 # CELERY_DEFAULT_QUEUE = LOW_PRIO_QUEUE = env('LOW_PRIO_QUEUE_NAME', 'celery_low')

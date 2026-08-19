@@ -131,6 +131,11 @@ class ReportSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
             "change_in_data_availability",
             "retroactive_change",
         ]
+        # summary may be omitted (patch-friendly), but if sent it must be a
+        # non-empty, non-null string — the client never sends a blank summary.
+        extra_kwargs = {
+            "summary": {"required": False, "allow_null": False, "allow_blank": False},
+        }
 
     def validate_dates(self, attrs):
         errors = OrderedDict()
@@ -140,13 +145,26 @@ class ReportSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
             errors.update(dict(filter_figure_start_after=gettext("Choose start date earlier than end date.")))
         return errors
 
-    def validate_gidd_report(self, attrs, errors):
+    def validate_figure_crisis_type(self, attrs):
+        crisis_types = (
+            attrs.get("filter_figure_crisis_types", self.instance and self.instance.filter_figure_crisis_types) or []
+        )
+        # NOTE: list may hold enum instances or raw values depending on the path
+        crisis_type_values = {getattr(crisis_type, "value", crisis_type) for crisis_type in crisis_types}
+        if Crisis.CRISIS_TYPE.DISASTER.value not in crisis_type_values:
+            attrs["filter_figure_disaster_sub_types"] = []
+        if Crisis.CRISIS_TYPE.CONFLICT.value not in crisis_type_values:
+            attrs["filter_figure_violence_sub_types"] = []
+
+    def validate_report(self, attrs, errors):
         is_gidd_report = attrs.get("is_gidd_report", self.instance and self.instance.is_gidd_report)
         if is_gidd_report is True:
             year = attrs.get("gidd_report_year", self.instance and self.instance.gidd_report_year)
 
             if not year:
                 raise serializers.ValidationError("For GIDD report year is required.")
+            if year < 2008:  # NOTE Data is only available from 2008 onwards
+                raise serializers.ValidationError("year must be greater than or equal to 2008")
 
             # Clear all query abstraction filter fields
             for field in QueryAbstractModel._meta.get_fields():
@@ -167,6 +185,13 @@ class ReportSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
             attrs["is_pfa_visible_in_gidd"] = False
         else:
             attrs["gidd_report_year"] = None
+            self.validate_figure_crisis_type(attrs)
+            start = attrs.get("filter_figure_start_after", self.instance and self.instance.filter_figure_start_after)
+            end = attrs.get("filter_figure_end_before", self.instance and self.instance.filter_figure_end_before)
+            if not start:
+                errors["filter_figure_start_after"] = gettext("This field is required.")
+            if not end:
+                errors["filter_figure_end_before"] = gettext("This field is required.")
 
     @staticmethod
     def has_permission_for_report(user, report):
@@ -193,7 +218,7 @@ class ReportSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
         attrs = super().validate(attrs)
         errors = OrderedDict()
         errors.update(self.validate_dates(attrs))
-        self.validate_gidd_report(attrs, errors)
+        self.validate_report(attrs, errors)
         if errors:
             raise serializers.ValidationError(errors)
         return attrs

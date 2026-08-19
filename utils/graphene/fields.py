@@ -8,7 +8,6 @@ import graphene
 from django.core.exceptions import FieldError as DjFieldError
 from django.db.models import QuerySet
 from graphene import NonNull
-from graphene.types.structures import Structure
 from graphene.utils.str_converters import to_snake_case
 from graphene_django.registry import get_global_registry
 from graphene_django.rest_framework.serializer_converter import get_graphene_type_from_serializer_field
@@ -16,10 +15,11 @@ from graphene_django.utils import is_valid_django_model, maybe_queryset
 from graphene_django_extras import DjangoFilterPaginateListField
 from graphene_django_extras.base_types import DjangoListObjectBase
 from graphene_django_extras.fields import DjangoListField
-from graphene_django_extras.filters.filter import get_filterset_class
 from graphene_django_extras.paginations.pagination import BaseDjangoGraphqlPagination
 from graphene_django_extras.settings import graphql_api_settings
 from graphene_django_extras.utils import get_extra_filters
+from graphql.language.ast import Field as FieldNode
+from graphql.language.ast import FragmentSpread, InlineFragment
 from rest_framework import serializers
 
 from apps.gidd.filters import GIDD_API_TYPE_MAP
@@ -38,6 +38,43 @@ def path_has_list(info):
     e.g: ['countryList', 'results', 1, 'region']
     """
     return bool([each for each in info.path if str(each).isdigit()])
+
+
+def selects_field(info, field_name):
+    """Whether the selection set of the field being resolved asks for `field_name`.
+
+    Fragment spreads and inline fragments are followed. An alias is transparent: the
+    document's `total: totalCount` selects `totalCount`, and `totalCount: results`
+    does not. Anything unreadable — a spread whose definition is missing, a selection
+    node of an unknown kind — counts as asking, so a resolver gating work on this
+    skips the work only when the field is provably absent.
+    """
+    pending = []
+    for field_ast in info.field_asts:
+        if field_ast.selection_set is None:
+            return True
+        pending.extend(field_ast.selection_set.selections)
+    fragments = info.fragments or {}
+    visited_fragments = set()
+    while pending:
+        selection = pending.pop()
+        if isinstance(selection, FieldNode):
+            if selection.name.value == field_name:
+                return True
+        elif isinstance(selection, InlineFragment):
+            pending.extend(selection.selection_set.selections)
+        elif isinstance(selection, FragmentSpread):
+            name = selection.name.value
+            if name in visited_fragments:
+                continue
+            visited_fragments.add(name)
+            fragment = fragments.get(name)
+            if fragment is None:
+                return True
+            pending.extend(fragment.selection_set.selections)
+        else:
+            return True
+    return False
 
 
 class CustomDjangoListObjectBase(DjangoListObjectBase):
@@ -83,80 +120,6 @@ class CustomDjangoListField(DjangoListField):
             self.list_resolver,
             object_type,
             parent_resolver,
-        )
-
-
-class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
-    """
-    For non-model (or custom queryset) pagination and filtering
-    """
-
-    def __init__(
-        self,
-        _type,
-        pagination=None,
-        extra_filter_meta=None,
-        filterset_class=None,
-        *args,
-        **kwargs,
-    ):
-        kwargs.setdefault("args", {})
-
-        # -- NOTE: This doesn't uses nested filters args
-        # Currently arguments aren't used for this
-        filterset_class = filterset_class or _type._meta.filterset_class
-        self.filterset_class = get_filterset_class(filterset_class)
-        self.filtering_args = get_filtering_args_from_non_model_filterset(self.filterset_class)
-        # -- NOTE: This doesn't uses nested filters args
-        kwargs["args"].update(self.filtering_args)
-
-        pagination = pagination or OrderingOnlyArgumentPagination()
-
-        if pagination is not None:
-            assert isinstance(pagination, BaseDjangoGraphqlPagination), (
-                'You need to pass a valid DjangoGraphqlPagination in DjangoFilterPaginateListField, received "{}".'
-            ).format(pagination)
-
-            pagination_kwargs = pagination.to_graphql_fields()
-
-            self.pagination = pagination
-            kwargs.update(**pagination_kwargs)
-
-        self.accessor = kwargs.pop("accessor", None)
-        super(DjangoFilterPaginateListField, self).__init__(_type, *args, **kwargs)
-
-    def list_resolver(self, filterset_class, filtering_args, root, info, **kwargs):
-        filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
-        qs = getattr(root, self.accessor)
-        if hasattr(qs, "all"):
-            qs = qs.all()
-        qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context.request).qs
-        count = qs.count()
-
-        if getattr(self, "pagination", None):
-            ordering = kwargs.pop(self.pagination.ordering_param, None) or self.pagination.ordering
-            ordering = ",".join([to_snake_case(each) for each in ordering.strip(",").replace(" ", "").split(",")])
-            kwargs[self.pagination.ordering_param] = ordering
-            qs = self.pagination.paginate_queryset(qs, **kwargs)
-
-        return CustomDjangoListObjectBase(
-            count=count,
-            results=maybe_queryset(qs),
-            results_field_name=self.type._meta.results_field_name,
-            page=kwargs.get("page", 1) if hasattr(self.pagination, "page") else None,
-            pageSize=kwargs.get("pageSize", graphql_api_settings.DEFAULT_PAGE_SIZE)
-            if hasattr(self.pagination, "page")
-            else None,
-        )
-
-    def get_resolver(self, parent_resolver):
-        current_type = self.type
-        while isinstance(current_type, Structure):
-            current_type = current_type.of_type
-        return partial(
-            self.list_resolver,
-            self.filterset_class,
-            self.filtering_args,
         )
 
 
@@ -221,6 +184,36 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
 
         super(DjangoFilterPaginateListField, self).__init__(_type, *args, **kwargs)
 
+    def get_queryset(self, manager, info, **kwargs):
+        # Relation eager-loading is handled by RelationBatchedDjangoObjectType's per-field
+        # DataLoaders (depth- and path-independent batching). We therefore DO NOT route through
+        # graphene_django_extras.queryset_factory, which only select_related/prefetch_related'd the
+        # FIRST relation level under the list (leaving latent N+1s at depth) and duplicated the
+        # loaders' work (an extra JOIN per selected forward FK). Return the plain queryset; the
+        # filterset + pagination downstream are unchanged.
+        from graphene_django_extras.utils import _get_queryset
+
+        return _get_queryset(manager)
+
+    def nested_count(self, info, root, parent_class, child_class, loader_params, page):
+        """The total this document asks for on a nested list, or None when it asks for none.
+
+        A total nobody selected is a query nobody reads, so it is resolved only for
+        documents that select `totalCount`. `page` is the promise of the parent's child
+        rows, which answers the total on its own where it holds them all.
+        """
+        if not selects_field(info, self.type._meta.fields["count"].name):
+            return None
+        if not getattr(self.pagination, "page_size_query_param", None):
+            # Without page params the loader's batch holds every child row of the parent,
+            # so the group it returns already carries the total.
+            return page.then(len)
+        return info.context.get_filtered_relation_count_loader(
+            parent_class.__name__,
+            child_class.__name__,
+            loader_params,
+        ).load(root.id)
+
     def list_resolver(self, manager, filterset_class, filtering_args, root, info, **kwargs):
         filter_kwargs = kwargs.get("filters", {})
 
@@ -242,39 +235,27 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 raise NotImplementedError(f"Dataloader error: fetching without dataloader. {info.path}")
             parent_class = root._meta.model
             child_class = manager.model
+            # The loader instance is selected by these arguments (see GQLContext.get_filtered_relation_list_loader),
+            # so every argument that changes the rows a batch returns is passed here.
+            loader_params = dict(
+                parent=parent_class,
+                child=child_class,
+                accessor=self.accessor,
+                related_name=self.related_name,
+                reverse_related_name=self.reverse_related_name,
+                pagination=self.pagination,
+                filterset_class=filterset_class,
+                filter_kwargs=filter_kwargs,
+                request=info.context.request,
+                **kwargs,
+            )
             # TODO: qs should be executed only when we access the results node in the future
-            qs = info.context.get_dataloader(
+            qs = info.context.get_filtered_relation_list_loader(
                 parent_class.__name__,
                 self.related_name,
-            ).load(
-                root.id,
-                parent=parent_class,
-                child=child_class,
-                accessor=self.accessor,
-                related_name=self.related_name,
-                reverse_related_name=self.reverse_related_name,
-                pagination=self.pagination,
-                filterset_class=filterset_class,
-                filter_kwargs=filter_kwargs,
-                request=info.context.request,
-                **kwargs,
-            )
-            count = info.context.get_count_loader(
-                parent_class.__name__,
-                child_class.__name__,
-            ).load(
-                root.id,
-                parent=parent_class,
-                child=child_class,
-                accessor=self.accessor,
-                related_name=self.related_name,
-                reverse_related_name=self.reverse_related_name,
-                pagination=self.pagination,
-                filterset_class=filterset_class,
-                filter_kwargs=filter_kwargs,
-                request=info.context.request,
-                **kwargs,
-            )
+                loader_params,
+            ).load(root.id)
+            count = self.nested_count(info, root, parent_class, child_class, loader_params, qs)
         else:
             accessor = self.accessor or self.related_name
             if accessor:
@@ -283,7 +264,17 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                     qs = qs.all()
             else:
                 qs = self.get_queryset(manager, info, **kwargs)
-            qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context.request).qs
+
+            filterset_kwargs = {
+                "data": filter_kwargs,
+                "queryset": qs,
+                "request": info.context.request,
+            }
+            # Only forward ordering to filtersets that opt in, so they can
+            # gate expensive annotations on the active ordering.
+            if getattr(filterset_class, "accepts_ordering", False):
+                filterset_kwargs["ordering"] = kwargs.get(self.pagination.ordering_param)
+            qs = filterset_class(**filterset_kwargs).qs
             if root and not accessor and is_valid_django_model(root._meta.model):
                 extra_filters = get_extra_filters(root, manager.model)
                 if len(list(extra_filters.keys())) == 1:

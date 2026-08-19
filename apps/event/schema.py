@@ -1,5 +1,4 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.contrib.commons import DateAccuracyGrapheneEnum
@@ -39,13 +38,22 @@ from apps.event.models import (
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType, reverse_fk_list_resolver
 from utils.graphene.types import CustomDjangoListObjectType
 
 
-class ViolenceSubObjectType(DjangoObjectType):
+class ViolenceSubObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ViolenceSubType
-        exclude_fields = ("events", "violence")
+        # figures, reportSet and extractionquerySet are unbounded fan-out. figures are read via
+        # figureList(filters: {filterFigureViolenceSubTypes: [id], filterFigureCrisisTypes: ["CONFLICT"]}):
+        # filterFigureViolenceSubTypes is pass-through, so on its own it also returns every figure
+        # of another cause (28,307 -> 153,803 on the production dump); the crisis-type pairing
+        # reproduces the removed set exactly, for every sub-type.
+        # reportSet/extractionquerySet are the saved figure-filter selections of reports and
+        # extraction queries; reportList and extractionQueryList cannot filter on them, so those
+        # two have no bounded replacement.
+        exclude_fields = ("events", "violence", "figures", "report_set", "extractionquery_set")
 
 
 class ViolenceSubObjectListType(CustomDjangoListObjectType):
@@ -54,10 +62,18 @@ class ViolenceSubObjectListType(CustomDjangoListObjectType):
         filterset_class = ViolenceSubTypeFilter
 
 
-class ViolenceType(DjangoObjectType):
+class ViolenceType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Violence
-        exclude_fields = ("events",)
+        # figures, reportSet and extractionquerySet are unbounded fan-out. figures are read via
+        # figureList(filters: {filterFigureViolenceTypes: [id], filterFigureCrisisTypes: ["CONFLICT"]}):
+        # filterFigureViolenceTypes is pass-through, so on its own it also returns every figure of
+        # another cause (28,307 -> 153,803 on the production dump); the crisis-type pairing
+        # reproduces the removed set exactly, for every violence type.
+        # reportSet/extractionquerySet are the saved figure-filter selections of reports and
+        # extraction queries; reportList and extractionQueryList cannot filter on them, so those
+        # two have no bounded replacement.
+        exclude_fields = ("events", "figures", "report_set", "extractionquery_set")
 
     sub_types = DjangoPaginatedListObjectField(
         ViolenceSubObjectListType,
@@ -72,7 +88,7 @@ class ViolenceListType(CustomDjangoListObjectType):
         filterset_class = ViolenceFilter
 
 
-class ActorType(DjangoObjectType):
+class ActorType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Actor
         exclude_fields = ("events",)
@@ -84,10 +100,18 @@ class ActorListType(CustomDjangoListObjectType):
         filterset_class = ActorFilter
 
 
-class DisasterSubObjectType(DjangoObjectType):
+class DisasterSubObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterSubType
-        exclude_fields = ("events", "type")
+        # figures, reportSet and extractionquerySet are unbounded fan-out. figures are read via
+        # figureList(filters: {filterFigureDisasterSubTypes: [id], filterFigureCrisisTypes: ["DISASTER"]}):
+        # filterFigureDisasterSubTypes is pass-through, so on its own it also returns every figure of
+        # another cause (64,088 -> 125,296 on the production dump); the crisis-type pairing
+        # reproduces the removed set exactly, for every sub-type.
+        # reportSet/extractionquerySet are the saved figure-filter selections of reports and
+        # extraction queries; reportList and extractionQueryList cannot filter on them, so those
+        # two have no bounded replacement.
+        exclude_fields = ("events", "type", "figures", "report_set", "extractionquery_set")
 
 
 class DisasterSubObjectListType(CustomDjangoListObjectType):
@@ -96,10 +120,18 @@ class DisasterSubObjectListType(CustomDjangoListObjectType):
         filterset_class = DisasterSubTypeFilter
 
 
-class DisasterTypeObjectType(DjangoObjectType):
+class DisasterTypeObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterType
-        exclude_fields = ("events", "disaster_sub_category")
+        # figures, reportSet and extractionquerySet are unbounded fan-out. figures are read via
+        # figureList(filters: {filterFigureDisasterTypes: [id], filterFigureCrisisTypes: ["DISASTER"]}):
+        # filterFigureDisasterTypes is pass-through, so on its own it also returns every figure of
+        # another cause (64,317 -> 125,525 on the production dump); the crisis-type pairing
+        # reproduces the removed set exactly, for every type.
+        # reportSet/extractionquerySet are the saved figure-filter selections of reports and
+        # extraction queries; reportList and extractionQueryList cannot filter on them, so those
+        # two have no bounded replacement.
+        exclude_fields = ("events", "disaster_sub_category", "figures", "report_set", "extractionquery_set")
 
     sub_types = DjangoPaginatedListObjectField(
         DisasterSubObjectListType,
@@ -114,10 +146,18 @@ class DisasterTypeObjectListType(CustomDjangoListObjectType):
         filterset_class = DisasterTypeFilter
 
 
-class DisasterSubCategoryType(DjangoObjectType):
+class DisasterSubCategoryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterSubCategory
-        exclude_fields = ("events", "category")
+        # figures, reportSet and extractionquerySet are unbounded fan-out. figures are read via
+        # figureList(filters: {filterFigureDisasterSubCategories: [id], filterFigureCrisisTypes: ["DISASTER"]}):
+        # filterFigureDisasterSubCategories is pass-through, so on its own it also returns every figure
+        # of another cause (71,823 -> 133,031 on the production dump); the crisis-type pairing
+        # reproduces the removed set exactly, for every sub-category.
+        # reportSet/extractionquerySet are the saved figure-filter selections of reports and
+        # extraction queries; reportList and extractionQueryList cannot filter on them, so those
+        # two have no bounded replacement.
+        exclude_fields = ("events", "category", "figures", "report_set", "extractionquery_set")
 
     types = DjangoPaginatedListObjectField(
         DisasterTypeObjectListType,
@@ -132,10 +172,18 @@ class DisasterSubCategoryListType(CustomDjangoListObjectType):
         filterset_class = DisasterSubCategoryFilter
 
 
-class DisasterCategoryType(DjangoObjectType):
+class DisasterCategoryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterCategory
-        exclude_fields = ("events",)
+        # figures, reportSet and extractionquerySet are unbounded fan-out. figures are read via
+        # figureList(filters: {filterFigureDisasterCategories: [id], filterFigureCrisisTypes: ["DISASTER"]}):
+        # filterFigureDisasterCategories is pass-through, so on its own it also returns every figure of
+        # another cause (116,414 -> 177,622 on the production dump); the crisis-type pairing
+        # reproduces the removed set exactly, for every category.
+        # reportSet/extractionquerySet are the saved figure-filter selections of reports and
+        # extraction queries; reportList and extractionQueryList cannot filter on them, so those
+        # two have no bounded replacement.
+        exclude_fields = ("events", "figures", "report_set", "extractionquery_set")
 
     sub_categories = DjangoPaginatedListObjectField(
         DisasterSubCategoryListType,
@@ -159,10 +207,26 @@ class EventReviewCountType(graphene.ObjectType):
     progress = graphene.Float(required=False)
 
 
-class OsvSubObjectType(DjangoObjectType):
+class OsvSubObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = OsvSubType
         filterset_class = OsvSubTypeFilter
+        # figures, events, reportSet and extractionquerySet are unbounded fan-out, and none of the
+        # four has an exact bounded replacement.
+        # filterFigureOsvSubTypes keys off event.violence.name rather than a figure column, so it
+        # passes through every figure whose event is not OSV and no combination of the figure
+        # filters recovers the set: measured on one sub-type, the removed field returned 372
+        # figures while the closest pairing (filterFigureOsvSubTypes + filterFigureCrisisTypes:
+        # ["CONFLICT"] + filterFigureViolenceTypes: [<OSV>]) returned 2,524 -- 2,316 extra and 164
+        # short, because 172 of the 571 figures carrying an osv_sub_type do not carry the OSV
+        # violence themselves.
+        # For events the closest is eventList(filters: {eventTypes: ["CONFLICT"],
+        # violenceTypes: [<OSV>], osvSubTypeByIds: [id]}); it is short by the 7 events whose
+        # osv_sub_type is set while their violence is not OSV (50 -> 46 on the largest sub-type,
+        # 3 of the 6 populated sub-types affected) -- data worth correcting separately.
+        # reportSet/extractionquerySet are the saved figure-filter selections of reports and
+        # extraction queries; reportList and extractionQueryList cannot filter on them.
+        exclude_fields = ("figures", "events", "report_set", "extractionquery_set")
 
 
 class OsvSubTypeList(CustomDjangoListObjectType):
@@ -171,10 +235,15 @@ class OsvSubTypeList(CustomDjangoListObjectType):
         filterset_class = OsvSubTypeFilter
 
 
-class OtherSubTypeObjectType(DjangoObjectType):
+class OtherSubTypeObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = OtherSubType
         filterset_class = OtherSubTypeFilter
+        # figures and events are unbounded fan-out; events are read via
+        # eventList(filters: {eventTypes: ["OTHER"], otherSubTypes: [id]}) -- otherSubTypes is
+        # pass-through, so the eventTypes pairing is what reproduces the removed set exactly.
+        # figureList has no other-sub-type filter, so figures have no bounded replacement.
+        exclude_fields = ("figures", "events")
 
 
 class OtherSubTypeList(CustomDjangoListObjectType):
@@ -183,7 +252,7 @@ class OtherSubTypeList(CustomDjangoListObjectType):
         filterset_class = OtherSubTypeFilter
 
 
-class EventCodeType(DjangoObjectType):
+class EventCodeType(RelationBatchedDjangoObjectType):
     event_code_type = graphene.Field(EventCodeTypeGrapheneEnum)
     event_code_display = EnumDescription(source="get_event_code_type_display")
 
@@ -192,10 +261,13 @@ class EventCodeType(DjangoObjectType):
         fields = ("id", "uuid", "event_code", "event_code_type", "country")
 
 
-class EventType(DjangoObjectType):
+class EventType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Event
-        exclude_fields = ("figures", "gidd_events", "glide_numbers")
+        # reportSet/extractionquerySet are the reports and saved extraction queries whose stored
+        # figure filter names this event; reportList and extractionQueryList cannot filter on that
+        # selection, so neither has a bounded replacement.
+        exclude_fields = ("figures", "gidd_events", "glide_numbers", "report_set", "extractionquery_set")
 
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
     event_type_display = EnumDescription(source="get_event_type_display")
@@ -222,12 +294,19 @@ class EventType(DjangoObjectType):
     event_codes = graphene.List(graphene.NonNull(EventCodeType))
     crisis = graphene.Field("apps.crisis.schema.CrisisType")
     crisis_id = graphene.ID(required=True, source="crisis_id")
+    # See FigureType.hulk_uuid.
+    hulk_uuid = graphene.UUID()
 
-    def resolve_crisis(root, info, **kwargs):
-        return info.context.event_crisis_loader.load(root.id)
+    # crisis (forward FK) is auto-wired via RelationBatchedDjangoObjectType -> RelationNodeLoader.
 
-    def resolve_event_codes(root, info, **kwargs):
-        return info.context.event_code_loader.load(root.id)
+    def resolve_hulk_uuid(root, info, **kwargs):
+        return info.context.event_hulk_dataloader.load(root.id).then(lambda row: row.uuid if row else None)
+
+    # The GraphQL field name (event_codes) != the model reverse accessor (event.event_code),
+    # so the auto-wire can't map it; wire it explicitly through the same factory the auto-wire
+    # uses, so the ref (and the per-request loader) is shared with the `event_code` field.
+    # An event with no codes resolves to an empty list (consistent with the other list loaders).
+    resolve_event_codes = reverse_fk_list_resolver(EventCode, "event")
 
     def resolve_entry_count(root, info, **kwargs):
         return info.context.event_entry_count_dataloader.load(root.id)
@@ -269,10 +348,18 @@ class EventListType(CustomDjangoListObjectType):
         filterset_class = EventFilter
 
 
-class ContextOfViolenceType(DjangoObjectType):
+class ContextOfViolenceType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ContextOfViolence
         filterset_class = ContextOfViolenceFilter
+        # figures, events, reportSet and extractionquerySet are unbounded fan-out. Both
+        # figureList(filters: {filterFigureContextOfViolence: [id]}) and
+        # eventList(filters: {contextOfViolences: [id]}) are strict membership tests and reproduce
+        # the removed sets exactly (619 figures / 252 events on the widest context).
+        # reportSet/extractionquerySet are the saved figure-filter selections of reports and
+        # extraction queries; reportList and extractionQueryList cannot filter on them, so those
+        # two have no bounded replacement.
+        exclude_fields = ("figures", "events", "report_set", "extractionquery_set")
 
 
 class ContextOfViolenceListType(CustomDjangoListObjectType):

@@ -69,7 +69,12 @@ class TestDirectorsOfficeRole(HelixGraphQLTestCase):
             }
         }"""
 
-        self.input = {"name": "Test Report", "isPublic": True}
+        self.input = {
+            "name": "Test Report",
+            "isPublic": True,
+            "filterFigureStartAfter": "2020-01-01",
+            "filterFigureEndBefore": "2020-12-31",
+        }
 
     def test_directors_office_user_can_create_update_delete_report(self):
         self.force_login(self.directors_office_user)
@@ -95,10 +100,7 @@ class TestDirectorsOfficeRole(HelixGraphQLTestCase):
         self.force_login(self.directors_office_user)
         # Test can update report
         report_id = content["result"]["id"]
-        update_data = {
-            "id": report_id,
-            "name": "Report updated",
-        }
+        update_data = {"id": report_id, "name": "Report updated"}
         response = self.query(
             self.report_update_mutation,
             input_data=update_data,

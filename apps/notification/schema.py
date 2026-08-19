@@ -1,5 +1,4 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.notification.enums import NotificationTypeEnum
@@ -8,6 +7,7 @@ from apps.notification.models import Notification
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 
@@ -15,7 +15,7 @@ def notificaiton_qs(info):
     return Notification.objects.filter(recipient=info.context.user)
 
 
-class GenericNotificationType(DjangoObjectType):
+class GenericNotificationType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Notification
         fields = (

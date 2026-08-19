@@ -25,7 +25,7 @@ input ActorCreateInputType {
   versionId: String
   name: String!
   torg: String
-  country: ID
+  country: ID!
 }
 
 input ActorFilterDataInputType {
@@ -96,6 +96,7 @@ type AttachmentType {
   encoding: String
   filetypeDetail: String
   attachmentForDisplay: EnumDescription
+  hulkUuid: UUID
 }
 
 enum BULK_OPERATION_ACTION {
@@ -382,8 +383,8 @@ input CommunicationCreateInputType {
   content: String!
   date: Date
   contact: ID!
-  country: ID
-  medium: ID
+  country: ID!
+  medium: ID!
   attachment: ID
 }
 
@@ -467,7 +468,7 @@ input ContactCreateInputType {
   comment: String
   organization: ID
   country: ID
-  countriesOfOperation: [ID!]
+  countriesOfOperation: [ID!]!
 }
 
 input ContactFilterDataInputType {
@@ -553,10 +554,6 @@ type ContextOfViolenceType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  figures: [FigureType!]!
-  events: [EventType!]!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
 }
 
 input ContextOfViolenceUpdateInputType {
@@ -769,7 +766,6 @@ type CountryType {
   contextualAnalyses(filters: ContextualAnalysisFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContextualAnalysisListType
   summaries(filters: CountrySummaryFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): SummaryListType
   householdSizes: [CountryHouseholdSizeType!]!
-  organizations: [OrganizationType!]!
   operatingContacts(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
   contacts(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
   communications: [CommunicationType!]!
@@ -1244,9 +1240,9 @@ input DisaggregatedAgeInputType {
   id: ID
   sex: GENDER_TYPE!
   uuid: String!
-  value: Int
-  ageFrom: Int
-  ageTo: Int
+  value: Int!
+  ageFrom: Int!
+  ageTo: Int!
 }
 
 type DisaggregatedAgeListType {
@@ -1263,8 +1259,6 @@ type DisaggregatedAgeType {
   value: Int
   ageFrom: Int
   ageTo: Int
-  entryFigureRelated: [FigureType!]!
-  reportReportRelated: [ReportType!]!
   sexDisplay: EnumDescription
 }
 
@@ -1288,10 +1282,7 @@ type DisasterCategoryListType {
 type DisasterCategoryType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   subCategories(filters: DisasterSubCategoryFilterDataInputType, ordering: String): DisasterSubCategoryListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
 }
 
@@ -1319,10 +1310,7 @@ type DisasterSubCategoryListType {
 type DisasterSubCategoryType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   types(filters: DisasterTypeFilterDataInputType, ordering: String): DisasterTypeObjectListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
 }
 
@@ -1336,9 +1324,7 @@ type DisasterSubObjectListType {
 type DisasterSubObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
+  iduName: String
   disasters: [GiddDisasterType!]!
 }
 
@@ -1360,10 +1346,7 @@ type DisasterTypeObjectListType {
 type DisasterTypeObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   subTypes(filters: DisasterSubTypeFilterDataInputType, ordering: String): DisasterSubObjectListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   disasters: [GiddDisasterType!]!
 }
 
@@ -1438,7 +1421,7 @@ input EntryCreateInputType {
   associatedParkedItem: ID
   preview: ID
   document: ID
-  publishers: [ID!]
+  publishers: [ID!]!
 }
 
 input EntryExtractionFilterDataInputType {
@@ -1502,7 +1485,7 @@ type EntryType {
   idmcAnalysis: String
   isConfidential: Boolean!
   notifications: [GenericNotificationType!]!
-  figures: [FigureType!]
+  hulkUuid: UUID
 }
 
 input EntryUpdateInputType {
@@ -1558,7 +1541,7 @@ input EventCreateInputType {
   startDateAccuracy: DATE_ACCURACY
   endDate: Date!
   endDateAccuracy: DATE_ACCURACY
-  eventNarrative: String
+  eventNarrative: String!
   includeTriangulationInQa: Boolean
   crisis: ID
   otherSubType: ID
@@ -1567,7 +1550,7 @@ input EventCreateInputType {
   disasterSubCategory: ID
   disasterSubType: ID
   osvSubType: ID
-  countries: [ID!]
+  countries: [ID!]!
   contextOfViolence: [ID!]
 }
 
@@ -1590,6 +1573,7 @@ input EventFilterDataInputType {
   eventTypes: [String!]
   countries: [ID!]
   osvSubTypeByIds: [ID!]
+  otherSubTypes: [ID!]
   disasterSubTypes: [ID!]
   violenceTypes: [ID!]
   violenceSubTypes: [ID!]
@@ -1655,8 +1639,6 @@ type EventType {
   notifications: [GenericNotificationType!]!
   eventReviews: [UnifiedReviewCommentType!]!
   eventCode: [EventCodeType!]!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
   eventTypeDisplay: EnumDescription
   totalStockIdpFigures: Int
   stockIdpFiguresMaxEndDate: Date
@@ -1672,6 +1654,7 @@ type EventType {
   reviewCount: EventReviewCountType
   eventCodes: [EventCodeType!]
   crisisId: ID!
+  hulkUuid: UUID
 }
 
 input EventUpdateInputType {
@@ -2150,6 +2133,9 @@ input FigureLocationInputType {
   alternativeNames: String
   accuracy: ACCURACY!
   moved: Boolean
+  pcode: String
+  pcodeSource: String
+  pcodeAccuracy: PCODE_ACCURACY
 }
 
 type FigureLocationListType {
@@ -2189,11 +2175,14 @@ type FigureLocationType {
   moved: Boolean!
   geocoder: GEOCODER
   geocoderMetadata: JSONString
+  pcode: String
+  pcodeSource: String
+  pcodeAccuracy: PCODE_ACCURACY
   geoLocationReviewComments: [UnifiedReviewCommentType!]!
-  figures: [FigureType!]!
   accuracyDisplay: EnumDescription
   identifierDisplay: EnumDescription
   geocoderDisplay: EnumDescription
+  pcodeAccuracyDisplay: EnumDescription
 }
 
 input FigureTagCreateInputType {
@@ -2220,7 +2209,6 @@ type FigureTagType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  figureSet: [FigureType!]!
   contextualupdateSet: [ContextualUpdateType!]!
 }
 
@@ -2296,7 +2284,6 @@ type FigureType {
   reviewStatus: FIGURE_REVIEW_STATUS
   notifications: [GenericNotificationType!]!
   figureReviewComments: [UnifiedReviewCommentType!]!
-  reportSet: [ReportType!]!
   getQuantifier: EnumDescription
   unitDisplay: EnumDescription
   roleDisplay: EnumDescription
@@ -2317,6 +2304,7 @@ type FigureType {
   lastReviewCommentStatus: [FigureLastReviewCommentStatusType!]
   eventId: ID!
   entryId: ID!
+  hulkUuid: UUID
 }
 
 input FigureUpdateInputType {
@@ -2692,6 +2680,22 @@ type GiddYearType {
   year: Int!
 }
 
+enum HULK_BULK_IMPORT_DATASET_IMPORT_TYPE {
+  ATTACHMENT
+  SOURCE_PREVIEW
+  ENTRY
+  EVENT
+  FIGURE
+}
+
+enum HULK_BULK_IMPORT_STATUS {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
 input HouseholdSizeFilterDataTypeInputType {
   search: String
   year: Float
@@ -2706,10 +2710,91 @@ type HouseholdSizeListType {
   pageSize: Int
 }
 
+input HulkBulkImportCreateInputType {
+  name: String
+  datasets: [HulkBulkImportDatasetCreateInputType!]!
+}
+
+input HulkBulkImportDatasetCreateInputType {
+  importType: HULK_BULK_IMPORT_DATASET_IMPORT_TYPE!
+  importFile: Upload!
+}
+
+type HulkBulkImportDatasetType {
+  id: ID!
+  bulkImport: HulkBulkImportType!
+  successCount: Int
+  failureCount: Int
+  skipCount: Int
+  createdAt: DateTime!
+  importType: HULK_BULK_IMPORT_DATASET_IMPORT_TYPE!
+  importTypeDisplay: EnumDescription!
+  importFile: String
+  successFile: String
+  failureFile: String
+  skipFile: String
+}
+
+input HulkBulkImportFilterDataInputType {
+  search: String
+  statusList: [HULK_BULK_IMPORT_STATUS!]
+  createdByIds: [ID!]
+  createdAtGte: DateTime
+  createdAtLte: DateTime
+}
+
+type HulkBulkImportListType {
+  results: [HulkBulkImportType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type HulkBulkImportType {
+  id: ID!
+  name: String
+  createdAt: DateTime!
+  createdBy: UserType!
+  startedAt: DateTime
+  completedAt: DateTime
+  status: HULK_BULK_IMPORT_STATUS!
+  statusDisplay: EnumDescription!
+  successCount: Int
+  failureCount: Int
+  skipCount: Int
+  datasets: [HulkBulkImportDatasetType!]
+}
+
 enum IDENTIFIER {
   ORIGIN
   DESTINATION
   ORIGIN_AND_DESTINATION
+}
+
+type IDUGenerate {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: String
+}
+
+input IDUGenerateInputType {
+  mainTrigger: CRISIS_TYPE
+  quantifier: QUANTIFIER
+  figure: Int
+  unit: UNIT
+  displacementTerm: FIGURE_TERMS
+  locations: [IDUGenerateLocationInputType!]
+  startDate: Date
+  endDate: Date
+  sources: [Int!]
+  disasterSubType: String
+  violenceSubType: String
+  otherSubType: String
+}
+
+input IDUGenerateLocationInputType {
+  identifier: IDENTIFIER
+  displayName: String
 }
 
 scalar JSONString
@@ -2768,6 +2853,7 @@ type MonitoringSubRegionType {
 }
 
 type Mutation {
+  triggerHulkBulkImport(data: HulkBulkImportCreateInputType!): TriggerHulkBulkImport
   giddUpdateData: GiddUpdateData
   giddUpdateReleaseMetaData(data: ReleaseMetadataInputType!): GiddUpdateReleaseMetaData
   toggleNotificationRead(id: ID!): ToggleNotificationRead
@@ -2817,6 +2903,7 @@ type Mutation {
   approveFigure(id: ID!): ApproveFigure
   unapproveFigure(id: ID!): UnapproveFigure
   reRequestReviewFigure(id: ID!): ReRequestReviewFigure
+  generateIdu(data: IDUGenerateInputType!): IDUGenerate
   createEvent(data: EventCreateInputType!): CreateEvent
   updateEvent(data: EventUpdateInputType!): UpdateEvent
   deleteEvent(id: ID!): DeleteEvent
@@ -2933,8 +3020,8 @@ input OrganizationCreateInputType {
   deletedOn: DateTime
   name: String!
   shortName: String
-  category: ORGANIZATION_CATEGORY
-  methodology: String
+  category: ORGANIZATION_CATEGORY!
+  methodology: String!
   organizationKind: ID
   parent: ID
   countries: [ID!]
@@ -2946,6 +3033,7 @@ input OrganizationFilterDataInputType {
   categories: [String!]
   organizationKinds: [ID!]
   orderCountryFirst: [ID!]
+  excludeDeleted: Boolean
 }
 
 input OrganizationKindCreateInputType {
@@ -3011,16 +3099,9 @@ type OrganizationType {
   organizationKind: OrganizationKindObjectType
   methodology: String
   parent: OrganizationType
-  sourcedFigures: [FigureType!]!
-  publishedEntries: [EntryType!]!
-  subOrganizations: [OrganizationType!]!
   contacts(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
-  sourcedExtractionquery: [ExtractionQueryObjectType!]!
-  publishedExtractionquery: [ExtractionQueryObjectType!]!
   sourcedContextualUpdates: [ContextualUpdateType!]!
   publishedContextualUpdates: [ContextualUpdateType!]!
-  sourcedReport: [ReportType!]!
-  publishedReport: [ReportType!]!
   categoryDisplay: EnumDescription
 }
 
@@ -3041,10 +3122,6 @@ input OrganizationUpdateInputType {
 type OsvSubObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
-  events: [EventType!]!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
 }
 
 input OsvSubTypeFilterDataInputType {
@@ -3077,8 +3154,7 @@ type OtherSubTypeObjectType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  figures: [FigureType!]!
-  events: [EventType!]!
+  iduName: String
 }
 
 enum PARKING_LOT_SOURCE {
@@ -3091,6 +3167,15 @@ enum PARKING_LOT_STATUS {
   TO_BE_REVIEWED
   REVIEWED
   ON_GOING
+}
+
+enum PCODE_ACCURACY {
+  ADM0
+  ADM1
+  ADM2
+  ADM3
+  ADM4
+  ADM5
 }
 
 enum PERMISSION_ACTION {
@@ -3106,6 +3191,7 @@ enum PERMISSION_ACTION {
   update_pfa_visibility
   update_gidd_data
   update_release_meta_data
+  bulk_import
 }
 
 enum PERMISSION_ENTITY {
@@ -3133,6 +3219,7 @@ enum PERMISSION_ENTITY {
   gidd
   client
   figuretag
+  hulkbulkimport
 }
 
 enum PREVIEW_STATUS {
@@ -3153,8 +3240,8 @@ input ParkedItemCreateInputType {
   source: PARKING_LOT_SOURCE
   sourceUuid: String
   metaData: JSONString
-  country: ID
-  assignedTo: ID
+  country: ID!
+  assignedTo: ID!
 }
 
 type ParkedItemListType {
@@ -3255,6 +3342,8 @@ enum QUANTIFIER {
 }
 
 type Query {
+  hulkBulkImport(id: ID!): HulkBulkImportType
+  hulkBulkImports(filters: HulkBulkImportFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): HulkBulkImportListType
   giddPublicConflicts(filters: ConflictFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
   giddPublicDisasters(filters: DisasterFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
   giddPublicConflictStatistics(releaseEnvironment: String, countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddConflictStatisticsType!
@@ -3825,6 +3914,7 @@ type SignOffReport {
 }
 
 input SourcePreviewInputType {
+  skipRecentReuse: Boolean
   versionId: String
   url: String!
   token: String
@@ -3846,6 +3936,7 @@ type SourcePreviewType {
   remark: String
   contextualUpdate: [ContextualUpdateType!]!
   statusDisplay: EnumDescription
+  hulkUuid: UUID
 }
 
 input SummaryCreateInputType {
@@ -3881,6 +3972,12 @@ type TriggerBulkOperation {
   errors: [GenericScalar!]
   ok: Boolean
   result: BulkApiOperationObjectType
+}
+
+type TriggerHulkBulkImport {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: HulkBulkImportType
 }
 
 enum UNIT {
@@ -4153,6 +4250,7 @@ input UserFilterDataInputType {
   isActive: Boolean
   search: String
   id: ID
+  email: String
   roleIn: [String!]
   roleNotIn: [String!]
   monitoringSubRegionIn: [ID!]
@@ -4227,9 +4325,7 @@ type ViolenceSubObjectListType {
 type ViolenceSubObjectType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
+  iduName: String
 }
 
 input ViolenceSubTypeFilterDataInputType {
@@ -4239,10 +4335,7 @@ input ViolenceSubTypeFilterDataInputType {
 type ViolenceType {
   id: ID!
   name: String!
-  figures: [FigureType!]!
   subTypes(filters: ViolenceSubTypeFilterDataInputType, ordering: String): ViolenceSubObjectListType
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
 }
 
 type VisualizationFigureType {

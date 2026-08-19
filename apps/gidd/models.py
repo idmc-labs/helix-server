@@ -12,6 +12,22 @@ from apps.entry.models import Entry, Figure
 
 
 class Conflict(models.Model):
+    # giddPublicConflicts. Unauthenticated and no client sends `ordering`, so every token is
+    # refused: an empty set is a bound, not an absent one.
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "country_name",
+            "created_at",
+            "id",
+            "iso3",
+            "new_displacement",
+            "new_displacement_rounded",
+            "total_displacement",
+            "total_displacement_rounded",
+            "year",
+        }
+    )
+
     country = models.ForeignKey(
         "country.Country", related_name="country_conflict", on_delete=models.PROTECT, verbose_name=_("Country")
     )
@@ -41,6 +57,23 @@ class Conflict(models.Model):
 
 
 class Disaster(models.Model):
+    # giddPublicDisasters. Same unauthenticated route; keys are idmc-website-components'
+    # Gidd/EventsTable sortable columns (including the hand-written eventName column).
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "country_name",
+            "created_at",
+            "event_codes",
+            "event_name",
+            "hazard_category_name",
+            "hazard_type_name",
+            "id",
+            "new_displacement_rounded",
+            "start_date",
+            "year",
+        }
+    )
+
     event = models.ForeignKey(
         "event.Event", verbose_name=_("Event"), related_name="gidd_events", on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -123,6 +156,14 @@ class Disaster(models.Model):
 
 
 class StatusLog(models.Model):
+    # giddLogs
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "triggered_at",
+        }
+    )
+
     class Status(enum.Enum):
         PENDING = 0
         SUCCESS = 1
@@ -242,6 +283,19 @@ class ReleaseMetadata(models.Model):
 
 
 class PublicFigureAnalysis(models.Model):
+    # giddPublicFigureAnalysisList. Unauthenticated and no client sends `ordering`.
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "figure_category",
+            "figure_cause",
+            "figures",
+            "figures_rounded",
+            "id",
+            "iso3",
+            "year",
+        }
+    )
+
     iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
     figure_cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_("Figure Cause"))
     figure_category = enum.EnumField(
@@ -259,6 +313,20 @@ class PublicFigureAnalysis(models.Model):
 
 
 class DisplacementData(models.Model):
+    # giddPublicDisplacements. Unauthenticated (GRAPHENE_NODES_WHITELIST), so the bound comes
+    # from the one client we can read: idmc-website-components' Gidd/DataTable sortable columns.
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "conflict_new_displacement_rounded",
+            "conflict_total_displacement_rounded",
+            "country_name",
+            "disaster_new_displacement_rounded",
+            "disaster_total_displacement_rounded",
+            "id",
+            "year",
+        }
+    )
+
     iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
     country_name = models.CharField(verbose_name=_("Country name"), max_length=256)
     country = models.ForeignKey(

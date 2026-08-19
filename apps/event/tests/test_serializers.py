@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
+from uuid import uuid4
 
 from django.test import RequestFactory
 
 from apps.crisis.models import Crisis
+from apps.event.models import EventCode
 from apps.event.serializers import EventSerializer
 from apps.users.enums import USER_ROLE
 from utils.factories import (
@@ -36,6 +38,7 @@ class TestCreateEventSerializer(HelixTestCase):
             start_date=start,
             end_date=end,
         )
+        countries = [country.id for country in CountryFactory.create_batch(2)]
         data = {
             "crisis": crisis.id,
             "name": "test event",
@@ -45,13 +48,82 @@ class TestCreateEventSerializer(HelixTestCase):
             "violence": violence_sub_type.violence.id,
             "violence_sub_type": violence_sub_type.id,
             "disaster_sub_category": DisasterSubCategoryFactory.create().id,
+            "countries": countries,
+            "event_narrative": "event narrative",
         }
         serializer = EventSerializer(data=data, context=self.context)
         self.assertFalse(serializer.is_valid())
         self.assertIn("start_date", serializer.errors)
 
+    def test_invalid_crisis_less_event_date_order(self):
+        # crisis-less event with end_date < start_date must be rejected.
+        start = datetime.today()
+        data = dict(
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+            disaster_sub_type=DisasterSubTypeFactory.create().pk,
+            name="one",
+            start_date=start.date(),
+            end_date=(start - timedelta(days=1)).date(),
+            event_narrative="event narrative",
+            countries=[CountryFactory.create().id],
+        )
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+        self.assertIn("end_date", serializer.errors)
+
+    def test_valid_crisis_less_event_equal_dates(self):
+        # start_date == end_date is allowed.
+        start = datetime.today()
+        data = dict(
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+            disaster_sub_type=DisasterSubTypeFactory.create().pk,
+            name="one",
+            start_date=start.date(),
+            end_date=start.date(),
+            event_narrative="event narrative",
+            countries=[CountryFactory.create().id],
+        )
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_event_dates_more_than_10_years_in_future_rejected(self):
+        start = datetime.today() + timedelta(days=365 * 11)
+        end = start + timedelta(days=1)
+        data = dict(
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+            disaster_sub_type=DisasterSubTypeFactory.create().pk,
+            name="one",
+            start_date=start.date(),
+            end_date=end.date(),
+            event_narrative="event narrative",
+            countries=[CountryFactory.create().id],
+        )
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+        self.assertIn("end_date", serializer.errors)
+
+    def test_event_dates_within_10_years_accepted(self):
+        # boundary: ~9 years in the future is allowed.
+        start = datetime.today() + timedelta(days=365 * 9)
+        end = start + timedelta(days=1)
+        data = dict(
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+            disaster_sub_type=DisasterSubTypeFactory.create().pk,
+            name="one",
+            start_date=start.date(),
+            end_date=end.date(),
+            event_narrative="event narrative",
+            countries=[CountryFactory.create().id],
+        )
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_invalid_event_type(self):
+        country_1 = CountryFactory.create()
         crisis = CrisisFactory.create(crisis_type=Crisis.CRISIS_TYPE.DISASTER.value)
+        crisis.countries.add(country_1)
         violence_sub_type = ViolenceSubTypeFactory.create()
         start_date = datetime.today() - timedelta(days=20)
         end_date = datetime.today() - timedelta(days=10)
@@ -64,6 +136,7 @@ class TestCreateEventSerializer(HelixTestCase):
             start_date=start_date.date(),
             end_date=end_date.date(),
             event_narrative="event narrative",
+            countries=[country_1.id],
         )
         serializer = EventSerializer(data=data, context=self.context)
         self.assertFalse(serializer.is_valid())
@@ -77,7 +150,52 @@ class TestCreateEventSerializer(HelixTestCase):
             start_date=start_date.date(),
             end_date=end_date.date(),
             event_narrative="event narrative2",
+            countries=[country_1.id],
         )
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+
+    def test_event_codes(self):
+        country_1 = CountryFactory.create()
+        crisis = CrisisFactory.create(crisis_type=Crisis.CRISIS_TYPE.CONFLICT.value)
+        crisis.countries.add(country_1)
+        violence_sub_type = ViolenceSubTypeFactory.create()
+        start_date = datetime.today() - timedelta(days=20)
+        end_date = datetime.today() - timedelta(days=10)
+        data = dict(
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+            violence=violence_sub_type.violence.pk,
+            violence_sub_type=violence_sub_type.pk,
+            crisis=crisis.pk,
+            name="one",
+            start_date=start_date.date(),
+            end_date=end_date.date(),
+            event_narrative="event narrative",
+            countries=[country_1.id],
+            event_codes=[
+                {
+                    "country": country_1.id,
+                    "event_code": f"NEP-{n}",
+                    "uuid": uuid4(),
+                    "event_code_type": EventCode.EVENT_CODE_TYPE.GLIDE_NUMBER,
+                }
+                for n in range(51)
+            ],
+        )
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("event_codes", serializer.errors)
+        data["event_codes"] = [
+            {
+                "country": country_1.id,
+                "event_code": f"NEP-{n}",
+                "uuid": uuid4(),
+                "event_code_type": EventCode.EVENT_CODE_TYPE.GLIDE_NUMBER,
+            }
+            for n in range(50)
+        ]
+
         serializer = EventSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
@@ -93,26 +211,52 @@ class TestCreateEventSerializer(HelixTestCase):
         violence_sub_type = ViolenceSubTypeFactory.create(violence=violence)
 
         data = {
-            "name": "test event",
+            "name": "test disaster event",
             "event_type": Crisis.CRISIS_TYPE.DISASTER.value,
             "start_date": "2020-01-01",
             "end_date": "2021-01-01",
             "disaster_sub_type": disaster_sub_type.id,
             "violence_sub_type": violence_sub_type.id,
+            "countries": [country.id for country in CountryFactory.create_batch(2)],
+            "event_narrative": "event narrative",
         }
         serializer = EventSerializer(data=data, context={"request": self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         event = serializer.save()
 
         # Test sub fields
-        self.assertEqual(event.disaster_sub_category.id, disaster_sub_category.id)
-        self.assertEqual(event.disaster_sub_type.id, disaster_sub_type.id)
-        self.assertEqual(event.violence_sub_type.id, violence_sub_type.id)
+        self.assertEqual(event.disaster_sub_category_id, disaster_sub_category.id)
+        self.assertEqual(event.disaster_sub_type_id, disaster_sub_type.id)
+        self.assertEqual(event.violence_sub_type_id, None)
 
         # Test parent fields
-        self.assertEqual(event.disaster_category.id, disaster_category.id)
-        self.assertEqual(event.disaster_type.id, disaster_type.id)
-        self.assertEqual(event.violence.id, violence.id)
+        self.assertEqual(event.disaster_category_id, disaster_category.id)
+        self.assertEqual(event.disaster_type_id, disaster_type.id)
+        self.assertEqual(event.violence_id, None)
+
+        data = {
+            "name": "test conflict event",
+            "event_type": Crisis.CRISIS_TYPE.CONFLICT.value,
+            "start_date": "2020-01-01",
+            "end_date": "2021-01-01",
+            "disaster_sub_type": disaster_sub_type.id,
+            "violence_sub_type": violence_sub_type.id,
+            "countries": [country.id for country in CountryFactory.create_batch(2)],
+            "event_narrative": "event narrative",
+        }
+        serializer = EventSerializer(data=data, context={"request": self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        event = serializer.save()
+
+        # Test sub fields
+        self.assertEqual(event.disaster_sub_category_id, None)
+        self.assertEqual(event.disaster_sub_type_id, None)
+
+        # Test parent fields
+        self.assertEqual(event.disaster_category_id, None)
+        self.assertEqual(event.disaster_type_id, None)
+        self.assertEqual(event.violence_id, violence.id)
+        self.assertEqual(event.violence_sub_type_id, violence_sub_type.id)
 
 
 class TestUpdateEventSerializer(HelixTestCase):
@@ -154,3 +298,84 @@ class TestUpdateEventSerializer(HelixTestCase):
         serializer = EventSerializer(instance=event, data=data, context=self.context, partial=True)
         self.assertFalse(serializer.is_valid())
         self.assertIn("countries", serializer.errors)
+
+    def test_legacy_bad_date_order_row_editable_on_other_fields(self):
+        # decision #1: the date-order check fires only when the date
+        # fields are in the payload, so a legacy row with end_date < start_date
+        # can still be updated on unrelated fields.
+        start_date = datetime.today()
+        event = EventFactory.create(
+            crisis=None,
+            violence_sub_type=None,
+            disaster_sub_type=DisasterSubTypeFactory.create(),
+            start_date=start_date.date(),
+            end_date=(start_date - timedelta(days=5)).date(),
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+            event_narrative="test event narrative",
+        )
+        event.countries.set([CountryFactory.create()])
+
+        data = dict(name="renamed event")
+        serializer = EventSerializer(instance=event, data=data, context=self.context, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_partial_update_single_date_breaks_order_rejected(self):
+        # partial-update gap: a partial update that touches only one date
+        # must be checked against the stored value of the other date.
+        event = EventFactory.create(
+            crisis=None,
+            violence_sub_type=None,
+            disaster_sub_type=DisasterSubTypeFactory.create(),
+            start_date=datetime(2024, 1, 1).date(),
+            end_date=datetime(2024, 6, 1).date(),
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+            event_narrative="test event narrative",
+        )
+        event.countries.set([CountryFactory.create()])
+
+        data = dict(end_date=datetime(2023, 1, 1).date())
+        serializer = EventSerializer(instance=event, data=data, context=self.context, partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("end_date", serializer.errors)
+        self.assertIn(
+            "The start date must be earlier than end date.",
+            str(serializer.errors["end_date"]),
+        )
+
+    def test_partial_update_single_date_keeps_order_accepted(self):
+        # partial-update positive case: updating only end_date to a value
+        # still after the stored start_date passes.
+        event = EventFactory.create(
+            crisis=None,
+            violence_sub_type=None,
+            disaster_sub_type=DisasterSubTypeFactory.create(),
+            start_date=datetime(2024, 1, 1).date(),
+            end_date=datetime(2024, 6, 1).date(),
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+            event_narrative="test event narrative",
+        )
+        event.countries.set([CountryFactory.create()])
+
+        data = dict(end_date=datetime(2024, 12, 1).date())
+        serializer = EventSerializer(instance=event, data=data, context=self.context, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_legacy_future_dated_event_editable_on_other_fields(self):
+        # decision #1: the future-date check fires only when the date
+        # fields are in the payload, so a legacy event with out-of-bounds dates
+        # can still be updated on unrelated fields.
+        start_date = datetime.today() + timedelta(days=365 * 20)
+        event = EventFactory.create(
+            crisis=None,
+            violence_sub_type=None,
+            disaster_sub_type=DisasterSubTypeFactory.create(),
+            start_date=start_date.date(),
+            end_date=(start_date + timedelta(days=1)).date(),
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+            event_narrative="test event narrative",
+        )
+        event.countries.set([CountryFactory.create()])
+
+        data = dict(name="renamed event")
+        serializer = EventSerializer(instance=event, data=data, context=self.context, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)

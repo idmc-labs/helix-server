@@ -1,59 +1,132 @@
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class SubType:
+    name: str
+    idu_name: str
+
+
+OTHER_SUB_TYPES = [
+    SubType(name="Development", idu_name="development"),
+    SubType(name="Eviction", idu_name="eviction"),
+    SubType(name="Technical disaster", idu_name="a technical disaster"),
+]
+
 OSV = "Other situations of violence (OSV)"
 
 CONFLICT_TYPES = {
-    "International armed conflict(IAC)": [
-        "International armed conflict(IAC)",
+    "International armed conflict (IAC)": [
+        SubType(
+            name="International armed conflict (IAC)",
+            idu_name="international armed conflict",
+        ),
     ],
     "Non-International armed conflict (NIAC)": [
-        "Non-International armed conflict (NIAC)",
+        SubType(
+            name="Non-International armed conflict (NIAC)",
+            idu_name="non-international armed conflict",
+        ),
     ],
     OSV: [
-        "Civilian-state violence",
-        "Crime-related violence",
-        "Communal violence",
-        "Other",
+        SubType(
+            name="Civilian-state violence",
+            idu_name="civilian state violence",
+        ),
+        SubType(
+            name="Crime-related violence",
+            idu_name="crime-related violence",
+        ),
+        SubType(
+            name="Communal violence",
+            idu_name="communal violence",
+        ),
+        SubType(
+            name="Other",
+            idu_name="conflict",
+        ),
     ],
     "Unclear/Unknown": [
-        "Unclear/Unknown",
+        SubType(
+            name="Unclear/Unknown",
+            idu_name="conflict",
+        ),
     ],
 }
 
 DISASTERS = {
     "Geophysical": {
         "Geophysical": {
-            "Earthquake": ["Earthquake", "Tsunami"],
-            "Mass Movement": ["Dry mass movement", "Sinkhole"],
-            "Volcanic activity": ["Volcanic activity"],
+            "Earthquake": [
+                SubType(name="Earthquake", idu_name="an earthquake"),
+                SubType(name="Tsunami", idu_name="a tsunami"),
+            ],
+            "Mass Movement": [
+                SubType(name="Dry mass movement", idu_name="dry mass movement"),
+                SubType(name="Sinkhole", idu_name="a sinkhole"),
+            ],
+            "Volcanic activity": [
+                SubType(name="Volcanic activity", idu_name="volcanic activity"),
+            ],
         }
     },
     "Weather related": {
         "Climatological": {
-            "Desertification": ["Desertification"],
-            "Drought": ["Drought"],
-            "Erosion": ["Erosion"],
-            "Salinisation": ["Salinization"],
-            "Sea level Rise": ["Sea level rise"],
-            "Wildfire": ["Wildfire"],
+            "Desertification": [
+                SubType(name="Desertification", idu_name="desertification"),
+            ],
+            "Drought": [
+                SubType(name="Drought", idu_name="a drought"),
+            ],
+            "Erosion": [
+                SubType(name="Erosion", idu_name="erosion"),
+            ],
+            "Salinisation": [
+                SubType(name="Salinization", idu_name="salinization"),
+            ],
+            "Sea level Rise": [
+                SubType(name="Sea level rise", idu_name="sea level rise"),
+            ],
+            "Wildfire": [
+                SubType(name="Wildfire", idu_name="a wildfire"),
+            ],
         },
         "Hydrological": {
-            "Flood": ["Dam release flood", "Flood"],
-            "Mass Movement": ["Avalanche", "Landslide/Wet mass movement"],
-            "Wave action": ["Rogue Wave"],
+            "Flood": [
+                SubType(name="Dam release flood", idu_name="flooding caused by a dam release"),
+                SubType(name="Flood", idu_name="flooding"),
+            ],
+            "Mass Movement": [
+                SubType(name="Avalanche", idu_name="an avalanche"),
+                SubType(name="Landslide/Wet mass movement", idu_name="a landslide"),
+            ],
+            "Wave action": [
+                SubType(name="Rogue Wave", idu_name="a rogue wave"),
+            ],
         },
         "Meteorological": {
-            "Extreme Temperature": ["Cold wave", "Heat wave"],
+            "Extreme Temperature": [
+                SubType(name="Cold wave", idu_name="a cold wave"),
+                SubType(name="Heat wave", idu_name="a heat wave"),
+            ],
             "Storm": [
-                "Hailstorm",
-                "Sand/dust storm",
-                "Storm",
-                "Storm surge",
-                "Tornado",
-                "Typhoon/Hurricane/Cyclone",
-                "Winter storm/Blizzard",
+                SubType(name="Hailstorm", idu_name="a hailstorm"),
+                SubType(name="Sand/dust storm", idu_name="a sandstorm"),
+                SubType(name="Storm", idu_name="a storm"),
+                SubType(name="Storm surge", idu_name="storm surge"),
+                SubType(name="Tornado", idu_name="a tornado"),
+                SubType(name="Typhoon/Hurricane/Cyclone", idu_name="a tropical cyclone"),
+                SubType(name="Winter storm/Blizzard", idu_name="a winter storm"),
             ],
         },
     },
-    "Unknown": {"Unknown": {"Unknown": ["Unknown"]}},
+    "Mixed disasters": {
+        "Mixed disasters": {
+            "Mixed disasters": [
+                SubType(name="Mixed disasters", idu_name="mixed disasters"),
+            ],
+        }
+    },
 }
 
 OSV_SUB_TYPE = [

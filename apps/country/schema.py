@@ -1,6 +1,7 @@
+from operator import itemgetter
+
 import graphene
 from graphene.types.utils import get_type
-from graphene_django import DjangoObjectType
 from graphene_django_extras import (
     DjangoObjectField,
 )
@@ -29,18 +30,18 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 from .enums import HouseholdSizeGapFillingMethodEnum
 
 
-class MonitoringSubRegionType(DjangoObjectType):
+class MonitoringSubRegionType(RelationBatchedDjangoObjectType):
     class Meta:
         model = MonitoringSubRegion
         exclude_fields = ("portfolios",)
 
     countries = graphene.Dynamic(lambda: graphene.List(graphene.NonNull(get_type("apps.country.schema.CountryType"))))
-    # TODO: Add dataloaders
     regional_coordinator = graphene.Field("apps.users.schema.PortfolioType")
     monitoring_experts_count = graphene.Int(required=True)
     unmonitored_countries_count = graphene.Int(required=True)
@@ -50,8 +51,11 @@ class MonitoringSubRegionType(DjangoObjectType):
     def resolve_countries_count(root, info, **kwargs):
         return info.context.monitoring_sub_region_country_count_loader.load(root.id)
 
-    def resolve_countries(root, info, **kwargs):
-        return info.context.monitoring_sub_region_country_loader.load(root.id)
+    # countries (reverse FK) is auto-wired via RelationBatchedDjangoObjectType -> ReverseFKListLoader.
+
+    def resolve_regional_coordinator(root, info, **kwargs):
+        # was a per-instance Portfolio lookup (N+1); batch via the existing loader keyed by sub-region id
+        return info.context.monitoring_subregion_regional_coordinator_loader.load(root.id)
 
 
 class MonitoringSubRegionListType(CustomDjangoListObjectType):
@@ -60,12 +64,12 @@ class MonitoringSubRegionListType(CustomDjangoListObjectType):
         filterset_class = MonitoringSubRegionFilter
 
 
-class CountrySubRegionType(DjangoObjectType):
+class CountrySubRegionType(RelationBatchedDjangoObjectType):
     class Meta:
         model = CountrySubRegion
 
 
-class CountryRegionType(DjangoObjectType):
+class CountryRegionType(RelationBatchedDjangoObjectType):
     class Meta:
         model = CountryRegion
 
@@ -76,7 +80,7 @@ class CountryRegionListType(CustomDjangoListObjectType):
         filterset_class = CountryRegionFilter
 
 
-class GeographicalGroupType(DjangoObjectType):
+class GeographicalGroupType(RelationBatchedDjangoObjectType):
     class Meta:
         model = GeographicalGroup
 
@@ -87,7 +91,7 @@ class GeographicalGroupListType(CustomDjangoListObjectType):
         filterset_class = GeographicalGroupFilter
 
 
-class ContextualAnalysisType(DjangoObjectType):
+class ContextualAnalysisType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ContextualAnalysis
         exclude_fields = ("country",)
@@ -104,7 +108,7 @@ class ContextualAnalysisListType(CustomDjangoListObjectType):
         filterset_class = ContextualAnalysisFilter
 
 
-class SummaryType(DjangoObjectType):
+class SummaryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Summary
         exclude_fields = ("country",)
@@ -119,10 +123,13 @@ class SummaryListType(CustomDjangoListObjectType):
         filterset_class = CountrySummaryFilter
 
 
-class CountryType(DjangoObjectType):
+class CountryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Country
-        exclude_fields = ("country_conflict", "country_disaster", "displacements")
+        # organizations is unbounded fan-out (420 organizations on the widest country); read them
+        # via organizationList(filters: {countries: [id]}), a strict membership test over the M2M
+        # through table that reproduces the removed set exactly.
+        exclude_fields = ("country_conflict", "country_disaster", "displacements", "organizations")
 
     last_summary = graphene.Field(SummaryType)
     last_contextual_analysis = graphene.Field(ContextualAnalysisType)
@@ -183,33 +190,55 @@ class CountryType(DjangoObjectType):
     regional_coordinator = graphene.Field("apps.users.schema.PortfolioType")
     monitoring_expert = graphene.Field("apps.users.schema.PortfolioType")
 
+    def resolve_last_summary(root, info, **kwargs):
+        return info.context.country_last_summary_loader.load(root.id)
+
+    def resolve_last_contextual_analysis(root, info, **kwargs):
+        return info.context.country_last_contextual_analysis_loader.load(root.id)
+
+    def resolve_monitoring_expert(root, info, **kwargs):
+        return info.context.country_monitoring_expert_loader.load(root.id)
+
+    def resolve_regional_coordinator(root, info, **kwargs):
+        if root.monitoring_sub_region_id is None:
+            return None
+        return info.context.monitoring_subregion_regional_coordinator_loader.load(root.monitoring_sub_region_id)
+
     def resolve_total_stock_disaster(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Country.IDP_DISASTER_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_idps_disaster_loader.load(root.id)
+        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+            itemgetter(Country.IDP_DISASTER_ANNOTATE)
+        )
 
     def resolve_total_stock_conflict(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Country.IDP_CONFLICT_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_idps_conflict_loader.load(root.id)
+        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+            itemgetter(Country.IDP_CONFLICT_ANNOTATE)
+        )
 
     def resolve_total_flow_conflict(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Country.ND_CONFLICT_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_nd_conflict_loader.load(root.id)
+        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+            itemgetter(Country.ND_CONFLICT_ANNOTATE)
+        )
 
     def resolve_total_flow_disaster(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Country.ND_DISASTER_ANNOTATE, NULL)
         if value != NULL:
             return value
-        return info.context.country_country_this_year_nd_disaster_loader.load(root.id)
+        return info.context.country_country_this_year_figures_loader.load(root.id).then(
+            itemgetter(Country.ND_DISASTER_ANNOTATE)
+        )
 
     def resolve_geojson_url(root, info, **kwargs):
         return info.context.request.build_absolute_uri(Country.geojson_url(root.iso3))
@@ -221,7 +250,7 @@ class CountryListType(CustomDjangoListObjectType):
         filterset_class = CountryFilter
 
 
-class CountryHouseholdSizeType(DjangoObjectType):
+class CountryHouseholdSizeType(RelationBatchedDjangoObjectType):
     class Meta:
         model = HouseholdSize
 

@@ -1,7 +1,6 @@
 import logging
 
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -18,12 +17,13 @@ from apps.extraction.models import (
 )
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 logger = logging.getLogger(__name__)
 
 
-class ExtractionQueryObjectType(DjangoObjectType):
+class ExtractionQueryObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ExtractionQuery
 
