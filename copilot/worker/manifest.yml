@@ -51,11 +51,11 @@ secrets:
 # You can override any of the values defined above by environment.
 environments:
   staging:
-    cpu: 1024
-    memory: 2048
+    # cpu: 1024
+    # memory: 2048
     count:
       range: 1-2
-      spot_from: 1
+      # spot_from: 1
       cpu_percentage: 80
       memory_percentage: 80
 
