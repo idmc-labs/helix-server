@@ -326,6 +326,16 @@ class GiddHazardSubCategoryType(graphene.ObjectType):
     name = graphene.String(required=True)
 
 
+class GiddViolenceType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
+class GiddViolenceSubType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
 class GiddYearType(graphene.ObjectType):
     year = graphene.Int(required=True)
 
@@ -406,6 +416,14 @@ class Query(graphene.ObjectType):
     )
     gidd_public_hazard_types = graphene.List(
         GiddHazardType,
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_violence_types = graphene.List(
+        GiddViolenceType,
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_violence_sub_types = graphene.List(
+        GiddViolenceSubType,
         client_id=graphene.String(required=True),
     )
     gidd_public_figure_analysis_list = DjangoPaginatedListObjectField(
@@ -737,6 +755,42 @@ class Query(graphene.ObjectType):
             )
             .values("hazard_type__id", "hazard_type__name")
             .distinct("hazard_type__id", "hazard_type__name")
+        ]
+
+    @staticmethod
+    def resolve_gidd_public_violence_types(parent, info, **kwargs):
+        client_id = kwargs.pop("client_id")
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_VIOLENCE_TYPES_GRAPHQL)
+
+        return [
+            GiddViolenceType(
+                id=row["violence__id"],
+                name=row["violence_name"],
+            )
+            for row in GiddDisplacement.objects.filter(
+                cause=Crisis.CRISIS_TYPE.CONFLICT,
+                violence__isnull=False,
+            )
+            .values("violence__id", "violence_name")
+            .distinct("violence__id", "violence_name")
+        ]
+
+    @staticmethod
+    def resolve_gidd_public_violence_sub_types(parent, info, **kwargs):
+        client_id = kwargs.pop("client_id")
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_VIOLENCE_SUB_TYPES_GRAPHQL)
+
+        return [
+            GiddViolenceSubType(
+                id=row["violence_sub_type__id"],
+                name=row["violence_sub_type_name"],
+            )
+            for row in GiddDisplacement.objects.filter(
+                cause=Crisis.CRISIS_TYPE.CONFLICT,
+                violence_sub_type__isnull=False,
+            )
+            .values("violence_sub_type__id", "violence_sub_type_name")
+            .distinct("violence_sub_type__id", "violence_sub_type_name")
         ]
 
     @staticmethod

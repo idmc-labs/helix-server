@@ -1844,6 +1844,8 @@ class ExternalApiDump(models.Model):
         GIDD_DISPLACEMENT_GRAPHQL = "gidd-displacement-graphql", _("query.giddPublicDisplacements")
         GIDD_NEW_EVENTS_GRAPHQL = "gidd-new-events-graphql", _("query.giddPublicEvents")
         GIDD_COUNTRY_DISPLACEMENT_GRAPHQL = "gidd-country-displacement-graphql", _("query.giddPublicCountryDisplacements")
+        GIDD_VIOLENCE_TYPES_GRAPHQL = "gidd-violence-types-graphql", _("query.giddPublicViolenceTypes")
+        GIDD_VIOLENCE_SUB_TYPES_GRAPHQL = "gidd-violence-sub-types-graphql", _("query.giddPublicViolenceSubTypes")
 
     class Status(models.IntegerChoices):
         PENDING = 0, "Pending"
@@ -2164,6 +2166,18 @@ class ExternalApiDump(models.Model):
             example_request="",
         ),
         ExternalApiType.GIDD_COUNTRY_DISPLACEMENT_GRAPHQL: Metadata(
+            response_type="GraphQL - JSON",
+            usage=(lambda _, client_code: "IDMC Website" if client_code == IDMC_WEBSITE_CLIENT_CODE else "IDMC Widgets"),
+            description="",
+            example_request="",
+        ),
+        ExternalApiType.GIDD_VIOLENCE_TYPES_GRAPHQL: Metadata(
+            response_type="GraphQL - JSON",
+            usage=(lambda _, client_code: "IDMC Website" if client_code == IDMC_WEBSITE_CLIENT_CODE else "IDMC Widgets"),
+            description="",
+            example_request="",
+        ),
+        ExternalApiType.GIDD_VIOLENCE_SUB_TYPES_GRAPHQL: Metadata(
             response_type="GraphQL - JSON",
             usage=(lambda _, client_code: "IDMC Website" if client_code == IDMC_WEBSITE_CLIENT_CODE else "IDMC Widgets"),
             description="",
