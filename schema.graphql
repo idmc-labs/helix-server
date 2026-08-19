@@ -448,11 +448,6 @@ input CommunicationUpdateInputType {
   attachment: ID
 }
 
-input ConflictFilterDataInputType {
-  id_Iexact: Float
-  releaseEnvironment: String
-}
-
 input ContactCreateInputType {
   oldId: String
   versionId: String
@@ -1285,17 +1280,6 @@ type DisasterCategoryType {
   id: ID!
   name: String!
   subCategories(filters: DisasterSubCategoryFilterDataInputType, ordering: String): DisasterSubCategoryListType
-  disasters: [GiddDisasterType!]!
-}
-
-input DisasterFilterDataInputType {
-  id_Iexact: Float
-  releaseEnvironment: String
-  hazardTypes: [ID!]
-  eventName: String
-  startYear: Float
-  endYear: Float
-  countriesIso3: [String!]
 }
 
 input DisasterSubCategoryFilterDataInputType {
@@ -1313,7 +1297,6 @@ type DisasterSubCategoryType {
   id: ID!
   name: String!
   types(filters: DisasterTypeFilterDataInputType, ordering: String): DisasterTypeObjectListType
-  disasters: [GiddDisasterType!]!
 }
 
 type DisasterSubObjectListType {
@@ -1327,7 +1310,6 @@ type DisasterSubObjectType {
   id: ID!
   name: String!
   iduName: String
-  disasters: [GiddDisasterType!]!
 }
 
 input DisasterSubTypeFilterDataInputType {
@@ -1349,7 +1331,6 @@ type DisasterTypeObjectType {
   id: ID!
   name: String!
   subTypes(filters: DisasterSubTypeFilterDataInputType, ordering: String): DisasterSubObjectListType
-  disasters: [GiddDisasterType!]!
 }
 
 type DisplacementByHazardType {
@@ -2444,13 +2425,6 @@ type GiddCombinedStatisticsType {
   totalDisplacementCountries: Int
 }
 
-type GiddConflictListType {
-  results: [GiddConflictType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
 type GiddConflictStatisticsType {
   newDisplacements: Int
   newDisplacementsRounded: Int
@@ -2462,18 +2436,6 @@ type GiddConflictStatisticsType {
   newDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
   totalDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
   totalDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
-}
-
-type GiddConflictType {
-  id: ID!
-  totalDisplacement: Int
-  newDisplacement: Int
-  totalDisplacementRounded: Int
-  newDisplacementRounded: Int
-  year: Int!
-  countryName: String!
-  iso3: String!
-  countryId: ID!
 }
 
 type GiddCountryDisplacementType {
@@ -2496,13 +2458,6 @@ type GiddDisasterCountryType {
   countryName: String!
 }
 
-type GiddDisasterListType {
-  results: [GiddDisasterType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
 type GiddDisasterStatisticsType {
   newDisplacements: Int
   newDisplacementsRounded: Int
@@ -2516,34 +2471,6 @@ type GiddDisasterStatisticsType {
   newDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
   totalDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
   totalDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
-}
-
-type GiddDisasterType {
-  id: ID!
-  year: Int!
-  startDate: Date
-  startDateAccuracy: String
-  endDate: Date
-  endDateAccuracy: String
-  newDisplacement: Int
-  totalDisplacement: Int
-  totalDisplacementRounded: Int
-  newDisplacementRounded: Int
-  eventName: String!
-  iso3: String!
-  countryName: String!
-  hazardCategoryName: String!
-  hazardSubCategoryName: String!
-  hazardSubTypeName: String!
-  hazardTypeName: String!
-  eventCodes: [String!]!
-  eventCodesType: [String!]!
-  countryId: ID!
-  eventId: ID
-  hazardCategoryId: ID
-  hazardSubCategoryId: ID
-  hazardTypeId: ID
-  hazardSubTypeId: ID
 }
 
 input GiddDisplacementFilterDataInputType {
@@ -3435,8 +3362,6 @@ enum QUANTIFIER {
 type Query {
   hulkBulkImport(id: ID!): HulkBulkImportType
   hulkBulkImports(filters: HulkBulkImportFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): HulkBulkImportListType
-  giddPublicConflicts(filters: ConflictFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
-  giddPublicDisasters(filters: DisasterFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
   giddPublicConflictStatistics(releaseEnvironment: String, startYear: Float, endYear: Float, countriesIso3: [String!], violenceTypes: [ID!], violenceSubTypes: [ID!], clientId: String!): GiddConflictStatisticsType!
   giddPublicDisasterStatistics(releaseEnvironment: String, hazardTypes: [ID!], hazardSubTypes: [ID!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddDisasterStatisticsType!
   giddLog(id: ID!): GiddStatusLogType
