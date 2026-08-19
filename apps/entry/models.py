@@ -1598,12 +1598,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
-        figures1 = figures or Figure.objects.all()
-        figures2 = figures or Figure.objects.all()
+        if figures is None:
+            figures = Figure.objects.all()
         return {
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
-                    figures1.filter(
+                    figures.filter(
                         entry=models.OuterRef("pk"),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
@@ -1618,7 +1618,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             ),
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_idp_figures(
-                    figures2.filter(
+                    figures.filter(
                         entry=models.OuterRef("pk"),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
