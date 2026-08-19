@@ -2606,6 +2606,7 @@ type GiddPublicCountryType {
   iso3: String!
   idmcShortName: String!
   region: GiddPublicCountryRegionType
+  centroid: [Float]
 }
 
 type GiddPublicFigureAnalysisListType {

@@ -314,6 +314,7 @@ class GiddPublicCountryType(graphene.ObjectType):
     iso3 = graphene.String(required=True)
     idmc_short_name = graphene.String(required=True)
     region = graphene.Field(GiddPublicCountryRegionType)
+    centroid = graphene.List(graphene.Float)
 
 
 class GiddHazardType(graphene.ObjectType):
@@ -489,12 +490,13 @@ class Query(graphene.ObjectType):
                 id=country["id"],
                 iso3=country["iso3"],
                 idmc_short_name=country["idmc_short_name"],
+                centroid=country["centroid"],
                 region=GiddPublicCountryRegionType(
                     id=country["region__id"],
                     name=country["region__name"],
                 ),
             )
-            for country in Country.objects.values("id", "idmc_short_name", "iso3", "region__id", "region__name")
+            for country in Country.objects.values("id", "idmc_short_name", "iso3", "centroid", "region__id", "region__name")
         ]
 
     @staticmethod
