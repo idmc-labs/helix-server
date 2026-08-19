@@ -479,6 +479,7 @@ class Query(graphene.ObjectType):
         **get_filtering_args_from_filterset(GiddCountryDisplacementFilter, GiddCountryDisplacementType),
         hazard_types=graphene.List(graphene.NonNull(graphene.ID)),
         violence_types=graphene.List(graphene.NonNull(graphene.ID)),
+        violence_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
         client_id=graphene.String(required=True),
     )
     gidd_public_country_year_displacements = graphene.Field(
@@ -486,6 +487,7 @@ class Query(graphene.ObjectType):
         **get_filtering_args_from_filterset(GiddCountryDisplacementFilter, GiddCountryYearDisplacementType),
         hazard_types=graphene.List(graphene.NonNull(graphene.ID)),
         violence_types=graphene.List(graphene.NonNull(graphene.ID)),
+        violence_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
         client_id=graphene.String(required=True),
     )
 
@@ -988,12 +990,15 @@ class Query(graphene.ObjectType):
 
         hazard_types = kwargs.pop("hazard_types", None)
         violence_types = kwargs.pop("violence_types", None)
+        violence_sub_types = kwargs.pop("violence_sub_types", None)
 
         qs = GiddCountryDisplacementFilter(data=kwargs).qs
 
         conflict_filter = Q(cause=Crisis.CRISIS_TYPE.CONFLICT)
         if violence_types:
             conflict_filter &= Q(violence__in=violence_types)
+        if violence_sub_types:
+            conflict_filter &= Q(violence_sub_type__in=violence_sub_types)
 
         disaster_filter = Q(cause=Crisis.CRISIS_TYPE.DISASTER)
         if hazard_types:
@@ -1035,12 +1040,15 @@ class Query(graphene.ObjectType):
 
         hazard_types = kwargs.pop("hazard_types", None)
         violence_types = kwargs.pop("violence_types", None)
+        violence_sub_types = kwargs.pop("violence_sub_types", None)
 
         qs = GiddCountryDisplacementFilter(data=kwargs).qs
 
         conflict_filter = Q(cause=Crisis.CRISIS_TYPE.CONFLICT)
         if violence_types:
             conflict_filter &= Q(violence__in=violence_types)
+        if violence_sub_types:
+            conflict_filter &= Q(violence_sub_type__in=violence_sub_types)
 
         disaster_filter = Q(cause=Crisis.CRISIS_TYPE.DISASTER)
         if hazard_types:
