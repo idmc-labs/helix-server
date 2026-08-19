@@ -81,8 +81,6 @@ app:
           - "beat"
           - "-l"
           - "INFO"
-          - "--scheduler"
-          - "banjo_utils.celery_health.persistent.HeartbeatPersistentScheduler"
         extraEnv:
           BANJO_CELERY_HEARTBEAT_FILE: /var/run/celery/beat_heartbeat
         volumes:
@@ -92,7 +90,7 @@ app:
         probes:
           enabled: true
           liveness:
-            exec: {command: [banjo-celery-probe, --max-age, "360"]}
+            exec: {command: [banjo-celery-probe, --max-age, "120"]}
             periodSeconds: 60
             timeoutSeconds: 5
             failureThreshold: 3

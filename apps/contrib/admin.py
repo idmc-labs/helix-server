@@ -1,7 +1,16 @@
 from admin_auto_filters.filters import AutocompleteFilterFactory
+from django import forms
 from django.conf import settings
 from django.contrib import admin
 from django.utils.safestring import mark_safe
+from django_celery_beat.admin import PeriodicTaskAdmin
+from django_celery_beat.models import (
+    ClockedSchedule,
+    CrontabSchedule,
+    IntervalSchedule,
+    PeriodicTask,
+    SolarSchedule,
+)
 
 from apps.contrib.models import (
     BulkApiOperation,
@@ -174,3 +183,63 @@ class BulkApiOperationAdmin(ReadOnlyMixin, admin.ModelAdmin):
 admin.site.register(Client, ClientAdmin)
 admin.site.register(ClientTrackInfo, ClientTrackInfoAdmin)
 admin.site.register(ExcelDownload, ExcelDownloadAdmin)
+
+
+# django_celery_beat's own admin, narrowed to the enable/disable switch. Schedules
+# come from `helix.celery.app.conf.beat_schedule` and are rewritten on every beat
+# start, so anything editable here other than `enabled` would be silently reverted.
+# The schedule models are unregistered for the same reason.
+for _model in (ClockedSchedule, CrontabSchedule, IntervalSchedule, SolarSchedule, PeriodicTask):
+    admin.site.unregister(_model)
+
+
+@admin.register(PeriodicTask)
+class HelixPeriodicTaskAdmin(PeriodicTaskAdmin):
+    # PeriodicTaskForm expects an editable `task` field; every field but `enabled`
+    # is read-only here, so a plain ModelForm is used instead.
+    form = forms.ModelForm
+    change_form_template = None
+    date_hierarchy = None
+    list_display = ("name", "task", "enabled", "schedule", "last_run_at", "total_run_count")
+    list_display_links = ("name",)
+    list_editable = ("enabled",)
+    list_filter = ("enabled",)
+    actions = ("enable_tasks", "disable_tasks", "run_tasks")
+    fieldsets = (
+        (None, {"fields": ("name", "task", "enabled", "schedule", "args", "kwargs")}),
+        ("Last run", {"fields": ("last_run_at", "total_run_count")}),
+    )
+    readonly_fields = (
+        "name",
+        "task",
+        "schedule",
+        "args",
+        "kwargs",
+        "last_run_at",
+        "total_run_count",
+    )
+
+    @admin.display(description="Schedule")
+    def schedule(self, obj):
+        if obj.crontab_id:
+            return obj.crontab.human_readable
+        return obj.interval or obj.solar or obj.clocked
+
+    def get_actions(self, request):
+        # The inherited actions declare no `permissions`, so Django offers them to
+        # anyone who can open the changelist. All three of them write to a task or
+        # fire it, so they need the change permission.
+        if not self.has_change_permission(request):
+            return {}
+        return super().get_actions(request)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        # Skips PeriodicTaskAdmin's crontab-picker context, which belongs to the
+        # template this admin drops.
+        return admin.ModelAdmin.changeform_view(self, request, object_id, form_url, extra_context)
