@@ -418,7 +418,17 @@ def _generate_idus_dump_file(api_type):
     raise ValueError(f"Invalid api type: {api_type}")
 
 
+# One dump run rewrites the same ExternalApiDump rows and S3 objects for its api
+# type, so two overlapping runs interleave their writes. Each api type takes its
+# own lock: all three tasks share the `0 */2` slot, and a shared key would starve
+# two of them every cycle. The timeout only has to outlive a run whose worker died
+# -- an hour is far above any observed runtime and well inside the two-hour period,
+# so a lost lock costs at most one cycle.
+IDUS_DUMP_LOCK_TIMEOUT = 60 * 60
+
+
 @celery_app.task
+@redis_lock("generate_idus_dump_file", IDUS_DUMP_LOCK_TIMEOUT)
 def generate_idus_dump_file():
     from apps.entry.models import ExternalApiDump
 
@@ -426,6 +436,7 @@ def generate_idus_dump_file():
 
 
 @celery_app.task
+@redis_lock("generate_idus_all_dump_file", IDUS_DUMP_LOCK_TIMEOUT)
 def generate_idus_all_dump_file():
     from apps.entry.models import ExternalApiDump
 
@@ -433,6 +444,7 @@ def generate_idus_all_dump_file():
 
 
 @celery_app.task
+@redis_lock("generate_idus_all_disaster_dump_file", IDUS_DUMP_LOCK_TIMEOUT)
 def generate_idus_all_disaster_dump_file():
     from apps.entry.models import ExternalApiDump
 
