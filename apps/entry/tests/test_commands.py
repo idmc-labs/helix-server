@@ -172,6 +172,95 @@ class TestUpdateAhhsCommand(HelixTestCase):
         with self.assertRaises(CommandError):
             call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers_and_note")
 
+    def test_dirty_duplicate_active_records_are_all_replaced(self):
+        # A second active record for the same country/year makes the set "dirty"; the
+        # unchanged-skip only trusts a lone active record, so both must be deactivated.
+        HouseholdSizeFactory.create(
+            country=self.country,
+            year=self.YEAR,
+            size=9.0,
+            is_active=True,
+            reference_date=date(self.YEAR, 1, 1),
+            gap_filling_method=HouseholdSize.GAP_FILLING_METHOD.EXACT_YEAR,
+        )
+        csv_path = self._write_csv([self._default_row(ahhs="7")])
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="none")
+
+        active = self._active_hhs_qs()
+        self.assertEqual(active.count(), 1)
+        self.assertEqual(active.get().size, 7.0)
+        # Two previous actives deactivated + one freshly created.
+        self.assertEqual(HouseholdSize.objects.filter(country=self.country, year=self.YEAR).count(), 3)
+
+    def test_zero_ahhs_leaves_figure_untouched(self):
+        # A zero AHHS is a legitimate import (some regions lack permanent residence),
+        # but it must never rewrite figures to zero.
+        csv_path = self._write_csv([self._default_row(ahhs="")])
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers")
+
+        self.assertEqual(self._active_hhs_qs().get().size, 0.0)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.household_size, 5.0)
+        self.assertEqual(self.figure.total_figures, 50)
+
+    def test_figure_with_mismatched_household_size_is_skipped(self):
+        # A figure whose stored household_size diverges from the active AHHS was computed
+        # against a different value, so the command must leave it alone.
+        mismatched = FigureFactory.create(
+            event=self.figure.event,
+            country=self.country,
+            unit=Figure.UNIT.HOUSEHOLD,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            start_date=date(self.YEAR, 6, 1),
+            end_date=date(self.YEAR, 6, 30),
+            reported=10,
+            household_size=4.0,
+            total_figures=40,
+            excerpt_idu="A total of 40 people were displaced.",
+        )
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers")
+
+        mismatched.refresh_from_db()
+        self.assertEqual(mismatched.household_size, 4.0)
+        self.assertEqual(mismatched.total_figures, 40)
+
+    def test_numbers_mode_rewrites_comma_separated_excerpt_value(self):
+        # The excerpt rewrite must handle thousands separators, the reason for the regex hack.
+        self.figure.reported = 200
+        self.figure.household_size = 5.0
+        self.figure.total_figures = 1000
+        self.figure.excerpt_idu = "A total of 1,000 people were displaced."
+        self.figure.save()
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers")
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.total_figures, 1200)
+        self.assertIn("1200", self.figure.excerpt_idu)
+        self.assertNotIn("1,000", self.figure.excerpt_idu)
+
+    def test_note_appends_to_existing_calculation_logic(self):
+        # An existing calculation_logic must survive and the retrospective note be appended.
+        self.figure.calculation_logic = "Existing calculation logic."
+        self.figure.save()
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        call_command(
+            "update_ahhs",
+            csv_path,
+            year=self.YEAR,
+            figure_update_mode="numbers_and_note",
+            retroactive_update_date="2024-03-27",
+        )
+
+        self.figure.refresh_from_db()
+        self.assertIn("Existing calculation logic.", self.figure.calculation_logic)
+        self.assertIn("retrospective update in AHHS", self.figure.calculation_logic)
+        self.assertIn("\n\n", self.figure.calculation_logic)
+
 
 class TestUpdateFigureEventMigrations(HelixGraphQLTestCase):
     def test_update_figure_event_migrations(self):

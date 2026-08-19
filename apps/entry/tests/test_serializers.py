@@ -384,6 +384,21 @@ class TestFigureSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("start_date", serializer.errors)
 
+    def test_same_start_and_end_date_is_allowed(self):
+        # A single-day figure (start_date == end_date) must be accepted.
+        self.data["start_date"] = "2020-10-30"
+        self.data["end_date"] = "2020-10-30"
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
+            },
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertNotIn("start_date", serializer.errors)
+        self.assertNotIn("end_date", serializer.errors)
+
     def test_geo_locations_required_on_create(self):
         self.data.pop("geo_locations")
         serializer = FigureSerializer(
