@@ -2,6 +2,7 @@ import json
 import typing
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import ArrayField
@@ -38,7 +39,6 @@ from utils.db import Array
 
 from .cache import GiddExportCache
 from .models import (
-    DisplacementData,
     GiddDisplacement,
     GiddEventDisplacement,
     GiddFigure,
@@ -1114,14 +1114,14 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     def export(self, request):
         # Track export
         # get_queryset() yields aggregated dicts from GiddDisplacement; materialise them into
-        # (unsaved) DisplacementData instances with rounded figures so the sheet builders — which
-        # use attribute access and the *_rounded fields — stay untouched and produce identical output.
+        # lightweight row objects with rounded figures so the sheet builders — which use attribute
+        # access and the *_rounded fields — stay untouched and produce identical output.
         rows = self.filter_queryset(self.get_queryset()).order_by(
             "-year",
             "iso3",
         )
         qs = [
-            DisplacementData(
+            SimpleNamespace(
                 iso3=row["iso3"],
                 country_name=row["country_name"],
                 year=row["year"],

@@ -11,150 +11,6 @@ from apps.crisis.models import Crisis
 from apps.entry.models import Entry, Figure
 
 
-class Conflict(models.Model):
-    # giddPublicConflicts. Unauthenticated and no client sends `ordering`, so every token is
-    # refused: an empty set is a bound, not an absent one.
-    ORDERING_ALLOWLIST = frozenset(
-        {
-            "country_name",
-            "created_at",
-            "id",
-            "iso3",
-            "new_displacement",
-            "new_displacement_rounded",
-            "total_displacement",
-            "total_displacement_rounded",
-            "year",
-        }
-    )
-
-    country = models.ForeignKey(
-        "country.Country", related_name="country_conflict", on_delete=models.PROTECT, verbose_name=_("Country")
-    )
-    total_displacement = models.BigIntegerField(blank=True, null=True)
-    new_displacement = models.BigIntegerField(blank=True, null=True)
-
-    # Don't use these rounded fields to aggregate, just used to display and sort
-    total_displacement_rounded = models.BigIntegerField(blank=True, null=True)
-    new_displacement_rounded = models.BigIntegerField(blank=True, null=True)
-
-    year = models.IntegerField()
-
-    # Cached/Snapshot values
-    country_name = models.CharField(verbose_name=_("Name"), max_length=256)
-    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
-
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = _("Conflict")
-        verbose_name_plural = _("Conflicts")
-
-    def __str__(self):
-        return str(self.id)
-
-
-class Disaster(models.Model):
-    # giddPublicDisasters. Same unauthenticated route; keys are idmc-website-components'
-    # Gidd/EventsTable sortable columns (including the hand-written eventName column).
-    ORDERING_ALLOWLIST = frozenset(
-        {
-            "country_name",
-            "created_at",
-            "event_codes",
-            "event_name",
-            "hazard_category_name",
-            "hazard_type_name",
-            "id",
-            "new_displacement_rounded",
-            "start_date",
-            "year",
-        }
-    )
-
-    event = models.ForeignKey(
-        "event.Event", verbose_name=_("Event"), related_name="gidd_events", on_delete=models.SET_NULL, null=True, blank=True
-    )
-    event_raw_id = models.IntegerField(null=True, blank=True)
-    year = models.IntegerField()
-    country = models.ForeignKey(
-        "country.Country", related_name="country_disaster", on_delete=models.PROTECT, verbose_name=_("Country")
-    )
-
-    # Dates
-    start_date = models.DateField(blank=True, null=True)
-    start_date_accuracy = models.TextField(blank=True, null=True)
-    end_date = models.DateField(blank=True, null=True)
-    end_date_accuracy = models.TextField(blank=True, null=True)
-
-    hazard_category = models.ForeignKey(
-        "event.DisasterCategory", verbose_name=_("Hazard Category"), related_name="disasters", on_delete=models.PROTECT
-    )
-    hazard_sub_category = models.ForeignKey(
-        "event.DisasterSubCategory",
-        verbose_name=_("Hazard Sub Category"),
-        related_name="disasters",
-        on_delete=models.PROTECT,
-    )
-    hazard_type = models.ForeignKey(
-        "event.DisasterType", verbose_name=_("Hazard Type"), related_name="disasters", on_delete=models.PROTECT
-    )
-    hazard_sub_type = models.ForeignKey(
-        "event.DisasterSubType", verbose_name=_("Hazard Sub Type"), related_name="disasters", on_delete=models.PROTECT
-    )
-
-    new_displacement = models.BigIntegerField(blank=True, null=True)
-    total_displacement = models.BigIntegerField(blank=True, null=True)
-
-    # Don't use these rounded fields to aggregate, just used to display and sort
-    total_displacement_rounded = models.BigIntegerField(blank=True, null=True)
-    new_displacement_rounded = models.BigIntegerField(blank=True, null=True)
-
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    # Cached/Snapshot values
-    event_name = models.CharField(verbose_name=_("Event name"), max_length=256)
-    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
-    country_name = models.CharField(verbose_name=_("Name"), max_length=256)
-    hazard_category_name = models.CharField(max_length=256, blank=True)
-    hazard_sub_category_name = models.CharField(max_length=256, blank=True)
-    hazard_sub_type_name = models.CharField(max_length=256, blank=True)
-    hazard_type_name = models.CharField(max_length=256, blank=True)
-
-    displacement_occurred = ArrayField(
-        base_field=enum.EnumField(
-            Figure.DISPLACEMENT_OCCURRED,
-            verbose_name=_("Displacement occurred"),
-        ),
-        default=list,
-    )
-
-    # Deprecated
-    glide_numbers = ArrayField(
-        models.CharField(verbose_name=_("Event Codes"), max_length=256),
-        default=list,
-    )
-    event_codes = ArrayField(
-        models.CharField(verbose_name=_("Event Codes"), max_length=256),
-        default=list,
-    )
-    event_codes_type = ArrayField(
-        models.CharField(verbose_name=_("Event Code Types"), max_length=256),
-        default=list,
-    )
-
-    class Meta:
-        verbose_name = _("Disaster")
-        verbose_name_plural = _("Disasters")
-
-    def __str__(self):
-        return str(self.id)
-
-
 class StatusLog(models.Model):
     # giddLogs
     ORDERING_ALLOWLIST = frozenset(
@@ -195,68 +51,6 @@ class StatusLog(models.Model):
         if last_log:
             _format = format or "%B %d, %Y"
             return last_log.completed_at.strftime(_format)
-
-
-class ConflictLegacy(models.Model):
-    total_displacement = models.BigIntegerField(blank=True, null=True)
-    new_displacement = models.BigIntegerField(blank=True, null=True)
-    year = models.IntegerField()
-    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
-
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = _("Legacy conflict")
-        verbose_name_plural = _("Legacy conflicts")
-
-    def __str__(self):
-        return str(self.id)
-
-
-class DisasterLegacy(models.Model):
-    year = models.IntegerField()
-    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
-    event_name = models.CharField(verbose_name=_("Event name"), max_length=256)
-
-    # Dates
-    start_date = models.DateField(blank=True, null=True)
-    start_date_accuracy = models.TextField(blank=True, null=True)
-    end_date = models.DateField(blank=True, null=True)
-    end_date_accuracy = models.TextField(blank=True, null=True)
-
-    hazard_category = models.ForeignKey(
-        "event.DisasterCategory",
-        verbose_name=_("Hazard Category"),
-        related_name="legacy_disasters",
-        on_delete=models.PROTECT,
-    )
-    hazard_sub_category = models.ForeignKey(
-        "event.DisasterSubCategory",
-        verbose_name=_("Hazard Sub Category"),
-        related_name="legacy_disasters",
-        on_delete=models.PROTECT,
-    )
-    hazard_type = models.ForeignKey(
-        "event.DisasterType", verbose_name=_("Hazard Type"), related_name="legacy_disasters", on_delete=models.PROTECT
-    )
-    hazard_sub_type = models.ForeignKey(
-        "event.DisasterSubType", verbose_name=_("Hazard Sub Type"), related_name="legacy_disasters", on_delete=models.PROTECT
-    )
-
-    new_displacement = models.BigIntegerField(blank=True, null=True)
-
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = _("Legacy disaster")
-        verbose_name_plural = _("Legacy disasters")
-
-    def __str__(self):
-        return str(self.id)
 
 
 class ReleaseMetadata(models.Model):
@@ -310,46 +104,6 @@ class PublicFigureAnalysis(models.Model):
         "report.Report", verbose_name=_("Report"), null=True, related_name="+", on_delete=models.SET_NULL
     )
     report_raw_id = models.IntegerField()
-
-
-class DisplacementData(models.Model):
-    # giddPublicDisplacements. Unauthenticated (GRAPHENE_NODES_WHITELIST), so the bound comes
-    # from the one client we can read: idmc-website-components' Gidd/DataTable sortable columns.
-    ORDERING_ALLOWLIST = frozenset(
-        {
-            "conflict_new_displacement_rounded",
-            "conflict_total_displacement_rounded",
-            "country_name",
-            "disaster_new_displacement_rounded",
-            "disaster_total_displacement_rounded",
-            "id",
-            "year",
-        }
-    )
-
-    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
-    country_name = models.CharField(verbose_name=_("Country name"), max_length=256)
-    country = models.ForeignKey(
-        "country.Country", related_name="displacements", on_delete=models.PROTECT, verbose_name=_("Country")
-    )
-
-    conflict_total_displacement = models.BigIntegerField(null=True, verbose_name=_("Conflict total idps"))
-    conflict_new_displacement = models.BigIntegerField(null=True, verbose_name=_("Conflict total nd"))
-
-    disaster_total_displacement = models.BigIntegerField(null=True, verbose_name=_("Disaster total nds"))
-    disaster_new_displacement = models.BigIntegerField(null=True, verbose_name=_("Disaster total nd"))
-
-    year = models.IntegerField(verbose_name=_("Year"))
-
-    # Don't use these rounded fields to aggregate, just used to display and sort
-    conflict_total_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Conflict total idps"))
-    conflict_new_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Conflict total nd"))
-
-    disaster_total_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Disaster total nds"))
-    disaster_new_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Disaster total nd"))
-
-    def __str__(self):
-        return self.iso3
 
 
 class IdpsSaddEstimate(models.Model):
@@ -744,6 +498,20 @@ class GiddDisplacement(models.Model):
     Disaster rows: hazard_type + hazard_sub_type set; violence fields null.
     """
 
+    # giddPublicDisplacements (row-level list). Unauthenticated; bounds the sortable columns.
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "country_name",
+            "id",
+            "iso3",
+            "new_displacement",
+            "new_displacement_rounded",
+            "total_displacement",
+            "total_displacement_rounded",
+            "year",
+        }
+    )
+
     country = models.ForeignKey("country.Country", related_name="gidd_displacements", on_delete=models.PROTECT)
     iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
     country_name = models.CharField(verbose_name=_("Country name"), max_length=256)
@@ -797,6 +565,23 @@ class GiddEventDisplacement(models.Model):
     Conflict rows: violence + violence_sub_type set; hazard fields null.
     Disaster rows: hazard_type + hazard_sub_type set; violence fields null.
     """
+
+    # giddPublicEvents (replaces the old giddPublicDisasters). Unauthenticated; the frontend
+    # Gidd/EventsTable sortable columns (mirrors the retired Disaster.ORDERING_ALLOWLIST).
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "country_name",
+            "created_at",
+            "event_codes",
+            "event_name",
+            "hazard_category_name",
+            "hazard_type_name",
+            "id",
+            "new_displacement_rounded",
+            "start_date",
+            "year",
+        }
+    )
 
     event = models.ForeignKey("event.Event", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
     event_raw_id = models.IntegerField(null=True, blank=True)

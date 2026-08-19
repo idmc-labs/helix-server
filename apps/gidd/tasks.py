@@ -27,9 +27,6 @@ from utils.common import round_and_remove_zero
 from utils.db import Array
 
 from .models import (
-    Conflict,
-    Disaster,
-    DisplacementData,
     GiddDisplacement,
     GiddEvent,
     GiddEventDisplacement,
@@ -50,177 +47,6 @@ def get_gidd_years():
         .distinct("gidd_report_year")
         .values_list("gidd_report_year", flat=True)
     )
-
-
-def annotate_conflict(qs, year):
-    return (
-        qs.annotate(
-            year=Value(year, output_field=IntegerField()),
-        )
-        .values("year", "country__idmc_short_name", "country__iso3")
-        .annotate(
-            total_displacement=Sum(
-                Case(
-                    When(category=Figure.FIGURE_CATEGORY_TYPES.IDPS, then=F("total_figures")),
-                    output_field=IntegerField(),
-                )
-            ),
-            new_displacement=Sum(
-                Case(
-                    When(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT, then=F("total_figures")),
-                    output_field=IntegerField(),
-                )
-            ),
-            country=F("country"),
-        )
-        .order_by("year")
-    )
-
-
-def update_conflict_and_disaster_data():
-    figure_queryset = Figure.objects.filter(role=Figure.ROLE.RECOMMENDED)
-    for year in get_gidd_years():
-        # FIXME: Check if this should be
-        # - Figure.filtered_nd_figures_for_listing
-        # - Figure.filtered_idp_figures_for_listing
-        # NOTE: No we do not need to use the listing method as we are aggregating
-        nd_figure_qs = Figure.filtered_nd_figures(
-            qs=figure_queryset,
-            start_date=datetime.datetime(year=year, month=1, day=1),
-            end_date=datetime.datetime(year=year, month=12, day=31),
-        )
-        stock_figure_qs = Figure.filtered_idp_figures(
-            qs=figure_queryset,
-            start_date=datetime.datetime(year=year, month=1, day=1),
-            end_date=datetime.datetime(year=year, month=12, day=31),
-        )
-        conflict_nd_figure_qs = nd_figure_qs.filter(event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
-        conflict_stock_figure_qs = stock_figure_qs.filter(event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
-        conflict_figure_qs = conflict_nd_figure_qs | conflict_stock_figure_qs
-        qs = annotate_conflict(Figure.objects.filter(id__in=conflict_figure_qs.values("id")), year)
-
-        # Create new conflict figures
-        Conflict.objects.bulk_create(
-            [
-                Conflict(
-                    country_id=figure["country"],
-                    total_displacement=figure["total_displacement"],
-                    new_displacement=figure["new_displacement"],
-                    total_displacement_rounded=round_and_remove_zero(figure["total_displacement"]),
-                    new_displacement_rounded=round_and_remove_zero(figure["new_displacement"]),
-                    year=figure["year"],
-                    iso3=figure["country__iso3"],
-                    country_name=figure["country__idmc_short_name"],
-                )
-                for figure in qs
-            ]
-        )
-
-        disaster_nd_figure_qs = nd_figure_qs.filter(event__event_type=Crisis.CRISIS_TYPE.DISASTER)
-        disaster_stock_figure_qs = stock_figure_qs.filter(event__event_type=Crisis.CRISIS_TYPE.DISASTER)
-        disaster_figures = disaster_nd_figure_qs | disaster_stock_figure_qs
-        disaster_qs = Figure.objects.filter(id__in=disaster_figures.values("id"))
-
-        # Sync disaster data
-        disasters = (
-            disaster_qs.values(
-                "event__id",
-                "event__name",
-                "event__disaster_category",
-                "event__disaster_sub_category",
-                "event__disaster_type",
-                "event__disaster_sub_type",
-                "event__disaster_category__name",
-                "event__disaster_sub_category__name",
-                "event__disaster_type__name",
-                "event__disaster_sub_type__name",
-                "event__start_date",
-                "event__end_date",
-                "event__start_date_accuracy",
-                "event__end_date_accuracy",
-                "event__glide_numbers",
-                "country",
-                "country__iso3",
-                "country__idmc_short_name",
-            )
-            .order_by()
-            .annotate(
-                new_displacement=Sum(
-                    Case(
-                        When(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT, then=F("total_figures")),
-                        output_field=IntegerField(),
-                    )
-                ),
-                total_displacement=Sum(
-                    Case(
-                        When(category=Figure.FIGURE_CATEGORY_TYPES.IDPS, then=F("total_figures")),
-                        output_field=IntegerField(),
-                    )
-                ),
-                year=Value(year, output_field=IntegerField()),
-                event_codes=Coalesce(
-                    Subquery(
-                        EventCode.objects.filter(event_id=OuterRef("event"), country_id=F("country"))
-                        .order_by()
-                        .values("event")
-                        .annotate(
-                            code=ArrayAgg(
-                                Array(
-                                    F("event_code"),
-                                    Cast(models.F("event_code_type"), models.CharField()),
-                                    F("country__iso3"),
-                                    output_field=ArrayField(models.CharField()),
-                                ),
-                                distinct=True,
-                            ),
-                        )
-                        .values("code")[:1],
-                    ),
-                    [],
-                ),
-                _displacement_occurred=ArrayAgg(
-                    F("displacement_occurred"),
-                    distinct=True,
-                    filter=Q(displacement_occurred__isnull=False),
-                ),
-            )
-        )
-
-        Disaster.objects.bulk_create(
-            [
-                Disaster(
-                    event_id=item["event__id"],
-                    event_raw_id=item["event__id"],
-                    event_name=item["event__name"],
-                    year=item["year"],
-                    start_date=item["event__start_date"],
-                    start_date_accuracy=item["event__start_date_accuracy"],
-                    end_date=item["event__end_date"],
-                    end_date_accuracy=item["event__end_date_accuracy"],
-                    hazard_category_id=item["event__disaster_category"],
-                    hazard_sub_category_id=item["event__disaster_sub_category"],
-                    hazard_type_id=item["event__disaster_type"],
-                    hazard_sub_type_id=item["event__disaster_sub_type"],
-                    hazard_category_name=item["event__disaster_category__name"],
-                    hazard_sub_category_name=item["event__disaster_sub_category__name"],
-                    hazard_type_name=item["event__disaster_type__name"],
-                    hazard_sub_type_name=item["event__disaster_sub_type__name"],
-                    glide_numbers=item["event__glide_numbers"] or list(),
-                    new_displacement=item["new_displacement"],
-                    total_displacement=item["total_displacement"],
-                    new_displacement_rounded=round_and_remove_zero(item["new_displacement"]),
-                    total_displacement_rounded=round_and_remove_zero(item["total_displacement"]),
-                    iso3=item["country__iso3"],
-                    country_id=item["country"],
-                    country_name=item["country__idmc_short_name"],
-                    displacement_occurred=item["_displacement_occurred"] or [],
-                    event_codes=event_code["code"],
-                    event_codes_type=event_code["code_type"],
-                )
-                for item in disasters
-                for event_code in [extract_event_code_data_list(item["event_codes"])]
-            ]
-        )
 
 
 def update_public_figure_analysis():
@@ -294,86 +120,6 @@ def update_public_figure_analysis():
 
     # Bulk create public analysis
     PublicFigureAnalysis.objects.bulk_create(data)
-
-
-def update_displacement_data():
-    start_year = min(Disaster.objects.order_by("year").first().year, Conflict.objects.order_by("year").first().year)
-    end_year = max(Disaster.objects.order_by("-year").first().year, Conflict.objects.order_by("-year").first().year)
-
-    for year in range(start_year, end_year + 1):
-        displacement_data = (
-            Country.objects.annotate(
-                conflict_total_displacement=Subquery(
-                    Conflict.objects.filter(
-                        year=year,
-                        country_id=OuterRef("pk"),
-                    ).values("total_displacement")[:1]
-                ),
-                conflict_new_displacement=Subquery(
-                    Conflict.objects.filter(
-                        year=year,
-                        country_id=OuterRef("pk"),
-                    ).values("new_displacement")[:1]
-                ),
-                disaster_total_displacement=Subquery(
-                    Disaster.objects.filter(
-                        year=year,
-                        country_id=OuterRef("pk"),
-                    )
-                    .values("iso3")
-                    .order_by()
-                    .annotate(disaster_total_displacement=Sum("total_displacement"))
-                    .values("disaster_total_displacement")[:1]
-                ),
-                disaster_new_displacement=Subquery(
-                    Disaster.objects.filter(
-                        year=year,
-                        country_id=OuterRef("pk"),
-                    )
-                    .values("iso3")
-                    .order_by()
-                    .annotate(disaster_new_displacement=Sum("new_displacement"))
-                    .values("disaster_new_displacement")[:1]
-                ),
-                year=Value(year, output_field=IntegerField()),
-            )
-            .filter(
-                Q(conflict_new_displacement__isnull=False)
-                | Q(conflict_total_displacement__isnull=False)
-                | Q(disaster_new_displacement__isnull=False)
-                | Q(disaster_total_displacement__isnull=False)
-            )
-            .values(
-                "iso3",
-                "idmc_short_name",
-                "id",
-                "conflict_total_displacement",
-                "conflict_new_displacement",
-                "disaster_new_displacement",
-                "disaster_total_displacement",
-                "year",
-            )
-        )
-
-        DisplacementData.objects.bulk_create(
-            [
-                DisplacementData(
-                    iso3=item["iso3"],
-                    country_name=item["idmc_short_name"],
-                    country_id=item["id"],
-                    conflict_total_displacement=item["conflict_total_displacement"],
-                    conflict_new_displacement=item["conflict_new_displacement"],
-                    disaster_new_displacement=item["disaster_new_displacement"],
-                    disaster_total_displacement=item["disaster_total_displacement"],
-                    conflict_total_displacement_rounded=round_and_remove_zero(item["conflict_total_displacement"]),
-                    conflict_new_displacement_rounded=round_and_remove_zero(item["conflict_new_displacement"]),
-                    disaster_new_displacement_rounded=round_and_remove_zero(item["disaster_new_displacement"]),
-                    disaster_total_displacement_rounded=round_and_remove_zero(item["disaster_total_displacement"]),
-                    year=item["year"],
-                )
-                for item in displacement_data
-            ]
-        )
 
 
 def update_idps_sadd_estimates_country_names():
@@ -961,13 +707,8 @@ def update_gidd_data(log_id):
     try:
         with transaction.atomic():
             # DELETE
-            # -- Delete all the conflicts TODO: Find way to update records
-            Conflict.objects.all().delete()
-            # -- Delete disasters
-            Disaster.objects.all().delete()
             # -- Delete all the public figure analysis objects
             PublicFigureAnalysis.objects.all().delete()
-            DisplacementData.objects.all().delete()
             # -- Delete all the GiddFigure objects
             GiddFigure.objects.all().delete()
             # -- Delete all the GiddEvent objects
@@ -977,9 +718,7 @@ def update_gidd_data(log_id):
             GiddDisplacement.objects.all().delete()
 
             # Create new data for GIDD
-            update_conflict_and_disaster_data()
             update_public_figure_analysis()
-            update_displacement_data()
             update_idps_sadd_estimates_country_names()
             update_gidd_event_and_gidd_figure_data()
             update_new_gidd_tables()

@@ -1733,22 +1733,15 @@ class TestCoreData(HelixGraphQLTestCase):
 
         query = """
             query DisplacementData($clientId: String!){
-                giddPublicDisplacements(
-                    filters: {},
+                giddPublicCountryYearDisplacements(
                     clientId: $clientId,
                 ){
-                    results {
-                        conflictNewDisplacement
-                        conflictTotalDisplacement
-                        disasterNewDisplacement
-                        disasterTotalDisplacement
-                        id
-                        iso3
-                        year
-                    }
-                    totalCount
-                    page
-                    pageSize
+                    conflictNewDisplacement
+                    conflictTotalDisplacement
+                    disasterNewDisplacement
+                    disasterTotalDisplacement
+                    iso3
+                    year
                 }
                 giddPublicConflictStatistics(
                     clientId: $clientId,
@@ -1771,7 +1764,7 @@ class TestCoreData(HelixGraphQLTestCase):
             }
         """
         response = self.query_json(query, variables={"clientId": self.gidd_client.code})
-        r_data = response["data"]["giddPublicDisplacements"]["results"]
+        r_data = response["data"]["giddPublicCountryYearDisplacements"]
         system_data = [
             {
                 "iso3": i["iso3"],
@@ -1783,7 +1776,10 @@ class TestCoreData(HelixGraphQLTestCase):
             }
             for i in r_data
         ]
-        assert displacement_data == system_data
+        # giddPublicCountryYearDisplacements is a non-paginated list ordered by (iso3, year);
+        # the expected rows are built year-major, so compare order-independently.
+        _key = lambda d: (d["iso3"], d["year"])  # noqa: E731
+        assert sorted(displacement_data, key=_key) == sorted(system_data, key=_key)
 
         conflict_stats_r_data = response["data"]["giddPublicConflictStatistics"]
         disaster_stats_r_data = response["data"]["giddPublicDisasterStatistics"]

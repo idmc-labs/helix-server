@@ -25,7 +25,9 @@ from utils.graphene.ordering import get_ordering_allowlist
 from utils.graphene.pagination import GatedPageGraphqlPagination, nulls_last_order_queryset
 
 # Measured, not guessed: see test_no_list_field_uses_an_unguarded_pagination_class.
-SEEN_FLOOR = 71
+# Dropped by one when the gidd Conflict/Disaster models (and their Country reverse-relation list
+# fields) were removed.
+SEEN_FLOOR = 70
 DYNAMIC_FLOOR = 6
 
 EXPECTED = {
@@ -300,9 +302,8 @@ EXPECTED = {
         "id",
         "modified_at",
     ],
-    "gidd.Conflict": [
+    "gidd.GiddDisplacement": [
         "country_name",
-        "created_at",
         "id",
         "iso3",
         "new_displacement",
@@ -311,7 +312,7 @@ EXPECTED = {
         "total_displacement_rounded",
         "year",
     ],
-    "gidd.Disaster": [
+    "gidd.GiddEventDisplacement": [
         "country_name",
         "created_at",
         "event_codes",
@@ -321,15 +322,6 @@ EXPECTED = {
         "id",
         "new_displacement_rounded",
         "start_date",
-        "year",
-    ],
-    "gidd.DisplacementData": [
-        "conflict_new_displacement_rounded",
-        "conflict_total_displacement_rounded",
-        "country_name",
-        "disaster_new_displacement_rounded",
-        "disaster_total_displacement_rounded",
-        "id",
         "year",
     ],
     "gidd.PublicFigureAnalysis": [

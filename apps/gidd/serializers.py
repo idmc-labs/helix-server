@@ -9,9 +9,8 @@ from apps.entry.models import Figure
 from utils.common import round_and_remove_zero
 
 from .models import (
-    Conflict,
-    Disaster,
-    DisplacementData,
+    GiddDisplacement,
+    GiddEventDisplacement,
     GiddFigure,
     IdpsSaddEstimate,
     PublicFigureAnalysis,
@@ -79,7 +78,9 @@ class ConflictSerializer(serializers.ModelSerializer):
         return round_and_remove_zero(obj["total_displacement"])
 
     class Meta:
-        model = Conflict
+        # Served from GiddDisplacement (aggregated to country x year); model is used only for
+        # DRF/spectacular field/schema generation.
+        model = GiddDisplacement
         fields = (
             "iso3",
             "country_name",
@@ -89,7 +90,6 @@ class ConflictSerializer(serializers.ModelSerializer):
             "total_displacement_rounded",
             "total_displacement",
         )
-        lookup_field = "id"
 
 
 class DisasterSerializer(serializers.ModelSerializer):
@@ -154,7 +154,8 @@ class DisasterSerializer(serializers.ModelSerializer):
         return extract_event_code_data_list(obj._all_event_codes)["code_type"]
 
     class Meta:
-        model = Disaster
+        # Served from GiddEventDisplacement (cause=DISASTER); model used only for schema generation.
+        model = GiddEventDisplacement
         fields = (
             "iso3",
             "country_name",
@@ -182,7 +183,9 @@ class DisasterSerializer(serializers.ModelSerializer):
         lookup_field = "id"
 
 
-class DisplacementDataSerializer(serializers.ModelSerializer):
+class DisplacementDataSerializer(serializers.Serializer):
+    # Served from GiddDisplacement aggregated to country x year (see DisplacementDataViewSet).
+    # A plain Serializer — every field is declared explicitly, so no backing model is needed.
     iso3 = serializers.CharField(
         help_text="Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area."
     )
@@ -253,22 +256,6 @@ class DisplacementDataSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.INT)
     def get_disaster_total_displacement_rounded(self, obj):
         return round_and_remove_zero(obj["disaster_total_displacement"])
-
-    class Meta:
-        model = DisplacementData
-        fields = (
-            "iso3",
-            "country_name",
-            "year",
-            "conflict_new_displacement",
-            "conflict_new_displacement_rounded",
-            "conflict_total_displacement",
-            "conflict_total_displacement_rounded",
-            "disaster_new_displacement",
-            "disaster_new_displacement_rounded",
-            "disaster_total_displacement",
-            "disaster_total_displacement_rounded",
-        )
 
 
 class PublicFigureAnalysisSerializer(serializers.ModelSerializer):

@@ -21,7 +21,6 @@ from utils.graphene.types import CustomDjangoListObjectType
 from .enums import GiddStatusLogEnum
 from .filters import (
     ConflictStatisticsFilter,
-    DisasterFilter,
     DisasterStatisticsFilter,
     GiddCountryDisplacementFilter,
     GiddDisplacementFilter,
@@ -838,29 +837,27 @@ class Query(graphene.ObjectType):
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_EVENT_GRAPHQL)
 
         event_id = kwargs["event_id"]
-        disaster_qs = DisasterFilter(data=kwargs).qs.filter(event_raw_id=event_id)
+        # Sourced from GiddEventDisplacement across ALL causes (conflict + disaster), not just
+        # disasters. One event spans multiple country rows; aggregate over all of them.
+        event_qs = GiddEventDisplacementFilter(data=kwargs).qs.filter(event_raw_id=event_id)
 
-        if not disaster_qs.exists():
+        if not event_qs.exists():
             return None
 
-        # NOTE:- There is always one object after group by event_name attrs
-        # so first objects is taken directly from queryset instead of iterating
-        event_data = (
-            disaster_qs.values(
-                "event_name",
-                "start_date",
-                "end_date",
-                "event_codes",
-                "event_codes_type",
-            )
-            .order_by()
-            .annotate(
-                total_new_displacement=models.Sum("new_displacement"),
-            )[0]
-        )
+        base = event_qs.values("event_name", "start_date", "end_date").first()
+        total_new_displacement = event_qs.aggregate(total=models.Sum("new_displacement"))["total"]
+
+        # event_codes are country-scoped on GiddEventDisplacement; union them to an event-level set.
+        event_codes, event_codes_type, seen = [], [], set()
+        for codes, code_types in event_qs.values_list("event_codes", "event_codes_type"):
+            for code, code_type in zip(codes or [], code_types or []):
+                if (code, code_type) not in seen:
+                    seen.add((code, code_type))
+                    event_codes.append(code)
+                    event_codes_type.append(code_type)
 
         affected_countries_qs = (
-            disaster_qs.values(
+            event_qs.values(
                 "country_name",
                 "iso3",
             )
@@ -870,17 +867,19 @@ class Query(graphene.ObjectType):
             )
         )
 
-        hazard_types_qs = disaster_qs.values("hazard_type_id", "hazard_type__name").distinct(
-            "hazard_type_id", "hazard_type__name"
+        hazard_types_qs = (
+            event_qs.filter(hazard_type__isnull=False)
+            .values("hazard_type_id", "hazard_type__name")
+            .distinct("hazard_type_id", "hazard_type__name")
         )
         return GiddEventType(
-            event_name=event_data.get("event_name"),
-            new_displacement_rounded=round_and_remove_zero(event_data.get("total_new_displacement")),
-            new_displacement=event_data.get("total_new_displacement"),
-            start_date=event_data.get("start_date"),
-            end_date=event_data.get("end_date"),
-            event_codes=event_data.get("event_codes"),
-            event_codes_type=event_data.get("event_codes_type"),
+            event_name=base.get("event_name"),
+            new_displacement_rounded=round_and_remove_zero(total_new_displacement),
+            new_displacement=total_new_displacement,
+            start_date=base.get("start_date"),
+            end_date=base.get("end_date"),
+            event_codes=event_codes,
+            event_codes_type=event_codes_type,
             affected_countries=[
                 GiddEventAffectedCountryType(
                     iso3=country_data["iso3"],
