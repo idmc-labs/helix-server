@@ -44,47 +44,89 @@ class TestCalculateGapFillingMethod(SimpleTestCase):
 
 class TestRewriteExcerptIdu(SimpleTestCase):
     def test_plain_digits_are_replaced(self):
+        rewrite = rewrite_excerpt_idu("a total of 1200 people were displaced", 1200, 1500)
+        self.assertEqual(rewrite.text, "a total of 1500 people were displaced")
+        self.assertEqual(rewrite.substitutions, 1)
+        self.assertEqual(rewrite.ambiguous_matches, 0)
+
+    def test_comma_separated_value_keeps_its_grouping(self):
+        self.assertEqual(rewrite_excerpt_idu("around 1,200 people", 1200, 1500).text, "around 1,500 people")
+
+    def test_ungrouped_value_stays_ungrouped(self):
+        self.assertEqual(rewrite_excerpt_idu("around 1200 people", 1200, 1500).text, "around 1500 people")
+
+    def test_grouping_is_applied_per_occurrence(self):
         self.assertEqual(
-            rewrite_excerpt_idu("a total of 1200 people were displaced", 1200, 1500),
-            "a total of 1500 people were displaced",
+            rewrite_excerpt_idu("2,051 people; 2051 people", 2051, 1743).text,
+            "1,743 people; 1743 people",
         )
 
-    def test_comma_separated_value_is_replaced(self):
-        self.assertEqual(
-            rewrite_excerpt_idu("around 1,200 people", 1200, 1500),
-            "around 1500 people",
-        )
+    def test_grouping_drops_out_when_the_new_total_is_shorter(self):
+        self.assertEqual(rewrite_excerpt_idu("1,010 people", 1010, 964).text, "964 people")
 
     def test_absent_total_leaves_excerpt_untouched(self):
         excerpt = "2 houses were destroyed"
-        self.assertEqual(rewrite_excerpt_idu(excerpt, 7, 5), excerpt)
+        rewrite = rewrite_excerpt_idu(excerpt, 7, 5)
+        self.assertEqual(rewrite.text, excerpt)
+        self.assertEqual(rewrite.substitutions, 0)
+        self.assertEqual(rewrite.ambiguous_matches, 0)
 
     def test_word_boundary_prevents_matching_inside_a_longer_number(self):
+        self.assertEqual(rewrite_excerpt_idu("50 of 1500 households", 50, 60).text, "60 of 1500 households")
+
+    def test_every_person_total_occurrence_is_replaced(self):
         self.assertEqual(
-            rewrite_excerpt_idu("50 of 1500 households", 50, 60),
-            "60 of 1500 households",
+            rewrite_excerpt_idu("120 people displaced; 120 people returned", 120, 90).text,
+            "90 people displaced; 90 people returned",
         )
 
-    def test_every_occurrence_is_replaced(self):
-        self.assertEqual(
-            rewrite_excerpt_idu("120 displaced; 120 returned", 120, 90),
-            "90 displaced; 90 returned",
-        )
+    def test_a_day_of_month_is_not_substituted(self):
+        excerpt = "on 21 July 2025, a total of 20 people were displaced"
+        rewrite = rewrite_excerpt_idu(excerpt, 21, 20)
+        self.assertEqual(rewrite.text, excerpt)
+        self.assertEqual(rewrite.substitutions, 0)
+        self.assertEqual(rewrite.ambiguous_matches, 1)
 
-    def test_replacement_drops_the_thousands_separator(self):
-        # Current behaviour: the replacement is the bare integer, so prose formatting is lost.
-        self.assertEqual(
-            rewrite_excerpt_idu("around 2,051 people", 2051, 1743),
-            "around 1743 people",
-        )
+    def test_the_person_total_is_substituted_while_the_date_is_left_alone(self):
+        rewrite = rewrite_excerpt_idu("on 31 March 2025, a total of 31 people", 31, 30)
+        self.assertEqual(rewrite.text, "on 31 March 2025, a total of 30 people")
+        self.assertEqual(rewrite.substitutions, 1)
+        self.assertEqual(rewrite.ambiguous_matches, 1)
 
-    def test_a_total_that_matches_a_day_of_month_rewrites_the_date(self):
-        # Current behaviour: the pattern has no notion of context, so a total in 1-31 collides
-        # with a calendar day. Observed on 22 of 786 real rewrites in the 2026-08 diagnostic.
-        self.assertEqual(
-            rewrite_excerpt_idu("on 21 July 2025, a total of 21 people", 21, 20),
-            "on 20 July 2025, a total of 20 people",
-        )
+    def test_a_date_written_month_first_is_not_substituted(self):
+        excerpt = "displaced on March 14, 2025"
+        self.assertEqual(rewrite_excerpt_idu(excerpt, 14, 13).text, excerpt)
+
+    def test_a_glued_ordinal_day_is_never_reached(self):
+        # The trailing word boundary cannot match "8th" at all, so the guard never sees it.
+        # Out of scope on purpose: such a figure still reaches the verification list, under the
+        # "states neither figure" reason rather than as an ambiguous match.
+        excerpt = "displaced on the 8th of June"
+        rewrite = rewrite_excerpt_idu(excerpt, 8, 6)
+        self.assertEqual(rewrite.text, excerpt)
+        self.assertEqual(rewrite.substitutions, 0)
+        self.assertEqual(rewrite.ambiguous_matches, 0)
+
+    def test_a_spaced_ordinal_day_is_refused(self):
+        excerpt = "displaced on the 8 th of June"
+        rewrite = rewrite_excerpt_idu(excerpt, 8, 6)
+        self.assertEqual(rewrite.text, excerpt)
+        self.assertEqual(rewrite.substitutions, 0)
+        self.assertEqual(rewrite.ambiguous_matches, 1)
+
+    def test_a_household_count_is_not_substituted(self):
+        excerpt = "500 houses were destroyed"
+        rewrite = rewrite_excerpt_idu(excerpt, 500, 400)
+        self.assertEqual(rewrite.text, excerpt)
+        self.assertEqual(rewrite.ambiguous_matches, 1)
+
+    def test_a_household_noun_behind_adjectives_is_not_substituted(self):
+        excerpt = "500 newly destroyed houses"
+        self.assertEqual(rewrite_excerpt_idu(excerpt, 500, 400).text, excerpt)
+
+    def test_a_prefix_of_a_longer_grouped_number_is_not_substituted(self):
+        excerpt = "a total of 1,234,567 people"
+        self.assertEqual(rewrite_excerpt_idu(excerpt, 1234, 999).text, excerpt)
 
 
 class TestUpdateAhhsCommand(HelixTestCase):
@@ -272,7 +314,7 @@ class TestUpdateAhhsCommand(HelixTestCase):
         self.assertEqual(mismatched.total_figures, 40)
 
     def test_numbers_mode_rewrites_comma_separated_excerpt_value(self):
-        # The excerpt rewrite must handle thousands separators, the reason for the regex hack.
+        # The excerpt rewrite matches a value written with thousands separators and keeps them.
         self.figure.reported = 200
         self.figure.household_size = 5.0
         self.figure.total_figures = 1000
@@ -284,8 +326,7 @@ class TestUpdateAhhsCommand(HelixTestCase):
 
         self.figure.refresh_from_db()
         self.assertEqual(self.figure.total_figures, 1200)
-        self.assertIn("1200", self.figure.excerpt_idu)
-        self.assertNotIn("1,000", self.figure.excerpt_idu)
+        self.assertEqual(self.figure.excerpt_idu, "A total of 1,200 people were displaced.")
 
     def test_note_appends_to_existing_calculation_logic(self):
         # An existing calculation_logic must survive and the retrospective note be appended.

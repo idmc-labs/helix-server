@@ -82,12 +82,58 @@ def total_figures_pattern(total: int) -> typing.Pattern:
     return re.compile("\\b" + ",?".join(str(total)) + "\\b")
 
 
-def rewrite_excerpt_idu(excerpt: str, old_total: int, new_total: int) -> str:
+# An excerpt states two different quantities: the person total (derived from AHHS, and the only one
+# worth substituting) and the household count (`reported`, which AHHS does not change). A bare
+# numeric match can also land on a calendar day or inside a longer number, so matches are only
+# substituted when none of these contexts apply.
+MONTH_NAME = (
+    r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?"
+    r"|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+)
+HOUSEHOLD_NOUN = r"(?:houses?|households?|homes?|famil(?:y|ies)|propert(?:y|ies)|dwellings?|shelters?)"
+
+_DATE_AFTER = re.compile(r"\s*(?:" + MONTH_NAME + r"\b|(?:st|nd|rd|th)\b|[/-]\s*\d)", re.IGNORECASE)
+_DATE_BEFORE = re.compile(MONTH_NAME + r"\s*$|[/-]\s*$", re.IGNORECASE)
+# The noun may trail an adjective or two ("1,200 newly destroyed houses"), but not another number,
+# which would belong to a different quantity.
+_HOUSEHOLD_AFTER = re.compile(r"\s*(?:[^\W\d_]+\s+){0,2}" + HOUSEHOLD_NOUN + r"\b", re.IGNORECASE)
+_NUMBER_AFTER = re.compile(r"\s*[,.]\d")
+_NUMBER_BEFORE = re.compile(r"\d[,.]\s*$")
+
+
+class ExcerptRewrite(typing.NamedTuple):
+    text: str
+    substitutions: int
+    #: Matches left alone because they read as a date, a household count, or part of a longer number.
+    ambiguous_matches: int
+
+
+def _is_person_total(excerpt: str, match) -> bool:
+    before, after = excerpt[: match.start()], excerpt[match.end() :]
+    if _DATE_AFTER.match(after) or _DATE_BEFORE.search(before):
+        return False
+    if _HOUSEHOLD_AFTER.match(after):
+        return False
+    return not (_NUMBER_AFTER.match(after) or _NUMBER_BEFORE.search(before))
+
+
+def rewrite_excerpt_idu(excerpt: str, old_total: int, new_total: int) -> ExcerptRewrite:
     """
-    Replace every occurrence of `old_total` in `excerpt` with `new_total`.
-    Returns `excerpt` unchanged when the old total is not stated.
+    Replace `old_total` with `new_total` wherever the excerpt states it as the person total,
+    keeping the thousands grouping the excerpt already used.
     """
-    return total_figures_pattern(old_total).sub(str(new_total), excerpt)
+    substitutions = ambiguous = 0
+
+    def replace(match: typing.Match[str]) -> str:
+        nonlocal substitutions, ambiguous
+        if not _is_person_total(excerpt, match):
+            ambiguous += 1
+            return match.group()
+        substitutions += 1
+        return f"{new_total:,}" if "," in match.group() else str(new_total)
+
+    text = total_figures_pattern(old_total).sub(replace, excerpt)
+    return ExcerptRewrite(text, substitutions, ambiguous)
 
 
 class Command(BaseCommand):
@@ -175,18 +221,27 @@ class Command(BaseCommand):
         )
 
     def update_household_sizes(self, validated_data: typing.List[typing.Dict], tally: Counter) -> typing.List[typing.Dict]:
-        changed_items = []
+        """
+        Replace the active AHHS records that differ from the incoming rows.
+        Returns only the items whose `size` moved, since those are the only ones whose figures
+        need revisiting; metadata-only edits leave every derived figure correct.
+        """
+        size_changed_items = []
         for item in validated_data:
             existing_active = HouseholdSize.objects.filter(
                 country=item["country"],
                 year=item["year"],
                 is_active=True,
             )
+            active_records = list(existing_active)
             # Only a single clean active record can be judged "unchanged"; dirty duplicates fall through to be replaced.
-            if existing_active.count() == 1 and self.household_size_unchanged(existing_active.get(), item):
+            if len(active_records) == 1 and self.household_size_unchanged(active_records[0], item):
                 tally["unchanged"] += 1
                 self.stdout.write(f"AHHS for {item['country']} is unchanged. Skipping.")
                 continue
+
+            # A country with no active record has no previous value, so its figures are in scope too.
+            size_changed = {record.size for record in active_records} != {item["size"]}
 
             # NOTE: deactivating previous values
             updated_households = existing_active.update(is_active=False)
@@ -207,9 +262,13 @@ class Command(BaseCommand):
                 modified_at=item["modified_at"],
             )
             tally["created"] += 1
-            changed_items.append(item)
+            if size_changed:
+                tally["size_changed"] += 1
+                size_changed_items.append(item)
+            else:
+                tally["metadata_only"] += 1
             self.stdout.write(self.style.SUCCESS(f"Created AHHS item for {item['country']}"))
-        return changed_items
+        return size_changed_items
 
     def process_household_size_row(self, row: DataRow, year: int) -> typing.Optional[typing.Dict]:
         if row["Year"] != str(year):
@@ -274,10 +333,10 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(f"Processed {len(processed_rows)} out of {total} AHHS items from CSV")
 
-            changed_items = []
+            size_changed_items = []
             serializer = HouseholdSizeCliImportSerializer(data=processed_rows, many=True)
             if serializer.is_valid():
-                changed_items = self.update_household_sizes(serializer.validated_data, tally)
+                size_changed_items = self.update_household_sizes(serializer.validated_data, tally)
             else:
                 for i, errors in enumerate(serializer.errors):
                     if errors:
@@ -287,7 +346,7 @@ class Command(BaseCommand):
                         self.stdout.write(self.style.ERROR(f"'{field}': {error}"))
                 raise Exception("Import failed")
 
-            return changed_items
+            return size_changed_items
 
     def update_figure(
         self,
@@ -344,20 +403,36 @@ class Command(BaseCommand):
                 f"In figure <{figure.pk}>, updating total figures from {old_total_figures} to {new_total_figures}"
             )
             if figure.excerpt_idu:
-                new_excerpt_idu = rewrite_excerpt_idu(figure.excerpt_idu, old_total_figures, new_total_figures)
+                rewrite = rewrite_excerpt_idu(figure.excerpt_idu, old_total_figures, new_total_figures)
 
-                if figure.excerpt_idu == new_excerpt_idu:
-                    self.stdout.write(
-                        self.style.WARNING(f"In figure <{figure.pk}>, excerpt idu ({figure.excerpt_idu}) is unchanged")
-                    )
-                else:
+                if rewrite.substitutions:
                     self.stdout.write(
                         self.style.SUCCESS(
-                            f"In figure <{figure.pk}>, excerpt idu ({figure.excerpt_idu}) is changed to ({new_excerpt_idu})"
+                            f"In figure <{figure.pk}>, excerpt idu ({figure.excerpt_idu}) is changed to ({rewrite.text})"
                         )
                     )
-
-                figure.excerpt_idu = new_excerpt_idu
+                    figure.excerpt_idu = rewrite.text
+                    tally["excerpt_rewritten"] += 1
+                elif rewrite.ambiguous_matches:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"In figure <{figure.pk}>, excerpt idu ({figure.excerpt_idu}) states {old_total_figures} "
+                            "only as a date, a household count or part of a longer number. Left unchanged."
+                        )
+                    )
+                    tally["excerpt_ambiguous"] += 1
+                elif total_figures_pattern(figure.reported).search(figure.excerpt_idu):
+                    # The excerpt states the household count rather than the person total, so the
+                    # AHHS change leaves its wording correct.
+                    tally["excerpt_states_household_count"] += 1
+                else:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"In figure <{figure.pk}>, excerpt idu ({figure.excerpt_idu}) states neither the person "
+                            f"total ({old_total_figures}) nor the household count ({figure.reported})."
+                        )
+                    )
+                    tally["excerpt_no_figure_stated"] += 1
 
             if mode == FIGURE_UPDATE_MODE_NUMBERS_AND_NOTE:
                 append_calculation_logic = (
@@ -420,13 +495,25 @@ class Command(BaseCommand):
         dry_run: bool,
     ):
         self.stdout.write(
-            self.style.SUCCESS(f"AHHS: created {household_tally['created']}, unchanged {household_tally['unchanged']}")
+            self.style.SUCCESS(
+                f"AHHS: created {household_tally['created']} "
+                f"(value changed {household_tally['size_changed']}, metadata only {household_tally['metadata_only']}), "
+                f"unchanged {household_tally['unchanged']}"
+            )
         )
         if figure_tally is not None:
             self.stdout.write(
                 self.style.SUCCESS(
                     f"Figures: changed {figure_tally['changed']}, skipped {figure_tally['skipped']}, "
                     f"unchanged {figure_tally['unchanged']}, notes appended {figure_tally['note_appended']}"
+                )
+            )
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Excerpts: rewritten {figure_tally['excerpt_rewritten']}, "
+                    f"ambiguous {figure_tally['excerpt_ambiguous']}, "
+                    f"state the household count {figure_tally['excerpt_states_household_count']}, "
+                    f"state no figure {figure_tally['excerpt_no_figure_stated']}"
                 )
             )
         if dry_run:
@@ -454,11 +541,11 @@ class Command(BaseCommand):
         household_tally: Counter = Counter()
         old_household_sizes_map = self.iso3_to_household_sizes(year)
 
-        changed_household_sizes = self.update_household_sizes_from_csv(csv_file_path, year, household_tally)
+        size_changed_household_sizes = self.update_household_sizes_from_csv(csv_file_path, year, household_tally)
 
         figure_tally: typing.Optional[Counter] = None
         if mode != FIGURE_UPDATE_MODE_NONE:
-            countries_set = set(x["country"].pk for x in changed_household_sizes)
+            countries_set = set(x["country"].pk for x in size_changed_household_sizes)
             new_household_sizes_map = self.iso3_to_household_sizes(year)
             figure_tally = Counter()
             self.update_figures(
