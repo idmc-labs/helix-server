@@ -1831,6 +1831,7 @@ enum ExternalApiType {
   GIDD_DISPLACEMENT_GRAPHQL
   GIDD_NEW_EVENTS_GRAPHQL
   GIDD_COUNTRY_DISPLACEMENT_GRAPHQL
+  GIDD_COUNTRY_YEAR_DISPLACEMENT_GRAPHQL
   GIDD_VIOLENCE_TYPES_GRAPHQL
   GIDD_VIOLENCE_SUB_TYPES_GRAPHQL
 }
@@ -2444,6 +2445,21 @@ type GiddCountryDisplacementType {
   iso3: String!
   countryName: String!
   countryId: ID!
+  conflictNewDisplacement: Int
+  conflictNewDisplacementRounded: Int
+  conflictTotalDisplacement: Int
+  conflictTotalDisplacementRounded: Int
+  disasterNewDisplacement: Int
+  disasterNewDisplacementRounded: Int
+  disasterTotalDisplacement: Int
+  disasterTotalDisplacementRounded: Int
+}
+
+type GiddCountryYearDisplacementType {
+  iso3: String!
+  countryName: String!
+  countryId: ID!
+  year: Int!
   conflictNewDisplacement: Int
   conflictNewDisplacementRounded: Int
   conflictTotalDisplacement: Int
@@ -3392,6 +3408,7 @@ type Query {
   giddPublicDisplacements(filters: GiddDisplacementFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementListType
   giddPublicEvents(filters: GiddEventDisplacementFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddEventDisplacementListType
   giddPublicCountryDisplacements(releaseEnvironment: String, countriesIso3: [String!], startYear: Float, endYear: Float, hazardTypes: [ID!], violenceTypes: [ID!], clientId: String!): [GiddCountryDisplacementType!]
+  giddPublicCountryYearDisplacements(releaseEnvironment: String, countriesIso3: [String!], startYear: Float, endYear: Float, hazardTypes: [ID!], violenceTypes: [ID!], clientId: String!): [GiddCountryYearDisplacementType!]
   notification(id: ID!): GenericNotificationType
   notifications(filters: NotificationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType
