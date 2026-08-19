@@ -20,7 +20,7 @@ Resources:
       'aws:copilot:description': 'This is for the worker service to access the addons created for django service'
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: 'Grants secret manager access; Grants CRUD access to S3 bucket'
+      Description: 'Grants secret manager access; Grants CRUD access to S3 bucket; Grants read-only access to the cross-account idmc-playground-nlp-storage bucket'
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -30,7 +30,7 @@ Resources:
               - secretsmanager:GetResourcePolicy
               - secretsmanager:GetSecretValue
               - secretsmanager:DescribeSecret
-              - secretsmanager:ListSecretVersionIds,
+              - secretsmanager:ListSecretVersionIds
               - secretsmanager:ListSecrets
             # NOTE: tried with 'arn:aws:secretsmanager:::secret:*' followed by condition, did not work
             Resource:
@@ -61,6 +61,22 @@ Resources:
               - !Sub
                 - arn:aws:s3:::${BucketArn}
                 - { BucketArn: { 'Fn::ImportValue': !Sub '${App}-${Env}-ExternalS3MediaBucketName' }}
+          # NOTE: Cross-account bucket owned by the NLP Playground.
+          # Hulk bulk-import copies objects from here into the media bucket, so the task role needs read-only access to it.
+          # The matching grant on the bucket side lives in that account applied throw terraform
+          - Sid: PlaygroundNlpObjectRead
+            Effect: Allow
+            Action:
+              # GetObject covers both the HEAD that resolves the key and the copy's source read;
+              # GetObjectTagging is required because copy_object leaves TaggingDirective at its COPY default.
+              - s3:GetObject
+              - s3:GetObjectTagging
+            Resource: 'arn:aws:s3:::idmc-playground-nlp-storage/*'
+          - Sid: PlaygroundNlpBucketRead
+            Effect: Allow
+            # ListBucket makes a HEAD on a missing key answer 404 rather than 403, so the resolver's log distinguishes a wrong key from a revoked grant.
+            Action: s3:ListBucket
+            Resource: 'arn:aws:s3:::idmc-playground-nlp-storage'
           - Sid: EmailSenderAction
             Effect: Allow
             Action:
@@ -76,7 +92,7 @@ Resources:
               - secretsmanager:GetResourcePolicy
               - secretsmanager:GetSecretValue
               - secretsmanager:DescribeSecret
-              - secretsmanager:ListSecretVersionIds,
+              - secretsmanager:ListSecretVersionIds
               - secretsmanager:ListSecrets
             Resource:
               - Fn::ImportValue: !Sub '${App}-${Env}-DatabaseSecret'

@@ -976,7 +976,7 @@ class HulkBulkImportHandler:
             (self.figure_handler, figure_dataset),
         ]:
             if dataset is None:
-                logger.info("Nothing to process for TODO")
+                logger.info("Nothing to process for %s", str(handler))
                 continue
 
             for row in dataset:
