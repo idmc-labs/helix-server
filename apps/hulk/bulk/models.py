@@ -254,6 +254,16 @@ class HulkFigureImport(HulkBaseModel, pyhelix_models.HulkFigureImport):
 
         event_type = typing.cast("Crisis.CRISIS_TYPE", event.event_type)
 
+        # The event's cause selects which sub_type field is required below, so a figure
+        # whose own cause differs from its event's would fail on a sub_type it never
+        # claimed to carry. helix rejects the mismatch as well
+        # (FigureSerializer._validate_figure_cause).
+        if event_type.value != self.figure_cause.value:
+            raise ValueError(
+                f"figure_cause {self.figure_cause.name} does not match the cause {event_type.name} of its event"
+                f" (event_id={event.pk}, event_uuid={self.event_uuid})"
+            )
+
         if event_type == Crisis.CRISIS_TYPE.CONFLICT:
             # TODO: Instead of get_name_attributed_model, use helix_client with custom function for _managers?
             self.violence_sub_type_id = get_name_attributed_model(ViolenceSubType, self.violence_sub_type_id).pk

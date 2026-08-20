@@ -14,10 +14,13 @@ from pydantic import ValidationError
 from pyhelix import models as pyhelix_models
 from pyhelix.api.api import helix_client_context
 
-from apps.hulk.bulk.models import HulkEventImport, HulkEventImportEventCode
+from apps.crisis.models import Crisis
+from apps.hulk.bulk.models import HulkEventImport, HulkEventImportEventCode, HulkFigureImport
 from utils.factories import (
     CountryFactory,
     DisasterSubTypeFactory,
+    EntryFactory,
+    EventFactory,
     ViolenceSubTypeFactory,
 )
 from utils.tests import HelixGraphQLTestCase
@@ -451,3 +454,77 @@ class TestHulkFigureImportDates(HelixGraphQLTestCase):
         row = self._stock_row(stock_date=self._near_future(), stock_reporting_date=self._near_future())
         with helix_client_context(self.stub_client):
             pyhelix_models.HulkFigureImport(**row)
+
+
+class TestHulkFigureImportEventCause(HelixGraphQLTestCase):
+    """A figure's ``figure_cause`` must match its event's cause. ``parse_event``
+    resolves the required sub_type from the event, so a mismatch has to be
+    reported as a mismatch rather than as the event-side sub_type being absent."""
+
+    def _figure_row(self, event, **overrides) -> dict:
+        entry = EntryFactory.create()
+        country = CountryFactory.create()
+        row = {
+            "uuid": "99999999-9999-9999-9999-999999999999",
+            "entry_id": entry.id,
+            "event_id": event.id,
+            "figure_cause": "DISASTER",
+            "disaster_sub_type_id": DisasterSubTypeFactory.create().id,
+            "category": "NEW_DISPLACEMENT",
+            "term": "DISPLACED",
+            "quantifier": "EXACT",
+            "unit": "PERSON",
+            "figure_role": "RECOMMENDED",
+            "country_id": country.id,
+            "start_date": "2024-01-01",
+            "start_date_accuracy": "DAY",
+            "end_date": "2024-01-31",
+            "end_date_accuracy": "DAY",
+            "reported_figure": 100,
+            "is_housing_destruction": False,
+            "displacement_occurred": "BEFORE",
+            "is_disaggregated": False,
+            "analysis_text": "analysis",
+            "source_excerpt_text": "excerpt",
+            "include_idu": False,
+            "idu_text": "",
+            "locations": [
+                {
+                    "uuid": "77777777-7777-7777-7777-777777777777",
+                    "display_name": "Kathmandu",
+                    "country_name": "Nepal",
+                    "country_code": "NP",
+                    "identifier": "ORIGIN",
+                    "accuracy": "ADM0",
+                    "geocoder": "GEONAME",
+                    "latitude": 27.7,
+                    "longitude": 85.3,
+                }
+            ],
+            "sources_id": [1],
+        }
+        row.update(overrides)
+        return row
+
+    def test_cause_mismatch_names_both_causes(self):
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
+        row = self._figure_row(event)
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**row)
+        message = str(cm.exception)
+        self.assertIn("figure_cause DISASTER does not match the cause CONFLICT of its event", message)
+        self.assertIn(f"event_id={event.pk}", message)
+        self.assertNotIn("ViolenceSubType id is None", message)
+
+    def test_matching_cause_accepted(self):
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER.value)
+        HulkFigureImport(**self._figure_row(event))
+
+    def test_matching_cause_still_requires_sub_type(self):
+        """The mismatch check does not swallow the missing sub_type error for a
+        figure whose cause does match its event's."""
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER.value)
+        row = self._figure_row(event, disaster_sub_type_id=None)
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**row)
+        self.assertIn("DisasterSubType id is None, this is required", str(cm.exception))
