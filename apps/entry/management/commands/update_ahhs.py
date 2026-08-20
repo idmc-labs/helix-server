@@ -101,6 +101,49 @@ _NUMBER_AFTER = re.compile(r"\s*[,.]\d")
 _NUMBER_BEFORE = re.compile(r"\d[,.]\s*$")
 
 
+class VerificationItem(typing.NamedTuple):
+    """A figure whose numbers moved but whose excerpt could not be updated to match."""
+
+    figure_pk: int
+    iso3: str
+    reason: str
+    old_total: int
+    new_total: int
+    excerpt: str
+
+
+class FigureChange(typing.NamedTuple):
+    """
+    What this command altered on one figure. Figures are updated in place, so unlike an archived
+    AHHS row nothing else records what they held before.
+
+    Numeric fields carry both values. Text fields are recorded as changed but not by value: a log
+    line cannot hold prose without flattening its newlines, so the copy would not be faithful.
+    """
+
+    figure_pk: int
+    iso3: str
+    year: int
+    old_size: float
+    new_size: float
+    old_total: int
+    new_total: int
+    excerpt_rewritten: bool
+    note_appended: bool
+
+
+class FigureRunLog:
+    """
+    What a figure pass accumulates. The per-figure changelog is held back and reported once the
+    pass is done, so the running output stays to one short line per figure.
+    """
+
+    def __init__(self):
+        self.tally: Counter = Counter()
+        self.changes: typing.List[FigureChange] = []
+        self.needs_verification: typing.List[VerificationItem] = []
+
+
 class ExcerptRewrite(typing.NamedTuple):
     text: str
     substitutions: int
@@ -237,20 +280,14 @@ class Command(BaseCommand):
             # Only a single clean active record can be judged "unchanged"; dirty duplicates fall through to be replaced.
             if len(active_records) == 1 and self.household_size_unchanged(active_records[0], item):
                 tally["unchanged"] += 1
-                self.stdout.write(f"AHHS for {item['country']} is unchanged. Skipping.")
                 continue
 
             # A country with no active record has no previous value, so its figures are in scope too.
             size_changed = {record.size for record in active_records} != {item["size"]}
 
-            # NOTE: deactivating previous values
-            updated_households = existing_active.update(is_active=False)
-            if updated_households > 0:
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Deactivated {updated_households} previous AHHS items for {item['country']}.",
-                    )
-                )
+            # NOTE: deactivating previous values. The archived row is the record of what this
+            # country-year held before, so the run reports only counts.
+            existing_active.update(is_active=False)
 
             new_ahhs = HouseholdSize.objects.create(
                 **item,
@@ -267,7 +304,6 @@ class Command(BaseCommand):
                 size_changed_items.append(item)
             else:
                 tally["metadata_only"] += 1
-            self.stdout.write(self.style.SUCCESS(f"Created AHHS item for {item['country']}"))
         return size_changed_items
 
     def process_household_size_row(self, row: DataRow, year: int) -> typing.Optional[typing.Dict]:
@@ -356,83 +392,94 @@ class Command(BaseCommand):
         new_household_sizes: typing.Dict[str, typing.Optional[HouseholdSize]],
         retroactive_update_date: typing.Optional[datetime],
         mode: str,
-        tally: Counter,
+        log: "FigureRunLog",
     ):
         old_household_size = old_household_sizes.get(figure.country.iso3)
         if old_household_size is not None and figure.household_size != old_household_size.size:
-            self.stdout.write(
-                self.style.WARNING(
-                    f"In figure <{figure.pk}>, household size does not match. "
-                    f" Expected {figure.household_size} but found {old_household_size.size}. Skipping."
+            log.tally["skipped"] += 1
+            log.needs_verification.append(
+                VerificationItem(
+                    figure.pk,
+                    figure.country.iso3,
+                    f"household size {figure.household_size} does not match the AHHS on record "
+                    f"({old_household_size.size}); figure left untouched",
+                    figure.total_figures,
+                    figure.total_figures,
+                    figure.excerpt_idu or "",
                 )
             )
-            tally["skipped"] += 1
             return
 
         old_household_size = figure.household_size
         new_household_size = new_household_sizes.get(figure.country.iso3)
         if new_household_size is None:
-            self.stdout.write(
-                self.style.WARNING(
-                    f"In figure <{figure.pk}>, new household size not found for country {figure.country.iso3}. Skipping."
+            log.tally["skipped"] += 1
+            log.needs_verification.append(
+                VerificationItem(
+                    figure.pk,
+                    figure.country.iso3,
+                    f"no active AHHS on record for {figure.country.iso3}; figure left untouched",
+                    figure.total_figures,
+                    figure.total_figures,
+                    figure.excerpt_idu or "",
                 )
             )
-            tally["skipped"] += 1
             return
 
         if old_household_size == new_household_size.size:
-            tally["unchanged"] += 1
+            log.tally["unchanged"] += 1
             return
 
         if new_household_size.size == 0:
-            tally["skipped"] += 1
+            log.tally["skipped"] += 1
             return
 
-        self.stdout.write(
-            f"In figure <{figure.pk}>, updating household size from {old_household_size} to {new_household_size.size}"
-        )
         figure.household_size = new_household_size.size
 
         old_total_figures = figure.total_figures
         new_total_figures = int(round_half_up(figure.reported * Decimal(str(figure.household_size))))
         figure.total_figures = new_total_figures
-        tally["changed"] += 1
+        log.tally["changed"] += 1
+
+        excerpt_rewritten = False
+        note_appended = False
 
         if old_total_figures != new_total_figures:
-            self.stdout.write(
-                f"In figure <{figure.pk}>, updating total figures from {old_total_figures} to {new_total_figures}"
-            )
             if figure.excerpt_idu:
                 rewrite = rewrite_excerpt_idu(figure.excerpt_idu, old_total_figures, new_total_figures)
 
                 if rewrite.substitutions:
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f"In figure <{figure.pk}>, excerpt idu ({figure.excerpt_idu}) is changed to ({rewrite.text})"
-                        )
-                    )
+                    excerpt_rewritten = True
                     figure.excerpt_idu = rewrite.text
-                    tally["excerpt_rewritten"] += 1
+                    log.tally["excerpt_rewritten"] += 1
                 elif rewrite.ambiguous_matches:
-                    self.stdout.write(
-                        self.style.WARNING(
-                            f"In figure <{figure.pk}>, excerpt idu ({figure.excerpt_idu}) states {old_total_figures} "
-                            "only as a date, a household count or part of a longer number. Left unchanged."
+                    log.tally["excerpt_ambiguous"] += 1
+                    log.needs_verification.append(
+                        VerificationItem(
+                            figure.pk,
+                            figure.country.iso3,
+                            "total appears only as a date, a household count or part of a longer number",
+                            old_total_figures,
+                            new_total_figures,
+                            figure.excerpt_idu,
                         )
                     )
-                    tally["excerpt_ambiguous"] += 1
                 elif total_figures_pattern(figure.reported).search(figure.excerpt_idu):
                     # The excerpt states the household count rather than the person total, so the
                     # AHHS change leaves its wording correct.
-                    tally["excerpt_states_household_count"] += 1
+                    log.tally["excerpt_states_household_count"] += 1
                 else:
-                    self.stdout.write(
-                        self.style.WARNING(
-                            f"In figure <{figure.pk}>, excerpt idu ({figure.excerpt_idu}) states neither the person "
-                            f"total ({old_total_figures}) nor the household count ({figure.reported})."
+                    log.tally["excerpt_no_figure_stated"] += 1
+                    log.needs_verification.append(
+                        VerificationItem(
+                            figure.pk,
+                            figure.country.iso3,
+                            "excerpt states neither the person total nor the household count",
+                            old_total_figures,
+                            new_total_figures,
+                            figure.excerpt_idu,
                         )
                     )
-                    tally["excerpt_no_figure_stated"] += 1
 
             if mode == FIGURE_UPDATE_MODE_NUMBERS_AND_NOTE:
                 append_calculation_logic = (
@@ -446,8 +493,22 @@ class Command(BaseCommand):
                     figure.calculation_logic = f"{figure.calculation_logic}\n\n{append_calculation_logic}"
                 else:
                     figure.calculation_logic = append_calculation_logic
-                tally["note_appended"] += 1
+                note_appended = True
+                log.tally["note_appended"] += 1
 
+        log.changes.append(
+            FigureChange(
+                figure.pk,
+                figure.country.iso3,
+                figure.start_date.year,
+                old_household_size,
+                new_household_size.size,
+                old_total_figures,
+                new_total_figures,
+                excerpt_rewritten,
+                note_appended,
+            )
+        )
         bulk_mgr.add(figure)
 
     def update_figures(
@@ -458,7 +519,7 @@ class Command(BaseCommand):
         filter_countries: typing.Set[str],
         retroactive_update_date: typing.Optional[datetime],
         mode: str,
-        tally: Counter,
+        log: "FigureRunLog",
     ):
         update_fields = ["household_size", "total_figures", "excerpt_idu"]
         if mode == FIGURE_UPDATE_MODE_NUMBERS_AND_NOTE:
@@ -482,16 +543,65 @@ class Command(BaseCommand):
                 new_household_sizes,
                 retroactive_update_date,
                 mode,
-                tally,
+                log,
             )
 
         bulk_mgr.done()
         self.stdout.write(self.style.SUCCESS(f"Updated figures: {bulk_mgr.summary()}"))
 
+    def print_figure_changelog(self, changes: typing.List[FigureChange]):
+        """
+        Report what this run altered on each figure, naming only the fields that moved.
+
+        Figures are updated in place, so this is the only record of what they held before; an AHHS
+        row keeps its own history by being archived instead. It is also the only per-figure output,
+        emitted once the pass is done as one tab-separated record so a run log loads as a table.
+        """
+        if not changes:
+            return
+        self.stdout.write(self.style.SUCCESS(f"{len(changes)} figures changed. Altered fields follow."))
+        for item in changes:
+            fields = [f"household_size={item.old_size}->{item.new_size}"]
+            if item.old_total != item.new_total:
+                fields.append(f"total_figures={item.old_total}->{item.new_total}")
+            if item.excerpt_rewritten:
+                fields.append("excerpt_idu=rewritten")
+            if item.note_appended:
+                fields.append("calculation_logic=note_appended")
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"FIGURE_CHANGED\tfigure={item.figure_pk}\tcountry={item.iso3}\tyear={item.year}\t" + "\t".join(fields)
+                )
+            )
+
+    def print_manual_verification(self, needs_verification: typing.List[VerificationItem]):
+        """
+        List the figures whose household size and total moved but whose excerpt could not be
+        rewritten to match, so a person can reword them. One tab-separated line each, prefixed
+        with MANUAL_VERIFICATION so a run log can be grepped straight into a worklist.
+        """
+        if not needs_verification:
+            return
+        self.stdout.write(
+            self.style.WARNING(
+                f"{len(needs_verification)} figures need manual verification: their excerpt could not "
+                "be updated, or their household size could not be reconciled with the AHHS on record."
+            )
+        )
+        for item in needs_verification:
+            excerpt = " ".join(item.excerpt.split())
+            self.stdout.write(
+                self.style.WARNING(
+                    "MANUAL_VERIFICATION\t"
+                    f"figure={item.figure_pk}\tcountry={item.iso3}\t"
+                    f"total={item.old_total}->{item.new_total}\treason={item.reason}\texcerpt={excerpt}"
+                )
+            )
+
     def print_summary(
         self,
         household_tally: Counter,
-        figure_tally: typing.Optional[Counter],
+        figure_log: typing.Optional["FigureRunLog"],
         dry_run: bool,
     ):
         self.stdout.write(
@@ -501,7 +611,8 @@ class Command(BaseCommand):
                 f"unchanged {household_tally['unchanged']}"
             )
         )
-        if figure_tally is not None:
+        if figure_log is not None:
+            figure_tally = figure_log.tally
             self.stdout.write(
                 self.style.SUCCESS(
                     f"Figures: changed {figure_tally['changed']}, skipped {figure_tally['skipped']}, "
@@ -516,6 +627,11 @@ class Command(BaseCommand):
                     f"state no figure {figure_tally['excerpt_no_figure_stated']}"
                 )
             )
+            needing_verification = (
+                figure_tally["excerpt_ambiguous"] + figure_tally["excerpt_no_figure_stated"] + figure_tally["skipped"]
+            )
+            style = self.style.WARNING if needing_verification else self.style.SUCCESS
+            self.stdout.write(style(f"Figures needing manual verification: {needing_verification}"))
         if dry_run:
             self.stdout.write(self.style.WARNING("DRY RUN: all changes rolled back; nothing was committed."))
 
@@ -543,11 +659,11 @@ class Command(BaseCommand):
 
         size_changed_household_sizes = self.update_household_sizes_from_csv(csv_file_path, year, household_tally)
 
-        figure_tally: typing.Optional[Counter] = None
+        figure_log: typing.Optional[FigureRunLog] = None
         if mode != FIGURE_UPDATE_MODE_NONE:
             countries_set = set(x["country"].pk for x in size_changed_household_sizes)
             new_household_sizes_map = self.iso3_to_household_sizes(year)
-            figure_tally = Counter()
+            figure_log = FigureRunLog()
             self.update_figures(
                 year,
                 old_household_sizes_map,
@@ -555,10 +671,13 @@ class Command(BaseCommand):
                 countries_set,
                 format_date(retroactive_update_date) if retroactive_update_date else None,
                 mode,
-                figure_tally,
+                figure_log,
             )
 
-        self.print_summary(household_tally, figure_tally, dry_run)
+        if figure_log is not None:
+            self.print_figure_changelog(figure_log.changes)
+            self.print_manual_verification(figure_log.needs_verification)
+        self.print_summary(household_tally, figure_log, dry_run)
 
         if dry_run:
             transaction.set_rollback(True)

@@ -1,6 +1,7 @@
 import csv
 import tempfile
 from datetime import date
+from io import StringIO
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -291,6 +292,24 @@ class TestUpdateAhhsCommand(HelixTestCase):
         self.assertEqual(self.figure.household_size, 5.0)
         self.assertEqual(self.figure.total_figures, 50)
 
+    def test_skipped_figure_is_logged_for_verification_with_its_own_reason(self):
+        # A figure whose household size cannot be reconciled is left alone and flagged.
+        self.figure.household_size = 9.0
+        self.figure.total_figures = 54
+        self.figure.save()
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        out = StringIO()
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers", stdout=out)
+        output = out.getvalue()
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.household_size, 9.0)
+        self.assertEqual(self.figure.total_figures, 54)
+        self.assertIn(f"MANUAL_VERIFICATION\tfigure={self.figure.pk}", output)
+        self.assertIn("does not match the AHHS on record", output)
+        self.assertIn("Figures needing manual verification: 1", output)
+
     def test_figure_with_mismatched_household_size_is_skipped(self):
         # A figure whose stored household_size diverges from the active AHHS was computed
         # against a different value, so the command must leave it alone.
@@ -327,6 +346,121 @@ class TestUpdateAhhsCommand(HelixTestCase):
         self.figure.refresh_from_db()
         self.assertEqual(self.figure.total_figures, 1200)
         self.assertEqual(self.figure.excerpt_idu, "A total of 1,200 people were displaced.")
+
+    def test_figure_whose_excerpt_cannot_be_updated_is_logged_for_verification(self):
+        # The excerpt states the total only as a date, so it is left alone and flagged.
+        self.figure.reported = 6
+        self.figure.household_size = 5.0
+        self.figure.total_figures = 30
+        self.figure.excerpt_idu = "On 30 June 2020, families were displaced."
+        self.figure.save()
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        out = StringIO()
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers", stdout=out)
+        output = out.getvalue()
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.total_figures, 36)
+        self.assertEqual(self.figure.excerpt_idu, "On 30 June 2020, families were displaced.")
+        self.assertIn(f"MANUAL_VERIFICATION\tfigure={self.figure.pk}", output)
+        self.assertIn("total=30->36", output)
+        self.assertIn("Figures needing manual verification: 1", output)
+
+    def test_figure_whose_excerpt_is_updated_is_not_logged_for_verification(self):
+        self.figure.reported = 6
+        self.figure.household_size = 5.0
+        self.figure.total_figures = 30
+        self.figure.excerpt_idu = "A total of 30 people were displaced."
+        self.figure.save()
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        out = StringIO()
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers", stdout=out)
+        output = out.getvalue()
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.excerpt_idu, "A total of 36 people were displaced.")
+        self.assertNotIn("MANUAL_VERIFICATION", output)
+        self.assertIn("Figures needing manual verification: 0", output)
+
+    def test_changelog_names_only_the_fields_that_moved(self):
+        self.figure.reported = 6
+        self.figure.household_size = 5.0
+        self.figure.total_figures = 30
+        self.figure.excerpt_idu = "A total of 30 people were displaced."
+        self.figure.save()
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        out = StringIO()
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers", stdout=out)
+        output = out.getvalue()
+
+        self.assertIn(f"FIGURE_CHANGED\tfigure={self.figure.pk}\t", output)
+        self.assertIn("household_size=5.0->6.0\ttotal_figures=30->36\texcerpt_idu=rewritten", output)
+        # Untouched in this mode, so absent rather than reported as unchanged.
+        self.assertNotIn("calculation_logic=", output)
+
+    def test_changelog_omits_a_total_that_rounding_left_alone(self):
+        self.figure.reported = 1
+        self.figure.household_size = 5.0
+        self.figure.total_figures = 5
+        self.figure.excerpt_idu = None
+        self.figure.save()
+
+        csv_path = self._write_csv([self._default_row(ahhs="5.4")])
+        out = StringIO()
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers", stdout=out)
+        output = out.getvalue()
+
+        self.assertIn("household_size=5.0->5.4", output)
+        self.assertNotIn("total_figures=", output)
+        self.assertNotIn("excerpt_idu=", output)
+
+    def test_changelog_records_the_note_without_quoting_it(self):
+        self.figure.reported = 6
+        self.figure.household_size = 5.0
+        self.figure.total_figures = 30
+        self.figure.calculation_logic = "Existing logic."
+        self.figure.save()
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        out = StringIO()
+        call_command(
+            "update_ahhs",
+            csv_path,
+            year=self.YEAR,
+            figure_update_mode="numbers_and_note",
+            retroactive_update_date="2026-01-15",
+            stdout=out,
+        )
+        output = out.getvalue()
+
+        self.assertIn("calculation_logic=note_appended", output)
+        self.assertNotIn("Existing logic.->", output)
+
+    def test_the_ahhs_pass_emits_no_per_row_line_of_its_own(self):
+        # The archived row records what this country-year held before, so the run reports counts.
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        out = StringIO()
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="none", stdout=out)
+        output = out.getvalue()
+
+        self.assertNotIn("Deactivated", output)
+        self.assertNotIn("Created AHHS item", output)
+        self.assertNotIn("is unchanged. Skipping", output)
+        self.assertIn("AHHS: created 1 (value changed 1, metadata only 0), unchanged 0", output)
+
+    def test_the_figure_pass_emits_no_per_figure_line_of_its_own(self):
+        # One log only: everything per-figure appears in the end blocks, nothing during the pass.
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        out = StringIO()
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers", stdout=out)
+        output = out.getvalue()
+
+        self.assertNotIn("updating household size", output)
+        self.assertNotIn("updating total figures", output)
+        self.assertNotIn("household size does not match", output)
 
     def test_note_appends_to_existing_calculation_logic(self):
         # An existing calculation_logic must survive and the retrospective note be appended.
