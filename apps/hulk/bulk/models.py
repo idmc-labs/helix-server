@@ -31,6 +31,7 @@ from .parsers import (
     get_name_attributed_model,
     validate_ids_exist,
 )
+from .url_guard import UnsafeUrlError, validate_fetch_url
 
 
 # TODO: Cache this
@@ -71,6 +72,19 @@ class HulkAttachmentImport(HulkBaseModel, pyhelix_models.HulkAttachmentImport):
 
 
 class HulkSourcePreviewImport(HulkBaseModel, pyhelix_models.HulkSourcePreviewImport):
+    @model_validator(mode="after")
+    def validate_file_url(self):
+        # helix renders this url server-side in a headless browser and publishes
+        # the result, so it needs the same destination check as an attachment
+        # download. See apps.hulk.bulk.url_guard.
+        try:
+            validate_fetch_url(self.file_url)
+        except UnsafeUrlError as e:
+            # Wording matches the attachment path: refused on purpose, not lost
+            # to a flaky network.
+            raise ValueError(f"refused to fetch url: {e}")
+        return self
+
     def generate_for_graphql_mutation(self):
         return {
             # TODO: Is file_url it a local path?

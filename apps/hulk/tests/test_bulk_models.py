@@ -21,6 +21,7 @@ from apps.hulk.bulk.models import (
     HulkEventImport,
     HulkEventImportEventCode,
     HulkFigureImport,
+    HulkSourcePreviewImport,
 )
 from utils.factories import (
     CountryFactory,
@@ -747,3 +748,25 @@ class TestHulkRelatedIdExistence(_ServerFigureRowMixin, HelixGraphQLTestCase):
         with self.assertRaises(ValidationError) as cm:
             HulkEventImport(**row)
         self.assertIn("event_codes[].country_id: unknown Country id(s)", str(cm.exception))
+
+
+class TestHulkSourcePreviewImportUrlGuard(HelixGraphQLTestCase):
+    """helix fetches a source preview's url server-side in a headless browser
+    and publishes the render, so the row carries the same destination check the
+    attachment path applies to a download."""
+
+    def _row(self, file_url: str) -> dict:
+        return {"uuid": "33333333-3333-3333-3333-333333333333", "file_url": file_url}
+
+    def test_public_url_allowed(self):
+        HulkSourcePreviewImport(**self._row("https://93.184.216.34/report.pdf"))
+
+    def test_instance_metadata_url_rejected(self):
+        with self.assertRaises(ValidationError) as cm:
+            HulkSourcePreviewImport(**self._row("http://169.254.169.254/latest/meta-data/"))
+        self.assertIn("refused to fetch url", str(cm.exception))
+
+    def test_non_http_scheme_rejected(self):
+        with self.assertRaises(ValidationError) as cm:
+            HulkSourcePreviewImport(**self._row("s3://bucket/key.pdf"))
+        self.assertIn("refused to fetch url", str(cm.exception))
