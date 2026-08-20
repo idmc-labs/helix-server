@@ -94,7 +94,6 @@ class HulkEntryImport(HulkBaseModel, pyhelix_models.HulkEntryImport):
     _source_preview_id: typing.Optional[int] = None
 
     @model_validator(mode="after")
-    @typing_extensions.override
     def parse_document(self):
         if self.hulk_import_type != HulkEntryImportTypeEnum.DOCUMENT:
             return self
@@ -108,7 +107,6 @@ class HulkEntryImport(HulkBaseModel, pyhelix_models.HulkEntryImport):
         return self
 
     @model_validator(mode="after")
-    @typing_extensions.override
     def parse_url(self):
         if self.hulk_import_type != HulkEntryImportTypeEnum.URL:
             return self
