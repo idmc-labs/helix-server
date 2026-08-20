@@ -13,14 +13,23 @@ from pyhelix.enums import HulkEntryImportTypeEnum
 from pyhelix.parsers import validate_and_parse_enum
 
 from apps.contrib.models import Attachment, SourcePreview
+from apps.country.models import Country
 from apps.crisis.models import Crisis
-from apps.entry.models import Entry
-from apps.event.models import DisasterSubType, Event, OtherSubType, ViolenceSubType
+from apps.entry.models import Entry, FigureTag
+from apps.event.models import (
+    ContextOfViolence,
+    DisasterSubType,
+    Event,
+    OsvSubType,
+    OtherSubType,
+    ViolenceSubType,
+)
 from apps.hulk.models import HulkAttachment, HulkEntityRelationBase, HulkEntry, HulkEvent, HulkSourcePreview
 
 from .parsers import (
     get_date_for_graphql,
     get_name_attributed_model,
+    validate_ids_exist,
 )
 
 
@@ -147,6 +156,17 @@ class HulkEventImport(HulkBaseModel, pyhelix_models.HulkEventImport):
         Field(max_length=MAX_EVENT_CODES),
     ]
 
+    @model_validator(mode="after")
+    @typing_extensions.override
+    def validate_related_ids(self):
+        validate_ids_exist(Country, self.countries_id, "countries_id")
+        validate_ids_exist(
+            Country,
+            [event_code.country_id for event_code in self.event_codes],
+            "event_codes[].country_id",
+        )
+        return self
+
     @model_validator(mode="before")
     @classmethod
     @typing_extensions.override
@@ -234,6 +254,16 @@ class HulkFigureImport(HulkBaseModel, pyhelix_models.HulkFigureImport):
             typing_extensions.assert_never(figure_cause)
 
         return data
+
+    @model_validator(mode="after")
+    @typing_extensions.override
+    def validate_related_ids(self):
+        """Existence checks for the FKs the cause branch does not cover."""
+        validate_ids_exist(Country, [self.country_id], "country_id")
+        validate_ids_exist(FigureTag, self.tags_id, "tags_id")
+        validate_ids_exist(OsvSubType, [self.osv_sub_type_id] if self.osv_sub_type_id else [], "osv_sub_type_id")
+        validate_ids_exist(ContextOfViolence, self.context_of_violences_id, "context_of_violences_id")
+        return self
 
     @model_validator(mode="after")
     @typing_extensions.override

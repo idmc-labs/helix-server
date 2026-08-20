@@ -16,7 +16,12 @@ from pyhelix.api.api import helix_client_context
 from pyhelix.constants import MAX_EVENT_CODES
 
 from apps.crisis.models import Crisis
-from apps.hulk.bulk.models import HulkEventImport, HulkEventImportEventCode, HulkFigureImport
+from apps.event.models import Event
+from apps.hulk.bulk.models import (
+    HulkEventImport,
+    HulkEventImportEventCode,
+    HulkFigureImport,
+)
 from utils.factories import (
     CountryFactory,
     DisasterSubTypeFactory,
@@ -284,7 +289,33 @@ class TestHulkEnumValidationFieldNames(HelixGraphQLTestCase):
         self.assertNotIn("Invalid event_type", message)
 
 
-class TestHulkEntryImportPublishDate(HelixGraphQLTestCase):
+class _PyhelixStubClientMixin:
+    """A helix client whose managers accept every id.
+
+    The pyhelix models resolve ids through the client; the app subclasses replace
+    those lookups with DB queries. Tests that exercise a parent model directly
+    (to avoid the subclass's DB-backed lookups) supply this instead.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        stub_manager = types.SimpleNamespace(
+            validate_id_exists=lambda _id: None,
+            validate_optional_id_exists=lambda _id: None,
+            validate_ids_exist=lambda _ids: None,
+        )
+        self.stub_client = types.SimpleNamespace(
+            violence_sub_type_manager=stub_manager,
+            disaster_sub_type_manager=stub_manager,
+            other_sub_type_manager=stub_manager,
+            osv_sub_type_manager=stub_manager,
+            context_of_violence_manager=stub_manager,
+            country_manager=stub_manager,
+            figure_tag_manager=stub_manager,
+        )
+
+
+class TestHulkEntryImportPublishDate(_PyhelixStubClientMixin, HelixGraphQLTestCase):
     """``publish_date`` must not be more than 10 years in the future.
 
     Validation lives on the pyhelix parent model, so we exercise it directly to
@@ -306,37 +337,24 @@ class TestHulkEntryImportPublishDate(HelixGraphQLTestCase):
     def test_publish_date_beyond_10_years_rejected(self):
         far_future = datetime.date.today().replace(year=datetime.date.today().year + 11)
         row = self._entry_row(publish_date=far_future.isoformat())
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
             pyhelix_models.HulkEntryImport(**row)
         self.assertIn("publish_date: This date cannot be more than 10 years in the future.", str(cm.exception))
 
     def test_publish_date_within_10_years_allowed(self):
         near_future = datetime.date.today().replace(year=datetime.date.today().year + 5)
         row = self._entry_row(publish_date=near_future.isoformat())
-        pyhelix_models.HulkEntryImport(**row)
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkEntryImport(**row)
 
     def test_publish_date_very_old_allowed(self):
         row = self._entry_row(publish_date="1900-01-01")
-        pyhelix_models.HulkEntryImport(**row)
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkEntryImport(**row)
 
 
-class _PyhelixFigureRowMixin:
-    """Figure rows for the pyhelix parent model.
-
-    The parent is exercised directly to avoid the DB-backed entry/event/sub-type
-    lookups on the app subclass, stubbing the sub-type existence check the
-    ``figure_cause`` validator performs."""
-
-    def setUp(self) -> None:
-        super().setUp()
-        # parse_figure_cause only calls ``<manager>.validate_id_exists(id)``; a
-        # no-op stub is enough to reach the date validation under test.
-        stub_manager = types.SimpleNamespace(validate_id_exists=lambda _id: None)
-        self.stub_client = types.SimpleNamespace(
-            violence_sub_type_manager=stub_manager,
-            disaster_sub_type_manager=stub_manager,
-            other_sub_type_manager=stub_manager,
-        )
+class _PyhelixFigureRowMixin(_PyhelixStubClientMixin):
+    """Figure rows for the pyhelix parent model."""
 
     def _location(self, **overrides) -> dict:
         loc = {
@@ -562,10 +580,11 @@ class TestHulkFigureImportHouseholdSize(_PyhelixFigureRowMixin, HelixGraphQLTest
             pyhelix_models.HulkFigureImport(**self._flow_row(unit="PERSON", household_size=0))
 
 
-class TestHulkFigureImportEventCause(HelixGraphQLTestCase):
-    """A figure's ``figure_cause`` must match its event's cause. ``parse_event``
-    resolves the required sub_type from the event, so a mismatch has to be
-    reported as a mismatch rather than as the event-side sub_type being absent."""
+class _ServerFigureRowMixin:
+    """Figure rows for the app subclass, whose validators query the DB."""
+
+    def _event(self, event_type) -> Event:
+        return EventFactory.create(event_type=event_type.value)
 
     def _figure_row(self, event, **overrides) -> dict:
         entry = EntryFactory.create()
@@ -612,6 +631,13 @@ class TestHulkFigureImportEventCause(HelixGraphQLTestCase):
         row.update(overrides)
         return row
 
+
+class TestHulkFigureImportEventCause(_ServerFigureRowMixin, HelixGraphQLTestCase):
+    """A figure's ``figure_cause`` must match its event's cause, and its country
+    and dates must sit inside the event's. ``parse_event`` resolves the required
+    sub_type from the event, so a cause mismatch has to be reported as a
+    mismatch rather than as the event-side sub_type being absent."""
+
     def test_cause_mismatch_names_both_causes(self):
         event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
         row = self._figure_row(event)
@@ -642,3 +668,82 @@ class TestHulkFigureImportEventCause(HelixGraphQLTestCase):
         with self.assertRaises(ValidationError) as cm:
             HulkFigureImport(**row)
         self.assertIn("DisasterSubType id is None, this is required", str(cm.exception))
+
+
+class TestHulkRelatedIdExistence(_ServerFigureRowMixin, HelixGraphQLTestCase):
+    """Ids the cause branch does not cover were only rejected by the mutation,
+    as ``Invalid pk`` post-errors raised after the row's entry and event exist."""
+
+    UNKNOWN_ID = 987654321
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.country = CountryFactory.create()
+
+    def test_unknown_figure_tag_rejected(self):
+        event = self._event(Crisis.CRISIS_TYPE.DISASTER)
+        row = self._figure_row(event, tags_id=[self.UNKNOWN_ID])
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**row)
+        self.assertIn("tags_id: unknown FigureTag id(s)", str(cm.exception))
+
+    def test_unknown_osv_sub_type_rejected(self):
+        event = self._event(Crisis.CRISIS_TYPE.DISASTER)
+        row = self._figure_row(event, osv_sub_type_id=self.UNKNOWN_ID)
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**row)
+        self.assertIn("osv_sub_type_id: unknown OsvSubType id(s)", str(cm.exception))
+
+    def test_absent_osv_sub_type_allowed(self):
+        event = self._event(Crisis.CRISIS_TYPE.DISASTER)
+        HulkFigureImport(**self._figure_row(event, osv_sub_type_id=None))
+
+    def test_unknown_context_of_violence_rejected(self):
+        event = self._event(Crisis.CRISIS_TYPE.DISASTER)
+        row = self._figure_row(event, context_of_violences_id=[self.UNKNOWN_ID])
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**row)
+        self.assertIn("context_of_violences_id: unknown ContextOfViolence id(s)", str(cm.exception))
+
+    def test_unknown_event_country_rejected(self):
+        row = {
+            "uuid": "44444444-4444-4444-4444-444444444444",
+            "event_name": "Test event",
+            "event_cause": "DISASTER",
+            "disaster_sub_type_id": DisasterSubTypeFactory.create().id,
+            "start_date": "2024-01-01",
+            "start_date_accuracy": "DAY",
+            "end_date": "2024-01-31",
+            "end_date_accuracy": "DAY",
+            "event_narrative": "narrative",
+            "countries_id": [self.country.id, self.UNKNOWN_ID],
+            "event_codes": [],
+        }
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("countries_id: unknown Country id(s)", str(cm.exception))
+
+    def test_unknown_event_code_country_rejected(self):
+        row = {
+            "uuid": "44444444-4444-4444-4444-444444444445",
+            "event_name": "Test event",
+            "event_cause": "DISASTER",
+            "disaster_sub_type_id": DisasterSubTypeFactory.create().id,
+            "start_date": "2024-01-01",
+            "start_date_accuracy": "DAY",
+            "end_date": "2024-01-31",
+            "end_date_accuracy": "DAY",
+            "event_narrative": "narrative",
+            "countries_id": [self.country.id],
+            "event_codes": [
+                {
+                    "uuid": "22222222-2222-2222-2222-222222222229",
+                    "country_id": self.UNKNOWN_ID,
+                    "event_code": "GLD-001",
+                    "event_code_type": "GLIDE_NUMBER",
+                }
+            ],
+        }
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("event_codes[].country_id: unknown Country id(s)", str(cm.exception))

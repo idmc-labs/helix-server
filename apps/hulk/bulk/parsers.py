@@ -4,6 +4,8 @@ import datetime
 import typing
 from enum import Enum
 
+from django.db import models
+
 from apps.event.models import NameAttributedModels
 
 EnumT = typing.TypeVar("EnumT", bound=Enum)
@@ -30,3 +32,22 @@ def get_name_attributed_model(
     if not obj:
         raise ValueError(f"Invalid {_Model.__name__} id={_id}")
     return obj
+
+
+def validate_ids_exist(
+    _Model: type[models.Model],
+    ids: typing.Optional[typing.Iterable[int]],
+    field_name: str,
+) -> None:
+    """Reject unknown pks, naming the input field and the offending ids.
+
+    The mutation reports these as ``Invalid pk "…"`` only after the row's entry
+    and event exist, so they are cheaper to catch here.
+    """
+    requested = {int(_id) for _id in ids or []}
+    if not requested:
+        return
+    known = set(_Model.objects.filter(id__in=requested).values_list("id", flat=True))
+    missing = sorted(requested - known)
+    if missing:
+        raise ValueError(f"{field_name}: unknown {_Model.__name__} id(s) {missing}")

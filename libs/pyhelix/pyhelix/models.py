@@ -204,6 +204,14 @@ class HulkEventImport(HulkBaseModel):
         return data
 
     @model_validator(mode="after")
+    def validate_related_ids(self):
+        country_manager = get_active_helix_client().country_manager
+        country_manager.validate_ids_exist(self.countries_id)
+        for event_code in self.event_codes:
+            country_manager.validate_id_exists(event_code.country_id)
+        return self
+
+    @model_validator(mode="after")
     def _validate_dates(self):
         if self.start_date and self.end_date and self.end_date < self.start_date:
             raise ValueError("The start date must be earlier than end date.")
@@ -337,6 +345,20 @@ class HulkFigureImport(HulkBaseModel):
             typing_extensions.assert_never(figure_cause)
 
         return data
+
+    @model_validator(mode="after")
+    def validate_related_ids(self):
+        """Existence checks for the FKs the cause branch does not cover.
+
+        Without them a stale id is only caught by the mutation, after the row's
+        entry and event have already been created.
+        """
+        helix_client = get_active_helix_client()
+        helix_client.country_manager.validate_id_exists(self.country_id)
+        helix_client.figure_tag_manager.validate_ids_exist(self.tags_id)
+        helix_client.osv_sub_type_manager.validate_optional_id_exists(self.osv_sub_type_id)
+        helix_client.context_of_violence_manager.validate_ids_exist(self.context_of_violences_id)
+        return self
 
     @model_validator(mode="after")
     def _validate_household_size(self):
