@@ -1547,7 +1547,6 @@ input EventCreateInputType {
   otherSubType: ID
   violenceSubType: ID
   actor: ID
-  disasterSubCategory: ID
   disasterSubType: ID
   osvSubType: ID
   countries: [ID!]!
@@ -1672,7 +1671,6 @@ input EventUpdateInputType {
   otherSubType: ID
   violenceSubType: ID
   actor: ID
-  disasterSubCategory: ID
   disasterSubType: ID
   osvSubType: ID
   countries: [ID!]

@@ -70,6 +70,7 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
             "glide_numbers",
             "assignee",
             "disaster_category",
+            "disaster_sub_category",
             "disaster_type",
             "ignore_qa",
             "old_id",

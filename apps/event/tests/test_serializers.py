@@ -500,3 +500,12 @@ class TestEventCodeUpdateFailures(HelixTestCase):
     def test_own_code_and_a_new_code_are_saved(self):
         self._save([self._code(id=self.code.id, uuid=str(self.code.uuid)), self._code(event_code="GLD-002")])
         self.assertEqual(EventCode.objects.filter(event=self.event).count(), 2)
+
+
+class TestEventDerivedFieldsNotWritable(HelixTestCase):
+    def test_derived_hazard_chain_is_not_writable(self):
+        """All four are derived from disaster_sub_type; disaster_sub_category was
+        the only one still exposed on the input types."""
+        fields = EventSerializer().fields
+        for field in ("violence", "disaster_type", "disaster_sub_category", "disaster_category"):
+            self.assertNotIn(field, fields)
