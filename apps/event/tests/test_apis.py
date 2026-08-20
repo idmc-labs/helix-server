@@ -10,7 +10,7 @@ from apps.contrib.migrate_commands import merge_events
 from apps.contrib.models import BulkApiOperation
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
-from apps.event.models import EventCode
+from apps.event.models import Event, EventCode, OsvSubType
 from apps.report.models import Report
 from apps.review.models import UnifiedReviewComment
 from apps.users.enums import USER_ROLE
@@ -846,6 +846,24 @@ class CloneEventTest(HelixGraphQLTestCase):
         }
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
+
+    def test_clone_event_with_every_foreign_key_set(self):
+        """``model_to_dict`` returns a pk for every FK, so each one has to be
+        resolved back to an instance before ``Event.objects.create``."""
+        self.event.osv_sub_type = OsvSubType.objects.create(name="osv sub type")
+        self.event.other_sub_type = OtherSubtypeFactory.create(name="other sub type")
+        self.event.assignee = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.event.assigner = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
+        self.event.save()
+
+        response = self.query(self.mutation, variables=self.variables)
+        content = response.json()
+        self.assertIsNone(content["data"]["cloneEvent"]["errors"], content)
+        cloned = Event.objects.get(id=content["data"]["cloneEvent"]["result"]["id"])
+        self.assertEqual(cloned.osv_sub_type_id, self.event.osv_sub_type_id)
+        self.assertEqual(cloned.other_sub_type_id, self.event.other_sub_type_id)
+        self.assertEqual(cloned.assignee_id, self.event.assignee_id)
+        self.assertEqual(cloned.assigner_id, self.event.assigner_id)
 
     def test_event_list_filter(self):
         response = self.query(self.mutation, variables=self.variables)

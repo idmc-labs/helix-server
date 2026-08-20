@@ -843,6 +843,10 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             "disaster_sub_category": DisasterSubCategory,
             "disaster_sub_type": DisasterSubType,
             "disaster_type": DisasterType,
+            "osv_sub_type": OsvSubType,
+            "other_sub_type": OtherSubType,
+            "assigner": User,
+            "assignee": User,
         }
         for field, model in foreign_key_fields_dict.items():
             if event_data[field]:
