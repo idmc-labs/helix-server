@@ -499,15 +499,23 @@ class GiddDisplacement(models.Model):
     """
 
     # giddPublicDisplacements (row-level list). Unauthenticated; bounds the sortable columns.
+    # Every scalar column the row type displays is sortable.
     ORDERING_ALLOWLIST = frozenset(
         {
+            "cause",
             "country_name",
+            "hazard_category_name",
+            "hazard_sub_category_name",
+            "hazard_sub_type_name",
+            "hazard_type_name",
             "id",
             "iso3",
             "new_displacement",
             "new_displacement_rounded",
             "total_displacement",
             "total_displacement_rounded",
+            "violence_name",
+            "violence_sub_type_name",
             "year",
         }
     )
@@ -566,19 +574,30 @@ class GiddEventDisplacement(models.Model):
     Disaster rows: hazard_type + hazard_sub_type set; violence fields null.
     """
 
-    # giddPublicEvents (replaces the old giddPublicDisasters). Unauthenticated; the frontend
-    # Gidd/EventsTable sortable columns (mirrors the retired Disaster.ORDERING_ALLOWLIST).
+    # giddPublicEvents (replaces the old giddPublicDisasters). Unauthenticated; every scalar
+    # column the row type displays is sortable (created_at is retained though not displayed —
+    # the frontend already sorts on it).
     ORDERING_ALLOWLIST = frozenset(
         {
+            "cause",
             "country_name",
             "created_at",
+            "end_date",
             "event_codes",
             "event_name",
             "hazard_category_name",
+            "hazard_sub_category_name",
+            "hazard_sub_type_name",
             "hazard_type_name",
             "id",
+            "iso3",
+            "new_displacement",
             "new_displacement_rounded",
             "start_date",
+            "total_displacement",
+            "total_displacement_rounded",
+            "violence_name",
+            "violence_sub_type_name",
             "year",
         }
     )
