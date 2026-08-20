@@ -80,6 +80,8 @@ class DisplacementByHazardType(graphene.ObjectType):
     label = graphene.String(required=True)
     new_displacements = graphene.Int()
     new_displacements_rounded = graphene.Int()
+    total_displacements = graphene.Int()
+    total_displacements_rounded = graphene.Int()
 
 
 class DisplacementByViolenceType(graphene.ObjectType):
@@ -87,6 +89,8 @@ class DisplacementByViolenceType(graphene.ObjectType):
     label = graphene.String(required=True)
     new_displacements = graphene.Int()
     new_displacements_rounded = graphene.Int()
+    total_displacements = graphene.Int()
+    total_displacements_rounded = graphene.Int()
 
 
 class GiddConflictStatisticsType(graphene.ObjectType):
@@ -576,10 +580,26 @@ class Query(graphene.ObjectType):
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
+        # IDP stock (total_displacement) is a point-in-time, end-of-year figure,
+        # so the per-category total must come from a single year's snapshot, not
+        # a sum across years. Pin it to the latest year that has stock within the
+        # filtered range, grouped by violence sub type.
+        conflict_latest_stock_year = conflict_qs.filter(total_displacement__gt=0).aggregate(
+            year=models.Max("year")
+        )["year"]
+
         violence_categories_qs = (
             conflict_qs.values("violence_sub_type", "violence_sub_type__id")
             .annotate(
                 total=Coalesce(models.Sum("new_displacement", output_field=models.IntegerField()), 0),
+                total_idp=Coalesce(
+                    models.Sum(
+                        "total_displacement",
+                        filter=models.Q(year=conflict_latest_stock_year),
+                        output_field=models.IntegerField(),
+                    ),
+                    0,
+                ),
                 label=models.Case(
                     models.When(violence_sub_type=None, then=models.Value("Not labeled")),
                     default=models.F("violence_sub_type_name"),
@@ -614,6 +634,8 @@ class Query(graphene.ObjectType):
                     label=item["label"],
                     new_displacements=item["total"],
                     new_displacements_rounded=round_and_remove_zero(item["total"]),
+                    total_displacements=item["total_idp"],
+                    total_displacements_rounded=round_and_remove_zero(item["total_idp"]),
                 )
                 for item in violence_categories_qs
             ],
@@ -705,10 +727,26 @@ class Query(graphene.ObjectType):
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
+        # IDP stock (total_displacement) is a point-in-time, end-of-year figure,
+        # so the per-category total must come from a single year's snapshot, not
+        # a sum across years. Pin it to the latest year that has stock within the
+        # filtered range, grouped by hazard type.
+        disaster_latest_stock_year = disaster_qs.filter(total_displacement__gt=0).aggregate(
+            year=models.Max("year")
+        )["year"]
+
         categories_qs = (
             disaster_qs.values("hazard_type", "hazard_type__id")
             .annotate(
                 total=Coalesce(models.Sum("new_displacement", output_field=models.IntegerField()), 0),
+                total_idp=Coalesce(
+                    models.Sum(
+                        "total_displacement",
+                        filter=models.Q(year=disaster_latest_stock_year),
+                        output_field=models.IntegerField(),
+                    ),
+                    0,
+                ),
                 label=models.Case(
                     models.When(hazard_sub_category=None, then=models.Value("Not labeled")),
                     default=models.F("hazard_type_name"),
@@ -788,6 +826,8 @@ class Query(graphene.ObjectType):
                     label=item["label"],
                     new_displacements=item["total"],
                     new_displacements_rounded=round_and_remove_zero(item["total"]),
+                    total_displacements=item["total_idp"],
+                    total_displacements_rounded=round_and_remove_zero(item["total_idp"]),
                 )
                 for item in categories_qs
             ],

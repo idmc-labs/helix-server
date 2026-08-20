@@ -1338,6 +1338,8 @@ type DisplacementByHazardType {
   label: String!
   newDisplacements: Int
   newDisplacementsRounded: Int
+  totalDisplacements: Int
+  totalDisplacementsRounded: Int
 }
 
 type DisplacementByViolenceType {
@@ -1345,6 +1347,8 @@ type DisplacementByViolenceType {
   label: String!
   newDisplacements: Int
   newDisplacementsRounded: Int
+  totalDisplacements: Int
+  totalDisplacementsRounded: Int
 }
 
 type DjangoDebug {
