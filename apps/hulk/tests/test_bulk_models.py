@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import datetime
 import types
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import ValidationError
 from pyhelix import models as pyhelix_models
 from pyhelix.api.api import helix_client_context
+from pyhelix.constants import MAX_EVENT_CODES
 
 from apps.crisis.models import Crisis
 from apps.hulk.bulk.models import HulkEventImport, HulkEventImportEventCode, HulkFigureImport
@@ -103,6 +104,41 @@ class TestHulkEventImportEventCodes(HelixGraphQLTestCase):
         payload = HulkEventImport(**row).generate_for_graphql_mutation()
         self.assertEqual(len(payload["eventCodes"]), 1)
         self.assertEqual(payload["eventCodes"][0]["eventCodeType"], "GOV_ASSIGNED_IDENTIFIER")
+
+    def test_more_than_max_event_codes_rejected(self):
+        """``EventSerializer._validate_event_codes`` caps the list; the bound is
+        shared with pyhelix through the generated ``MAX_EVENT_CODES``."""
+        country = CountryFactory.create()
+        row = self._event_row(
+            event_codes=[
+                {
+                    "uuid": str(uuid4()),
+                    "country_id": country.id,
+                    "event_code": f"GLD-{index:03d}",
+                    "event_code_type": "GLIDE_NUMBER",
+                }
+                for index in range(MAX_EVENT_CODES + 1)
+            ]
+        )
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("event_codes", str(cm.exception))
+
+    def test_max_event_codes_allowed(self):
+        country = CountryFactory.create()
+        row = self._event_row(
+            event_codes=[
+                {
+                    "uuid": str(uuid4()),
+                    "country_id": country.id,
+                    "event_code": f"GLD-{index:03d}",
+                    "event_code_type": "GLIDE_NUMBER",
+                }
+                for index in range(MAX_EVENT_CODES)
+            ]
+        )
+        payload = HulkEventImport(**row).generate_for_graphql_mutation()
+        self.assertEqual(len(payload["eventCodes"]), MAX_EVENT_CODES)
 
     def test_event_code_subclass_used_for_items(self):
         """The override must use the local subclass so each item has
@@ -585,6 +621,14 @@ class TestHulkFigureImportEventCause(HelixGraphQLTestCase):
         self.assertIn("figure_cause DISASTER does not match the cause CONFLICT of its event", message)
         self.assertIn(f"event_id={event.pk}", message)
         self.assertNotIn("ViolenceSubType id is None", message)
+
+    def test_empty_locations_rejected(self):
+        """The subclass restates the parent's ``locations`` bound; overriding the
+        field would otherwise drop it."""
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER.value)
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**self._figure_row(event, locations=[]))
+        self.assertIn("locations", str(cm.exception))
 
     def test_matching_cause_accepted(self):
         event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER.value)

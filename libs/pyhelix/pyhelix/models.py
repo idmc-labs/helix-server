@@ -18,6 +18,7 @@ from .constants import (
     FIGURE_FLOW_LIST,
     FIGURE_STOCK_LIST,
     FIGURE_UNIT,
+    MAX_EVENT_CODES,
     MAX_FUTURE_YEARS,
 )
 from .enums import (
@@ -171,7 +172,10 @@ class HulkEventImport(HulkBaseModel):
     FK: country.Country
     """
 
-    event_codes: typing.List[HulkEventImportEventCode]
+    event_codes: typing_extensions.Annotated[
+        typing.List[HulkEventImportEventCode],
+        Field(max_length=MAX_EVENT_CODES),
+    ]
 
     @field_validator("event_narrative")
     @classmethod

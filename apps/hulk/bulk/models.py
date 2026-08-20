@@ -6,8 +6,9 @@ import uuid
 
 import typing_extensions
 from django.db import models
-from pydantic import conlist, model_validator
+from pydantic import Field, model_validator
 from pyhelix import models as pyhelix_models
+from pyhelix.constants import MAX_EVENT_CODES
 from pyhelix.enums import HulkEntryImportTypeEnum
 from pyhelix.parsers import validate_and_parse_enum
 
@@ -141,7 +142,10 @@ class HulkEventImportEventCode(HulkBaseModel, pyhelix_models.HulkEventImportEven
 
 # TODO: Support partial data input for optional fields
 class HulkEventImport(HulkBaseModel, pyhelix_models.HulkEventImport):
-    event_codes: typing.List[HulkEventImportEventCode]  # type: ignore[reportIncompatibleVariableOverride]
+    event_codes: typing_extensions.Annotated[  # type: ignore[reportIncompatibleVariableOverride]
+        typing.List[HulkEventImportEventCode],
+        Field(max_length=MAX_EVENT_CODES),
+    ]
 
     @model_validator(mode="before")
     @classmethod
@@ -203,7 +207,7 @@ class HulkFigureImportLocation(HulkBaseModel, pyhelix_models.HulkFigureImportLoc
 class HulkFigureImport(HulkBaseModel, pyhelix_models.HulkFigureImport):
     locations: typing_extensions.Annotated[  # type: ignore[reportIncompatibleVariableOverride]
         typing.List[HulkFigureImportLocation],
-        conlist(item_type=HulkFigureImportLocation, min_length=1),
+        Field(min_length=1),
     ]
 
     _entry_id: int
