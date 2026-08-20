@@ -246,6 +246,31 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
             errors["start_date"] = gettext("The earliest start date of one of the figures is %s.") % min_start_date
         return errors
 
+    def _validate_figures_cause(self, attrs):
+        """
+        downward validation: a figure's cause must match its event's
+
+        A figure keeps its own sub-type, which may differ from the event's, but
+        FigureSerializer requires the causes to agree. Changing the event's cause
+        therefore strands its figures: they can no longer be edited, and report
+        totals — which read event__event_type — silently stop counting them.
+        """
+        errors = OrderedDict()
+        if not self.instance or "event_type" not in attrs:
+            return errors
+
+        event_type = attrs["event_type"]
+        if event_type == self.instance.event_type:
+            return errors
+
+        stranded = Figure.objects.filter(event=self.instance).exclude(figure_cause=event_type).count()
+        if stranded:
+            errors["event_type"] = gettext(
+                "%(count)s figure(s) of this event carry a different cause. "
+                "Update or remove them before changing the event's cause."
+            ) % {"count": stranded}
+        return errors
+
     def _update_event_codes(self, event: Event, event_codes: typing.List[typing.Dict]):
         instance_event_codes_qs = EventCode.objects.filter(event=event)
 
@@ -302,6 +327,7 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
         if self.instance:
             errors.update(self._validate_figures_countries(attrs))
             errors.update(self._validate_figures_dates(attrs))
+            errors.update(self._validate_figures_cause(attrs))
 
         if errors:
             raise ValidationError(errors)

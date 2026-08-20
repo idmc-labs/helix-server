@@ -17,6 +17,7 @@ from utils.factories import (
     EntryFactory,
     EventFactory,
     FigureFactory,
+    OtherSubtypeFactory,
     ViolenceFactory,
     ViolenceSubTypeFactory,
 )
@@ -378,4 +379,66 @@ class TestUpdateEventSerializer(HelixTestCase):
 
         data = dict(name="renamed event")
         serializer = EventSerializer(instance=event, data=data, context=self.context, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+
+class TestEventCauseFlipWithFigures(HelixTestCase):
+    """Changing an event's cause strands the figures attached to it: they can no
+    longer be edited (FigureSerializer requires the causes to agree) and report
+    totals, which read event__event_type, stop counting them."""
+
+    def setUp(self) -> None:
+        self.request = RequestFactory().post("/graphql")
+        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.context = dict(request=self.request)
+        self.violence_sub_type = ViolenceSubTypeFactory.create()
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+            violence_sub_type=self.violence_sub_type,
+        )
+
+    def _serializer(self, **data):
+        return EventSerializer(instance=self.event, data=data, partial=True, context=self.context)
+
+    def test_flip_rejected_when_a_figure_carries_the_old_cause(self):
+        FigureFactory.create(
+            entry=EntryFactory.create(),
+            event=self.event,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+        )
+        serializer = self._serializer(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+            other_sub_type=OtherSubtypeFactory.create().id,
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("event_type", serializer.errors)
+
+    def test_flip_allowed_without_figures(self):
+        serializer = self._serializer(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+            other_sub_type=OtherSubtypeFactory.create().id,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_unrelated_update_is_not_blocked_by_a_mismatched_figure(self):
+        """The guard fires on a cause change, not on every save — an event that
+        already has a mismatched figure stays editable."""
+        FigureFactory.create(
+            entry=EntryFactory.create(),
+            event=self.event,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+        )
+        serializer = self._serializer(name="renamed event")
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_flip_allowed_when_the_figures_already_carry_the_new_cause(self):
+        FigureFactory.create(
+            entry=EntryFactory.create(),
+            event=self.event,
+            figure_cause=Crisis.CRISIS_TYPE.OTHER,
+        )
+        serializer = self._serializer(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+            other_sub_type=OtherSubtypeFactory.create().id,
+        )
         self.assertTrue(serializer.is_valid(), serializer.errors)
