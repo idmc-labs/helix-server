@@ -320,11 +320,17 @@ class GiddPublicCountryRegionType(graphene.ObjectType):
     name = graphene.String(required=True)
 
 
+class GiddPublicCountryGeographicalGroupType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
 class GiddPublicCountryType(graphene.ObjectType):
     id = graphene.ID(required=True)
     iso3 = graphene.String(required=True)
     idmc_short_name = graphene.String(required=True)
     region = graphene.Field(GiddPublicCountryRegionType)
+    geographical_group = graphene.Field(GiddPublicCountryGeographicalGroupType)
     centroid = graphene.List(graphene.Float)
 
 
@@ -530,8 +536,25 @@ class Query(graphene.ObjectType):
                     id=country["region__id"],
                     name=country["region__name"],
                 ),
+                geographical_group=(
+                    GiddPublicCountryGeographicalGroupType(
+                        id=country["geographical_group__id"],
+                        name=country["geographical_group__name"],
+                    )
+                    if country["geographical_group__id"] is not None
+                    else None
+                ),
             )
-            for country in Country.objects.values("id", "idmc_short_name", "iso3", "centroid", "region__id", "region__name")
+            for country in Country.objects.values(
+                "id",
+                "idmc_short_name",
+                "iso3",
+                "centroid",
+                "region__id",
+                "region__name",
+                "geographical_group__id",
+                "geographical_group__name",
+            )
         ]
 
     @staticmethod
@@ -584,9 +607,7 @@ class Query(graphene.ObjectType):
         # so the per-category total must come from a single year's snapshot, not
         # a sum across years. Pin it to the latest year that has stock within the
         # filtered range, grouped by violence sub type.
-        conflict_latest_stock_year = conflict_qs.filter(total_displacement__gt=0).aggregate(
-            year=models.Max("year")
-        )["year"]
+        conflict_latest_stock_year = conflict_qs.filter(total_displacement__gt=0).aggregate(year=models.Max("year"))["year"]
 
         violence_categories_qs = (
             conflict_qs.values("violence_sub_type", "violence_sub_type__id")
@@ -731,9 +752,7 @@ class Query(graphene.ObjectType):
         # so the per-category total must come from a single year's snapshot, not
         # a sum across years. Pin it to the latest year that has stock within the
         # filtered range, grouped by hazard type.
-        disaster_latest_stock_year = disaster_qs.filter(total_displacement__gt=0).aggregate(
-            year=models.Max("year")
-        )["year"]
+        disaster_latest_stock_year = disaster_qs.filter(total_displacement__gt=0).aggregate(year=models.Max("year"))["year"]
 
         categories_qs = (
             disaster_qs.values("hazard_type", "hazard_type__id")
