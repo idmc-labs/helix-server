@@ -445,3 +445,29 @@ class TestFigureLevelViolenceFilters(HelixTestCase):
         fqs = BaseFigureExtractionFilterSet(data=dict(filter_figure_osv_sub_types=[self.other_osv_sub_type.id])).qs
         self.assertNotIn(self.osv_figure, set(fqs))
 
+
+class TestHousingDestructionFilter(HelixTestCase):
+    """``is_housing_destruction`` is NULL when the figure's term puts it outside
+    housing_list(), which answers "no housing destruction"."""
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.entry = EntryFactory.create()
+        cls.event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER)
+        cls.destroyed = FigureFactory.create(
+            entry=cls.entry, event=cls.event, term=Figure.FIGURE_TERMS.DESTROYED_HOUSING, is_housing_destruction=True
+        )
+        cls.not_destroyed = FigureFactory.create(
+            entry=cls.entry, event=cls.event, term=Figure.FIGURE_TERMS.DESTROYED_HOUSING, is_housing_destruction=False
+        )
+        cls.not_applicable = FigureFactory.create(
+            entry=cls.entry, event=cls.event, term=Figure.FIGURE_TERMS.DISPLACED, is_housing_destruction=None
+        )
+
+    def test_true_matches_only_the_flagged_figure(self):
+        fqs = BaseFigureExtractionFilterSet(data=dict(filter_figure_has_housing_destruction=True)).qs
+        self.assertEqual({self.destroyed}, set(fqs))
+
+    def test_false_matches_false_and_not_applicable(self):
+        fqs = BaseFigureExtractionFilterSet(data=dict(filter_figure_has_housing_destruction=False)).qs
+        self.assertEqual({self.not_destroyed, self.not_applicable}, set(fqs))

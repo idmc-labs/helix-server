@@ -546,6 +546,10 @@ class BaseFigureExtractionFilterSet(AcceptsOrdering, MultiWordSearchFilterSet):
     def filter_filter_figure_has_housing_destruction(self, qs, name, value):
         if value is None:
             return qs
+        if value is False:
+            # NULL on a term outside housing_list() means the flag does not apply,
+            # which answers "no housing destruction".
+            return qs.filter(Q(is_housing_destruction=False) | Q(is_housing_destruction__isnull=True))
         return qs.filter(is_housing_destruction=value)
 
     def filter_by_figure_terms(self, qs, name, value):
