@@ -1,5 +1,7 @@
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
+from apps.event.constants import OSV
+from apps.event.models import OsvSubType
 from apps.extraction.filters import BaseFigureExtractionFilterSet
 from apps.extraction.filters import EntryExtractionFilterSet as f
 from utils.factories import (
@@ -407,3 +409,39 @@ class TestExtractionFilter(HelixTestCase):
             all([figure not in set(fqs) for figure in [self.figure1entry1event1, self.fig1cat1entry1, self.fig2cat2entry1]])
             is True
         )
+
+
+class TestFigureLevelViolenceFilters(HelixTestCase):
+    """A figure carries its own violence and osv sub type, which may differ from
+    its event's — only the cause has to match. The filters narrow on the figure's
+    own fields, so a figure is reached through its own violence, not its event's.
+    """
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.osv = ViolenceFactory.create(name=OSV)
+        cls.niac = ViolenceFactory.create(name="Non-International armed conflict (NIAC)")
+        cls.osv_sub_type = OsvSubType.objects.create(name="Civilian-state violence")
+        cls.other_osv_sub_type = OsvSubType.objects.create(name="Crime-related violence")
+
+        # Event violence is NIAC; the figure on it asserts OSV itself.
+        cls.event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT, violence=cls.niac)
+        cls.entry = EntryFactory.create()
+        cls.osv_figure = FigureFactory.create(
+            entry=cls.entry,
+            event=cls.event,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            violence=cls.osv,
+            osv_sub_type=cls.osv_sub_type,
+        )
+
+    def test_figure_reached_through_its_own_violence(self):
+        fqs = BaseFigureExtractionFilterSet(data=dict(filter_figure_osv_sub_types=[self.osv_sub_type.id])).qs
+        self.assertIn(self.osv_figure, set(fqs))
+
+    def test_figure_excluded_when_its_osv_sub_type_does_not_match(self):
+        """Before, the guard read the event's violence: the event is NIAC, so this
+        figure escaped narrowing and matched every osv_sub_type filter."""
+        fqs = BaseFigureExtractionFilterSet(data=dict(filter_figure_osv_sub_types=[self.other_osv_sub_type.id])).qs
+        self.assertNotIn(self.osv_figure, set(fqs))
+
