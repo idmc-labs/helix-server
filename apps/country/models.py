@@ -64,7 +64,8 @@ class CountryRegion(models.Model):
         """
         returns the subqueries for figures sum annotations
         """
-        figures = figures or Figure.objects.all()
+        if figures is None:
+            figures = Figure.objects.all()
         if ignore_dates:
             start_date = None
             end_date = None

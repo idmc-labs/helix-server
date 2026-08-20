@@ -93,7 +93,8 @@ class Crisis(MetaInformationAbstractModel, models.Model):
     def _total_figure_disaggregation_subquery(cls, figures=None, reference_date=None):
         from apps.entry.models import Figure
 
-        figures = figures or Figure.objects.all()
+        if figures is None:
+            figures = Figure.objects.all()
 
         if reference_date is None:
             reference_date_qs = models.Subquery(
