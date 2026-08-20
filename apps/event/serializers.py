@@ -2,6 +2,7 @@ import typing
 from collections import OrderedDict
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.db.models import Max, Min, Q
 from django.utils.translation import gettext
 from rest_framework import serializers
@@ -291,15 +292,28 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
                 # Create new
                 event_code_ser = EventCodeSerializer(context=self.context)
             else:
-                # Update existing
+                # Update existing. The queryset is scoped to this event, so an id
+                # from another event has no match.
+                existing = instance_event_codes_qs.filter(id=code["id"]).first()
+                if existing is None:
+                    raise serializers.ValidationError(
+                        {"event_codes": gettext("Event code %s does not belong to this event.") % code["id"]}
+                    )
                 event_code_ser = EventCodeUpdateSerializer(
-                    instance=instance_event_codes_qs.get(id=code["id"]),
+                    instance=existing,
                     partial=True,
                     context=self.context,
                 )
             event_code_ser._validated_data = {**code, "event": event}
             event_code_ser._errors = {}
-            event_code_ser.save()
+            try:
+                event_code_ser.save()
+            except IntegrityError:
+                # uuid is unique across every event code and EventCodeSerializer
+                # drops the UniqueValidator, so a collision only shows up here.
+                raise serializers.ValidationError(
+                    {"event_codes": gettext("Event code uuid %s is already in use.") % code.get("uuid")}
+                )
 
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)

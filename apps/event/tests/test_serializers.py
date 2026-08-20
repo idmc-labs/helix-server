@@ -2,10 +2,11 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 from django.test import RequestFactory
+from rest_framework import serializers
 
 from apps.crisis.models import Crisis
 from apps.event.models import EventCode
-from apps.event.serializers import EventSerializer
+from apps.event.serializers import EventSerializer, EventUpdateSerializer
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     CountryFactory,
@@ -15,6 +16,7 @@ from utils.factories import (
     DisasterSubTypeFactory,
     DisasterTypeFactory,
     EntryFactory,
+    EventCodeFactory,
     EventFactory,
     FigureFactory,
     OtherSubtypeFactory,
@@ -442,3 +444,59 @@ class TestEventCauseFlipWithFigures(HelixTestCase):
             other_sub_type=OtherSubtypeFactory.create().id,
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
+
+
+class TestEventCodeUpdateFailures(HelixTestCase):
+    """``_update_event_codes`` assigns ``_validated_data`` directly and bypasses
+    ``run_validation``, so the two things it cannot cope with used to surface as
+    an EventCode.DoesNotExist and a raw unique-constraint violation."""
+
+    def setUp(self) -> None:
+        self.request = RequestFactory().post("/graphql")
+        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.context = dict(request=self.request)
+        self.country = CountryFactory.create()
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+            other_sub_type=OtherSubtypeFactory.create(),
+        )
+        self.event.countries.set([self.country])
+        self.code = EventCodeFactory.create(event=self.event, country=self.country)
+
+    def _code(self, **overrides) -> dict:
+        code = {
+            "uuid": str(uuid4()),
+            "country": self.country.id,
+            "event_code": "GLD-001",
+            "event_code_type": EventCode.EVENT_CODE_TYPE.GLIDE_NUMBER.value,
+        }
+        code.update(overrides)
+        return code
+
+    def _save(self, event_codes):
+        serializer = EventUpdateSerializer(
+            instance=self.event,
+            data=dict(id=self.event.id, event_codes=event_codes),
+            partial=True,
+            context=self.context,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        return serializer.save()
+
+    def test_id_belonging_to_another_event_is_reported(self):
+        other_event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.OTHER.value)
+        foreign_code = EventCodeFactory.create(event=other_event, country=self.country)
+        with self.assertRaises(serializers.ValidationError) as cm:
+            self._save([self._code(id=foreign_code.id)])
+        self.assertIn("does not belong to this event", str(cm.exception))
+
+    def test_uuid_held_by_another_event_is_reported(self):
+        other_event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.OTHER.value)
+        foreign_code = EventCodeFactory.create(event=other_event, country=self.country)
+        with self.assertRaises(serializers.ValidationError) as cm:
+            self._save([self._code(uuid=str(foreign_code.uuid))])
+        self.assertIn("already in use", str(cm.exception))
+
+    def test_own_code_and_a_new_code_are_saved(self):
+        self._save([self._code(id=self.code.id, uuid=str(self.code.uuid)), self._code(event_code="GLD-002")])
+        self.assertEqual(EventCode.objects.filter(event=self.event).count(), 2)
