@@ -336,8 +336,13 @@ class HulkFigureImport(HulkBaseModel):
 
     @model_validator(mode="after")
     def _validate_household_size(self):
-        if self.unit == FIGURE_UNIT.HOUSEHOLD and self.household_size is None:
-            raise ValueError("household_size is required when unit is HOUSEHOLD")
+        # FigureSerializer._validate_unit rejects any falsy household_size for
+        # HOUSEHOLD, and derives total_figures from it into a positive column.
+        if self.unit == FIGURE_UNIT.HOUSEHOLD:
+            if self.household_size is None:
+                raise ValueError("household_size is required when unit is HOUSEHOLD")
+            if self.household_size <= 0:
+                raise ValueError("household_size must be greater than 0 when unit is HOUSEHOLD")
         return self
 
     @model_validator(mode="after")
@@ -401,5 +406,9 @@ class HulkFigureImport(HulkBaseModel):
             raise ValueError(f"{start_field}: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
         if end_date and end_date > max_future_date:
             raise ValueError(f"{end_field}: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
+        # FigureSerializer._validate_category bounds a flow figure's end at today;
+        # a stock figure's reporting date may sit in the future.
+        if self.category.value in FIGURE_FLOW_LIST and end_date and end_date > datetime.date.today():
+            raise ValueError(f"{end_field}: This must be a past date.")
 
         return self

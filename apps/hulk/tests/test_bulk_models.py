@@ -284,17 +284,12 @@ class TestHulkEntryImportPublishDate(HelixGraphQLTestCase):
         pyhelix_models.HulkEntryImport(**row)
 
 
-class TestHulkFigureImportDates(HelixGraphQLTestCase):
-    """Figure ``start_date``/``end_date`` must not be more than 10 years in the
-    future — mirroring ``FigureSerializer._validate_dates``.
+class _PyhelixFigureRowMixin:
+    """Figure rows for the pyhelix parent model.
 
-    The check lives on the pyhelix parent (``parse_dates``) and bounds the
-    resolved ``_start_date``/``_end_date``, so it covers both the flow dates
-    (``start_date``/``end_date``) and the stock mapping
-    (``stock_date`` -> start, ``stock_reporting_date`` -> end). We exercise the
-    parent model directly to avoid the DB-backed entry/event/sub-type lookups on
-    the app subclass, stubbing the sub-type existence check the ``figure_cause``
-    validator performs."""
+    The parent is exercised directly to avoid the DB-backed entry/event/sub-type
+    lookups on the app subclass, stubbing the sub-type existence check the
+    ``figure_cause`` validator performs."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -368,6 +363,18 @@ class TestHulkFigureImportDates(HelixGraphQLTestCase):
         row.update(overrides)
         return row
 
+
+class TestHulkFigureImportDates(_PyhelixFigureRowMixin, HelixGraphQLTestCase):
+    """Figure ``start_date``/``end_date`` must not be more than 10 years in the
+    future — mirroring ``FigureSerializer._validate_dates`` — and a flow
+    figure's end must already have passed, mirroring
+    ``FigureSerializer._validate_category``.
+
+    The checks live on the pyhelix parent (``parse_dates``) and bound the
+    resolved ``_start_date``/``_end_date``, so they cover both the flow dates
+    (``start_date``/``end_date``) and the stock mapping
+    (``stock_date`` -> start, ``stock_reporting_date`` -> end)."""
+
     @staticmethod
     def _far_future() -> str:
         today = datetime.date.today()
@@ -392,10 +399,13 @@ class TestHulkFigureImportDates(HelixGraphQLTestCase):
             pyhelix_models.HulkFigureImport(**row)
         self.assertIn("end_date: This date cannot be more than 10 years in the future.", str(cm.exception))
 
-    def test_flow_dates_within_10_years_allowed(self):
+    def test_flow_near_future_dates_rejected(self):
+        """Inside the 10-year bound but still ahead of today: rejected by the
+        flow-only past-date rule rather than the future bound."""
         row = self._flow_row(start_date=self._near_future(), end_date=self._near_future())
-        with helix_client_context(self.stub_client):
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
             pyhelix_models.HulkFigureImport(**row)
+        self.assertIn("end_date: This must be a past date.", str(cm.exception))
 
     def test_flow_very_old_dates_allowed(self):
         row = self._flow_row(start_date="1900-01-01", end_date="1900-12-31")
@@ -454,6 +464,66 @@ class TestHulkFigureImportDates(HelixGraphQLTestCase):
         row = self._stock_row(stock_date=self._near_future(), stock_reporting_date=self._near_future())
         with helix_client_context(self.stub_client):
             pyhelix_models.HulkFigureImport(**row)
+
+    # -- flow end date must have passed ---------------------------------------
+
+    @staticmethod
+    def _tomorrow() -> str:
+        return (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+
+    def test_flow_end_date_in_the_future_rejected(self):
+        row = self._flow_row(end_date=self._tomorrow())
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+        self.assertIn("end_date: This must be a past date.", str(cm.exception))
+
+    def test_flow_end_date_today_allowed(self):
+        row = self._flow_row(end_date=datetime.date.today().isoformat())
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+
+    def test_stock_reporting_date_in_the_future_allowed(self):
+        """The past-date bound is flow-only; a stock figure reports forward."""
+        row = self._stock_row(stock_reporting_date=self._tomorrow())
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+
+
+class TestHulkFigureImportHouseholdSize(_PyhelixFigureRowMixin, HelixGraphQLTestCase):
+    """``FigureSerializer._validate_unit`` rejects any falsy ``household_size``
+    for HOUSEHOLD and derives ``total_figures`` from it into a positive column,
+    so zero and negative values must not reach helix."""
+
+    def _household_row(self, **overrides) -> dict:
+        row = {"unit": "HOUSEHOLD", "household_size": 4.5}
+        row.update(overrides)
+        return self._flow_row(**row)
+
+    def test_household_size_required_for_household_unit(self):
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**self._household_row(household_size=None))
+        self.assertIn("household_size is required when unit is HOUSEHOLD", str(cm.exception))
+
+    def test_zero_household_size_rejected(self):
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**self._household_row(household_size=0))
+        self.assertIn("household_size must be greater than 0 when unit is HOUSEHOLD", str(cm.exception))
+
+    def test_negative_household_size_rejected(self):
+        """A negative size reaches ``total_figures``, a positive column, as a
+        raw constraint violation rather than a field error."""
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**self._household_row(household_size=-4.5))
+        self.assertIn("household_size must be greater than 0 when unit is HOUSEHOLD", str(cm.exception))
+
+    def test_positive_household_size_allowed(self):
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**self._household_row())
+
+    def test_person_unit_ignores_household_size(self):
+        """helix nulls ``household_size`` for PERSON, so its value is not bounded."""
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**self._flow_row(unit="PERSON", household_size=0))
 
 
 class TestHulkFigureImportEventCause(HelixGraphQLTestCase):
