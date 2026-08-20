@@ -290,7 +290,8 @@ class HulkFigureImport(HulkBaseModel):
     analysis_text: str
     source_excerpt_text: str
     include_idu: bool
-    idu_text: str
+    idu_text: str = ""
+    """Optional: FigureSerializer generates the excerpt on create when blank"""
 
     locations: typing_extensions.Annotated[
         typing.List[HulkFigureImportLocation],
@@ -338,12 +339,6 @@ class HulkFigureImport(HulkBaseModel):
     def _validate_household_size(self):
         if self.unit == FIGURE_UNIT.HOUSEHOLD and self.household_size is None:
             raise ValueError("household_size is required when unit is HOUSEHOLD")
-        return self
-
-    @model_validator(mode="after")
-    def _validate_idu(self):
-        if self.include_idu and (not self.idu_text or not self.idu_text.strip()):
-            raise ValueError("idu_text is required (non-blank) when include_idu is True")
         return self
 
     @model_validator(mode="after")
