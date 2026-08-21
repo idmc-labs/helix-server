@@ -640,6 +640,16 @@ class Command(BaseCommand):
         """
         Entry point for processing the CSV file to update Household Size.
         """
+        try:
+            self.run_update(**kwargs)
+        finally:
+            # In a finally block so that neither an early return nor a caught exception can
+            # leave a dry run committed. Setting the flag issues no query, so it is safe even
+            # once the transaction is already marked for rollback.
+            if kwargs["dry_run"]:
+                transaction.set_rollback(True)
+
+    def run_update(self, **kwargs):
         csv_file_path = kwargs["csv_file_path"]
         year = kwargs["year"]
         mode = kwargs["figure_update_mode"]
@@ -678,6 +688,3 @@ class Command(BaseCommand):
             self.print_figure_changelog(figure_log.changes)
             self.print_manual_verification(figure_log.needs_verification)
         self.print_summary(household_tally, figure_log, dry_run)
-
-        if dry_run:
-            transaction.set_rollback(True)

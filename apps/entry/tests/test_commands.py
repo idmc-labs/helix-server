@@ -2,6 +2,7 @@ import csv
 import tempfile
 from datetime import date
 from io import StringIO
+from unittest import mock
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -9,6 +10,7 @@ from django.test import SimpleTestCase
 
 from apps.contrib.models import BulkApiOperation
 from apps.country.models import HouseholdSize
+from apps.entry.management.commands.update_ahhs import Command as UpdateAhhsCommand
 from apps.entry.management.commands.update_ahhs import calculate_gap_filling_method, rewrite_excerpt_idu
 from apps.entry.management.commands.update_figure_event import Command as UpdateFigureEventCommand
 from apps.entry.models import Figure
@@ -241,6 +243,51 @@ class TestUpdateAhhsCommand(HelixTestCase):
         self.figure.refresh_from_db()
         self.assertEqual(self.figure.household_size, 5.0)
         self.assertEqual(self.figure.total_figures, 50)
+
+    def test_dry_run_rolls_back_when_the_body_returns_early(self):
+        # `run_update` holding the work means an early return inside it still reaches the
+        # rollback flag in `handle`. The flag additionally sits in a finally block, which no
+        # test can distinguish: every path it covers is already covered by the extraction or
+        # by atomic() rolling back on an exception.
+        country = self.country
+
+        def early_return(command_self, **kwargs):
+            HouseholdSize.objects.create(
+                country=country,
+                year=1999,
+                size=9.9,
+                is_active=True,
+                data_source_category="probe",
+                source="probe",
+            )
+            return
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        with mock.patch.object(UpdateAhhsCommand, "run_update", early_return):
+            call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="none", dry_run=True)
+
+        self.assertFalse(HouseholdSize.objects.filter(year=1999).exists())
+
+    def test_a_real_run_keeps_what_the_body_wrote_before_returning_early(self):
+        # The mirror image, and the half that would catch a finally block firing unconditionally.
+        country = self.country
+
+        def early_return(command_self, **kwargs):
+            HouseholdSize.objects.create(
+                country=country,
+                year=1999,
+                size=9.9,
+                is_active=True,
+                data_source_category="probe",
+                source="probe",
+            )
+            return
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        with mock.patch.object(UpdateAhhsCommand, "run_update", early_return):
+            call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="none")
+
+        self.assertTrue(HouseholdSize.objects.filter(year=1999).exists())
 
     def test_dry_run_rolls_back_all_changes(self):
         csv_path = self._write_csv([self._default_row(ahhs="6")])
