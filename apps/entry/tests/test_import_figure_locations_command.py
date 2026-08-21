@@ -144,6 +144,24 @@ class TestImportFigureLocationsCommand(HelixTestCase):
             ],
         )
 
+    def test_template_readme_describes_update_only(self):
+        out = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+        call_command("import_figure_locations", "--make-template", out.name)
+        readme = load_workbook(out.name)["README"]
+        readme_text = " ".join(str(cell.value) for row in readme.iter_rows() for cell in row if cell.value is not None)
+
+        # An update-only importer must not tell the operator a blank id creates a record.
+        self.assertNotIn("Leave 'id' blank to CREATE", readme_text)
+        self.assertIn("This importer only UPDATES; it never creates records.", readme_text)
+        self.assertIn("id of the row to update", readme_text)
+        self.assertNotIn("leave blank to create", readme_text)
+        self.assertNotIn("Required (create)", readme_text)
+
+        # id is the one column the operator must supply, and the table says so.
+        shape = {row[0].value: row[2].value for row in readme.iter_rows() if row[0].value in {"id", "display_name"}}
+        self.assertEqual(shape["id"], "yes")
+        self.assertEqual(shape["display_name"], "no")
+
     def test_template_hides_denylisted_columns(self):
         headers = self.template_headers()
         for hidden in ["uuid", "geocoder_metadata", "moved", "created_by", "created_at", "old_id"]:

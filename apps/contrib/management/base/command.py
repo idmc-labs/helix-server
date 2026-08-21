@@ -336,6 +336,7 @@ class BaseImportCommand(BaseCommand):
                 required_columns=self.required_create_columns(),
                 column_types=self.column_types(),
                 column_notes=self.column_notes(),
+                update_only=self.update_only,
             )
             self.stdout.write(self.style.SUCCESS(f"Template written to {out_path}"))
             return

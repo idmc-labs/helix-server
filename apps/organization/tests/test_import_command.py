@@ -214,6 +214,9 @@ class TestImportOrganizationsCommand(HelixTestCase):
         self.assertIn("Template Shape", readme_text)
         self.assertIn("Allowed Choices", readme_text)
         # Usage + types + notes.
+        # This importer creates as well as updates, so it keeps the blank-id create wording.
+        self.assertIn("Leave 'id' blank to CREATE", readme_text)
+        self.assertIn("Required (create)", readme_text)
         self.assertIn("<clear>", readme_text)
         self.assertIn("single choice, case-sensitive", readme_text)  # category type + case
         self.assertIn("multiple reference, case-sensitive", readme_text)  # countries type + case

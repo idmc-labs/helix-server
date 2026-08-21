@@ -47,7 +47,18 @@ def _autosize(sheet, widths: typing.List[int]):
 
 
 def _write_readme(
-    workbook, *, title, metadata, data_sheet, columns, lookups, clear_token, required_columns, column_types, column_notes
+    workbook,
+    *,
+    title,
+    metadata,
+    data_sheet,
+    columns,
+    lookups,
+    clear_token,
+    required_columns,
+    column_types,
+    column_notes,
+    update_only,
 ):
     span = 4  # widest section (the Template Shape table): Column | Type | Required | Note
 
@@ -84,9 +95,14 @@ def _write_readme(
     # H2 How to use this template.
     heading("How to use this template", 12)
     blank()
+    id_usage = (
+        "Enter an existing record's id in every row. This importer only UPDATES; it never creates records."
+        if update_only
+        else "Leave 'id' blank to CREATE a new record; enter an existing record's id to UPDATE it."
+    )
     for text in [
         f"Fill in the '{data_sheet}' sheet, one row per record.",
-        "Leave 'id' blank to CREATE a new record; enter an existing record's id to UPDATE it.",
+        id_usage,
         "On update, only the columns you fill are changed; a blank or whitespace-only cell leaves that field unchanged.",
         f"To clear a field on update, put {clear_token} in the cell.",
         "List columns accept multiple values separated by ';'.",
@@ -100,12 +116,17 @@ def _write_readme(
     # H2 Template Shape.
     heading("Template Shape", 12)
     blank()
-    for col, text in enumerate(["Column", "Type", "Required (create)", "Note"], start=1):
+    required_header = "Required" if update_only else "Required (create)"
+    id_note = "id of the row to update" if update_only else "leave blank to create; set an existing id to update"
+    for col, text in enumerate(["Column", "Type", required_header, "Note"], start=1):
         _cell(sheet, row, col, text, bold=True)
     row += 1
     for column in columns:
-        required = "no" if column == "id" else ("yes" if column in required_columns else "no")
-        note = "leave blank to create; set an existing id to update" if column == "id" else column_notes.get(column, "")
+        if column == "id":
+            required = "yes" if update_only else "no"
+        else:
+            required = "yes" if column in required_columns else "no"
+        note = id_note if column == "id" else column_notes.get(column, "")
         _cell(sheet, row, 1, column)
         _cell(sheet, row, 2, column_types.get(column, "text"))
         _cell(sheet, row, 3, required)
@@ -147,6 +168,7 @@ def write_template(
     required_columns: typing.Iterable[str],
     column_types: typing.Dict[str, str],
     column_notes: typing.Dict[str, str],
+    update_only: bool = False,
 ) -> None:
     """
     Write a blank template workbook. All written cells use Arial 10 for portability (openpyxl
@@ -170,6 +192,7 @@ def write_template(
         required_columns=set(required_columns),
         column_types=column_types,
         column_notes=column_notes,
+        update_only=update_only,
     )
 
     data = workbook.create_sheet(data_sheet)
