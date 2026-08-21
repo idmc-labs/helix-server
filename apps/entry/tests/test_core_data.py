@@ -1717,18 +1717,36 @@ class TestCoreData(HelixGraphQLTestCase):
                         }
                     )
 
-        # NOTE: Both IDPs and NDs are summed if year is not provided
-        overall_conflict_idps = get_safe_sum(
-            [row["conflict_idps"] for row in displacement_data if row["conflict_idps"] is not None]
-        )
+        # NDs are a flow -> summed across all years when no year is provided.
         overall_conflict_nds = get_safe_sum(
             [row["conflict_nds"] for row in displacement_data if row["conflict_nds"] is not None]
         )
         overall_disaster_nds = get_safe_sum(
             [row["disaster_nds"] for row in displacement_data if row["disaster_nds"] is not None]
         )
+        # IDP stock is a point-in-time figure -> read from the latest year that has stock
+        # (never summed across years), so the expected total is that one year's rows only.
+        conflict_stock_year = max(
+            (row["year"] for row in displacement_data if row["conflict_idps"] is not None),
+            default=None,
+        )
+        overall_conflict_idps = get_safe_sum(
+            [
+                row["conflict_idps"]
+                for row in displacement_data
+                if row["conflict_idps"] is not None and row["year"] == conflict_stock_year
+            ]
+        )
+        disaster_stock_year = max(
+            (row["year"] for row in displacement_data if row["disaster_idps"] is not None),
+            default=None,
+        )
         overall_disaster_idps = get_safe_sum(
-            [row["disaster_idps"] for row in displacement_data if row["disaster_idps"] is not None]
+            [
+                row["disaster_idps"]
+                for row in displacement_data
+                if row["disaster_idps"] is not None and row["year"] == disaster_stock_year
+            ]
         )
 
         query = """
@@ -1736,12 +1754,14 @@ class TestCoreData(HelixGraphQLTestCase):
                 giddPublicCountryYearDisplacements(
                     clientId: $clientId,
                 ){
-                    conflictNewDisplacement
-                    conflictTotalDisplacement
-                    disasterNewDisplacement
-                    disasterTotalDisplacement
-                    iso3
-                    year
+                    results {
+                        conflictNewDisplacement
+                        conflictTotalDisplacement
+                        disasterNewDisplacement
+                        disasterTotalDisplacement
+                        iso3
+                        year
+                    }
                 }
                 giddPublicConflictStatistics(
                     clientId: $clientId,
@@ -1764,7 +1784,7 @@ class TestCoreData(HelixGraphQLTestCase):
             }
         """
         response = self.query_json(query, variables={"clientId": self.gidd_client.code})
-        r_data = response["data"]["giddPublicCountryYearDisplacements"]
+        r_data = response["data"]["giddPublicCountryYearDisplacements"]["results"]
         system_data = [
             {
                 "iso3": i["iso3"],
@@ -1776,8 +1796,9 @@ class TestCoreData(HelixGraphQLTestCase):
             }
             for i in r_data
         ]
-        # giddPublicCountryYearDisplacements is a non-paginated list ordered by (iso3, year);
-        # the expected rows are built year-major, so compare order-independently.
+        # giddPublicCountryYearDisplacements is paginated (results ordered by (iso3, year));
+        # the test data is well under one page, and the expected rows are built year-major,
+        # so compare order-independently.
         _key = lambda d: (d["iso3"], d["year"])  # noqa: E731
         assert sorted(displacement_data, key=_key) == sorted(system_data, key=_key)
 
