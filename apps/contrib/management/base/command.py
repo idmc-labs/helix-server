@@ -45,6 +45,10 @@ class BaseImportCommand(BaseCommand):
     #: A blank or whitespace-only cell leaves the field unchanged
     CLEAR_TOKEN = "<clear>"
 
+    #: A cell cannot hold a list, so a list column's cell is split on this separator and each
+    #: part is left to the serializer's child field to coerce and report on.
+    LIST_SEP = ";"
+
     #: Global denylist: fields that must never be in importable columns
     #: even when a serializer uses ``fields = "__all__"`` and exposes them
     #: id is intentionally NOT excluded here: it is used to identify create/update action.
@@ -136,6 +140,19 @@ class BaseImportCommand(BaseCommand):
         create_fields = self.create_serializer().fields
         return create_fields.get(column) or update_fields.get(column)
 
+    def _child_field(self, column: str):
+        """The child field of a list column, or None when the column is not a list."""
+        field = self._scalar_field(column)
+        if isinstance(field, drf_serializers.ListField):
+            return field.child
+        return None
+
+    def _split_list_value(self, column: str, value):
+        """Split a delimited cell for a list column; any other column's value passes through."""
+        if self._child_field(column) is None:
+            return value
+        return [part.strip() for part in str(value).split(self.LIST_SEP) if part.strip()]
+
     def column_types(self) -> typing.Dict[str, str]:
         """Data-type label per importable column."""
         lookups = self.lookup_map
@@ -150,9 +167,11 @@ class BaseImportCommand(BaseCommand):
             elif column == "id":
                 types[column] = "number"
             else:
-                field = self._scalar_field(column)
+                child = self._child_field(column)
+                field = self._scalar_field(column) if child is None else child
                 TEXT_SCALAR_FIELD = ("text", "")
-                types[column] = self._SCALAR_FIELDS.get(type(field).__name__, TEXT_SCALAR_FIELD)[0] if field else "text"
+                label = self._SCALAR_FIELDS.get(type(field).__name__, TEXT_SCALAR_FIELD)[0] if field else "text"
+                types[column] = f"{label} list" if child is not None else label
         return types
 
     def column_notes(self) -> typing.Dict[str, str]:
@@ -165,9 +184,13 @@ class BaseImportCommand(BaseCommand):
             elif column == "id":
                 notes[column] = ""
             else:
-                field = self._scalar_field(column)
+                child = self._child_field(column)
+                field = self._scalar_field(column) if child is None else child
                 TEXT_SCALAR_FIELD = ("text", "")
-                notes[column] = self._SCALAR_FIELDS.get(type(field).__name__, TEXT_SCALAR_FIELD)[1] if field else ""
+                note = self._SCALAR_FIELDS.get(type(field).__name__, TEXT_SCALAR_FIELD)[1] if field else ""
+                if child is not None:
+                    note = f"{note} each, separated by '{self.LIST_SEP}'" if note else f"separated by '{self.LIST_SEP}'"
+                notes[column] = note
         return notes
 
     # ----- resolution + dispatch -----
@@ -195,11 +218,12 @@ class BaseImportCommand(BaseCommand):
                 # Blank/whitespace leaves the field untouched (omitted from the payload).
                 continue
             if self._is_clear_token(value):
-                # Explicitly clear: nullable -> None, non-null blank-allowed string -> "", list fields -> [].
+                # Explicitly clear: nullable -> None, non-null blank-allowed string -> "",
+                # a lookup's own list fields -> [].
                 data[header] = lookup.clear_value() if lookup is not None else self._scalar_clear_value(header)
                 continue
             if lookup is None:
-                data[header] = value
+                data[header] = self._split_list_value(header, value)
                 continue
             try:
                 data[header] = lookup.resolve(value)
