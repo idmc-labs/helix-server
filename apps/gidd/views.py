@@ -3,6 +3,7 @@ import typing
 from datetime import datetime
 from pathlib import Path
 
+from django.core.exceptions import FieldDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Case, F, Q, When
@@ -18,6 +19,7 @@ from openpyxl.cell import Cell as OpCell
 from openpyxl.writer.excel import save_virtual_workbook
 from rest_framework import filters, mixins, renderers, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 
 from apps.common.utils import (
@@ -30,6 +32,7 @@ from apps.crisis.models import Crisis
 from apps.entry.models import ExternalApiDump, Figure, FigureLocation
 from apps.event.models import EventCode
 from utils.common import client_id, get_valid_xml_string, track_gidd
+from utils.graphene.ordering import leads_descending, orders_by_pk
 
 from .cache import GiddExportCache
 from .models import Conflict, Disaster, DisplacementData, GiddFigure, IdpsSaddEstimate, PublicFigureAnalysis, StatusLog
@@ -109,8 +112,88 @@ def remove_null_from_dict(data: dict) -> dict:
     return {key: value for key, value in data.items() if value is not None}
 
 
+class GiddOrderingFilter(filters.OrderingFilter):
+    """Ordering bounded by what the serializer exposes, and always total.
+
+    OFFSET paging over a sort with ties has no stable page boundary, so a row can repeat or be
+    skipped across requests.
+
+    TODO: index the sortable columns. None carries an index today, and these endpoints are
+    unauthenticated, so a deep page pays a full sort.
+    """
+
+    def get_ordering(self, request, queryset, view):
+        ordering = super().get_ordering(request, queryset, view)
+        pk_name = queryset.model._meta.pk.name
+        if not ordering:
+            # Exports iterate the queryset whole, so sorting one here would reorder a file nobody
+            # asked to be sorted.
+            return [pk_name] if getattr(view, "paginator", None) is not None else ordering
+        if orders_by_pk(ordering, pk_name):
+            return ordering
+        # Direction follows the leading key, as `nulls_last_order_queryset` does: a fixed ASC
+        # tiebreak reads a bulk-created batch backwards under a descending sort.
+        return [*ordering, f"-{pk_name}" if leads_descending(ordering) else pk_name]
+
+    def get_valid_fields(self, queryset, view, context={}):
+        return [(term, term) for term in self._term_to_source(queryset, view, context)]
+
+    def _term_to_source(self, queryset, view, context={}):
+        """Accepted ordering term -> the ORM path it sorts on.
+
+        DRF's own derivation is not reused because it drops sources that are model properties, and
+        django_enumfield installs one per `EnumField`, which would leave `figure_cause` unsortable.
+        The serializer field name is accepted alongside its source, since `country_name` is the
+        only spelling a caller knows for `Country.idmc_short_name`.
+        """
+        serializer_class = view.get_serializer_class()
+        mapping = {}
+        for field_name, field in serializer_class(context=context).fields.items():
+            if getattr(field, "write_only", False) or field.source == "*":
+                continue
+            source = field.source.replace(".", "__") or field_name
+            try:
+                queryset.model._meta.get_field(source)
+            except FieldDoesNotExist:
+                if source not in queryset.query.annotations:
+                    continue
+            mapping[source] = source
+            mapping.setdefault(field_name, source)
+        return mapping
+
+    def remove_invalid_fields(self, queryset, fields, view, request):
+        """Resolve aliases, and refuse an unknown term rather than dropping it.
+
+        DRF discards what it cannot resolve and still answers 200, so a caller cannot tell the
+        sort was skipped. The GraphQL lists already raise on the same input.
+        """
+        if getattr(view, "ordering_fields", self.ordering_fields) is not None:
+            valid = super().remove_invalid_fields(queryset, fields, view, request)
+            unknown = [field for field in fields if field not in valid]
+            mapping = None
+        else:
+            mapping = self._term_to_source(queryset, view)
+            valid, unknown = [], []
+            for field in fields:
+                prefix, bare = ("-", field[1:]) if field.startswith("-") else ("", field)
+                if bare in mapping:
+                    valid.append(prefix + mapping[bare])
+                else:
+                    unknown.append(field)
+        if unknown:
+            raise ValidationError({"ordering": [f"Invalid ordering field: {field.lstrip('-')}" for field in unknown]})
+        return valid
+
+
+# `ordering_fields` stays unset so the keys come from the serializer: "__all__" would admit every
+# model column, including internal ones like `event_raw_id` that no response carries.
+GIDD_LIST_FILTER_BACKENDS = (DjangoFilterBackend, GiddOrderingFilter, filters.SearchFilter)
+
+
 @client_id
 class ListOnlyViewSetMixin(mixins.ListModelMixin, viewsets.GenericViewSet):
+    filter_backends = GIDD_LIST_FILTER_BACKENDS
+
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
@@ -124,7 +207,6 @@ class ListOnlyViewSetMixin(mixins.ListModelMixin, viewsets.GenericViewSet):
 class CountryViewSet(ListOnlyViewSetMixin):
     serializer_class = CountrySerializer
     lookup_field = "iso3"
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
     filterset_fields = ["id"]
     pagination_class = GiddLimitOffsetPagination
 
@@ -2059,7 +2141,6 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
 )
 class PublicFigureAnalysisViewSet(ListOnlyViewSetMixin):
     serializer_class = PublicFigureAnalysisSerializer
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
     filterset_class = PublicFigureAnalysisFilterSet
     pagination_class = GiddLimitOffsetPagination
 
