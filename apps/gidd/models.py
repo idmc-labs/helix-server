@@ -14,12 +14,13 @@ from apps.entry.models import Entry, Figure
 
 
 class Conflict(models.Model):
-    # giddPublicConflicts. Unauthenticated and no client sends `ordering`, so every token is
-    # refused: an empty set is a bound, not an absent one.
+    # Bounded to what GiddConflictType exposes: these lists are unauthenticated, and a column a
+    # caller cannot read back buys it nothing while widening what it can make the database do.
+    # To-many paths stay out because they fan the parent list out
+    # (apps/contrib/tests/test_to_many_ordering_fanout.py).
     ORDERING_ALLOWLIST = frozenset(
         {
             "country_name",
-            "created_at",
             "id",
             "iso3",
             "new_displacement",
@@ -59,19 +60,28 @@ class Conflict(models.Model):
 
 
 class Disaster(models.Model):
-    # giddPublicDisasters. Same unauthenticated route; keys are idmc-website-components'
-    # Gidd/EventsTable sortable columns (including the hand-written eventName column).
+    # See Conflict. The type exposes the `*_name` denormalisations and not the hazard FKs, so the
+    # REST serializer -- which exposes both -- ends up with a wider set than this.
     ORDERING_ALLOWLIST = frozenset(
         {
             "country_name",
-            "created_at",
+            "end_date",
+            "end_date_accuracy",
             "event_codes",
+            "event_codes_type",
             "event_name",
             "hazard_category_name",
+            "hazard_sub_category_name",
+            "hazard_sub_type_name",
             "hazard_type_name",
             "id",
+            "iso3",
+            "new_displacement",
             "new_displacement_rounded",
             "start_date",
+            "start_date_accuracy",
+            "total_displacement",
+            "total_displacement_rounded",
             "year",
         }
     )
@@ -158,11 +168,14 @@ class Disaster(models.Model):
 
 
 class StatusLog(models.Model):
-    # giddLogs
+    # See Conflict, though this list is authenticated and small.
     ORDERING_ALLOWLIST = frozenset(
         {
+            "completed_at",
             "id",
+            "status",
             "triggered_at",
+            "triggered_by",
         }
     )
 
@@ -301,9 +314,10 @@ class ReleaseMetadata(models.Model):
 
 
 class PublicFigureAnalysis(models.Model):
-    # giddPublicFigureAnalysisList. Unauthenticated and no client sends `ordering`.
+    # See Conflict. `description` is a TextField, so it is the most expensive key here.
     ORDERING_ALLOWLIST = frozenset(
         {
+            "description",
             "figure_category",
             "figure_cause",
             "figures",
@@ -331,16 +345,21 @@ class PublicFigureAnalysis(models.Model):
 
 
 class DisplacementData(models.Model):
-    # giddPublicDisplacements. Unauthenticated (GRAPHENE_NODES_WHITELIST), so the bound comes
-    # from the one client we can read: idmc-website-components' Gidd/DataTable sortable columns.
+    # See Conflict. Unrounded figures are included so a caller can sort by the value it aggregates
+    # on, not only the display value.
     ORDERING_ALLOWLIST = frozenset(
         {
+            "conflict_new_displacement",
             "conflict_new_displacement_rounded",
+            "conflict_total_displacement",
             "conflict_total_displacement_rounded",
             "country_name",
+            "disaster_new_displacement",
             "disaster_new_displacement_rounded",
+            "disaster_total_displacement",
             "disaster_total_displacement_rounded",
             "id",
+            "iso3",
             "year",
         }
     )

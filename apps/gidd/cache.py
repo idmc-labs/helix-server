@@ -98,6 +98,10 @@ class GiddExportCache:
         return {
             **clean_data,
             "release_year": release_year,
+            # `ordering` is a filter-backend param, not a filterset field, so it is absent from
+            # `clean_data`. Without it two requests differing only in sort share one cached file and
+            # the second caller is served the first caller's order.
+            "ordering": query_params.get("ordering") or "",
         }
 
     @classmethod
