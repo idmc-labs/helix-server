@@ -24,7 +24,10 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
     class Meta:
         model = Conflict
         fields = {
-            "id": ["iexact"],
+            # `exact`, not `iexact`: id is an integer column and `iexact` compiles to UPPER("id"),
+            # which Postgres has no overload for -- the endpoint 500s on any value that passes
+            # form validation. `iso3` is text, so case-insensitivity is meaningful there.
+            "id": ["exact"],
             "iso3": ["iexact"],
         }
 

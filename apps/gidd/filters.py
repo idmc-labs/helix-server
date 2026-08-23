@@ -67,7 +67,7 @@ class ReleaseMetadataFilter(django_filters.FilterSet):
 class ConflictFilter(ReleaseMetadataFilter):
     class Meta:
         model = Conflict
-        fields = {"id": ["iexact"]}
+        fields = {"id": ["exact"]}
 
 
 class DisasterFilter(ReleaseMetadataFilter):
@@ -79,7 +79,7 @@ class DisasterFilter(ReleaseMetadataFilter):
 
     class Meta:
         model = Disaster
-        fields = {"id": ["iexact"]}
+        fields = {"id": ["exact"]}
 
     def filter_event_name(self, queryset, name, value):
         return queryset.filter(event_name__icontains=value)
