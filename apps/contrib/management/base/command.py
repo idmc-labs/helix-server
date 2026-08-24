@@ -1,6 +1,7 @@
 """The reusable bulk-import management command base class."""
 
 import typing
+from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
@@ -48,6 +49,9 @@ class BaseImportCommand(BaseCommand):
     #: A cell cannot hold a list, so a list column's cell is split on this separator and each
     #: part is left to the serializer's child field to coerce and report on.
     LIST_SEP = ";"
+
+    #: Longest value rendered into a changelog line before it is cut.
+    CHANGELOG_VALUE_CHARS = 120
 
     #: Global denylist: fields that must never be in importable columns
     #: even when a serializer uses ``fields = "__all__"`` and exposes them
@@ -208,6 +212,13 @@ class BaseImportCommand(BaseCommand):
                 return ""
         return None
 
+    def serializer_context(self, request) -> typing.Dict:
+        """
+        Context handed to every row's serializer. Subclasses extend it when their serializer
+        needs more than the request (e.g. a figure's bulk manager).
+        """
+        return {"request": request}
+
     def prepare_row(self, raw_row: typing.Dict, request):
         """Resolve a raw row and build its serializer. Returns (serializer_or_none, is_update, row_errors)."""
         row_errors: typing.Dict[str, str] = {}
@@ -233,18 +244,19 @@ class BaseImportCommand(BaseCommand):
         raw_id = raw_row.get("id")
         is_update = not is_empty(raw_id)
 
+        context = self.serializer_context(request)
         serializer = None
         if is_update:
             instance = self.model.objects.filter(pk=raw_id).first()
             if instance is None:
                 row_errors["id"] = f"no {self.model.__name__} found with id {raw_id}"
             else:
-                serializer = self.update_serializer(instance=instance, data=data, partial=True, context={"request": request})
+                serializer = self.update_serializer(instance=instance, data=data, partial=True, context=context)
         elif self.update_only:
             row_errors["id"] = f"id is required; this importer only updates existing {self.model.__name__} rows"
         else:
             data.pop("id", None)
-            serializer = self.create_serializer(data=data, context={"request": request})
+            serializer = self.create_serializer(data=data, context=context)
 
         if serializer is not None and not serializer.is_valid():
             for field, errors in serializer.errors.items():
@@ -350,19 +362,128 @@ class BaseImportCommand(BaseCommand):
         rows = read_rows(file_path, data_sheet=self.DATA_SHEET, allowed_columns=self.import_columns())
         self.run_import(rows, request, dry_run=options.get("dry_run", False))
 
+    # ----- changelog -----
+
+    def _comparable(self, instance, name):
+        """
+        The stored value of `name` on `instance`, in a form two snapshots can be compared by.
+
+        A foreign key is read through its attname so the comparison stays an id and never fetches
+        the related row; a many-to-many is read as its sorted ids.
+        """
+        from django.core.exceptions import FieldDoesNotExist
+
+        try:
+            field = instance._meta.get_field(name)
+        except FieldDoesNotExist:
+            # A serializer field with no model field behind it has nothing stored to compare.
+            return None, False
+        if field.many_to_many:
+            return sorted(getattr(instance, name).values_list("pk", flat=True)), True
+        return getattr(instance, field.attname, None), True
+
+    def _snapshot(self, instance, names) -> typing.Dict:
+        snapshot = {}
+        for name in names:
+            value, exists = self._comparable(instance, name)
+            if exists:
+                snapshot[name] = value
+        return snapshot
+
+    def changelog_fields(self, serializer) -> typing.List[str]:
+        """
+        Fields to record before/after. Everything the serializer resolved for this row, including
+        values it injected itself, since those are writes the operator did not ask for and would
+        otherwise go unrecorded. `id` identifies the row rather than changing, and the metadata
+        denylist is not the operator's edit.
+        """
+        skipped = self.excluded_fields | {"id"}
+        return [name for name in serializer.validated_data if name not in skipped]
+
+    @classmethod
+    def render_change_value(cls, value) -> str:
+        """
+        One-line rendering of a stored value. Prose fields hold newlines and run to paragraphs,
+        either of which would break the one-line-per-row format, so whitespace is collapsed and a
+        long value is cut — the line says which field moved and how it starts, not the full text.
+        """
+        text = " ".join(str(value).split())
+        if len(text) > cls.CHANGELOG_VALUE_CHARS:
+            return text[: cls.CHANGELOG_VALUE_CHARS] + "..."
+        return text
+
+    def print_row_change(self, row_number: int, instance, before: typing.Dict, after: typing.Dict) -> bool:
+        """
+        Report the fields whose stored value moved, as one tab-separated line. Rows are updated in
+        place and nothing else records what they held before, so this is the only account of it.
+        Returns whether anything moved.
+        """
+        moved = [
+            f"{name}={self.render_change_value(before[name])}->{self.render_change_value(after[name])}"
+            for name in before
+            if before[name] != after[name]
+        ]
+        if not moved:
+            return False
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"ROW_UPDATED\t{self.model.__name__.lower()}={instance.pk}\trow={row_number}\t" + "\t".join(moved)
+            )
+        )
+        return True
+
+    @contextmanager
+    def import_context(self):
+        """
+        Wraps the whole import, inside the transaction. Subclasses that need per-run state which
+        writes when it closes (a figure import recomputes event review status there) enter it here,
+        so those writes are covered by the same transaction a dry run rolls back.
+        """
+        yield
+
     @transaction.atomic
     def run_import(self, rows: typing.List[typing.Dict], request, dry_run: bool):
+        with self.import_context():
+            created, updated, unchanged = self.apply_rows(rows, request)
+
+        # Reported once import_context has closed: it may write on exit, and Django refuses any
+        # further query in an atomic block once rollback is flagged.
+        if dry_run:
+            transaction.set_rollback(True)
+            self.stdout.write(self.style.WARNING(f"DRY RUN: would create {created}, update {updated}; rolled back."))
+        else:
+            self.stdout.write(self.style.SUCCESS(f"Created {created}, updated {updated}."))
+        if unchanged:
+            self.stdout.write(self.style.NOTICE(f"{unchanged} of the updated rows had no effective change."))
+
+    def apply_rows(self, rows: typing.List[typing.Dict], request) -> typing.Tuple[int, int, int]:
+        """Validate every row, then persist. Returns (created, updated, unchanged)."""
         errors: typing.List[typing.Tuple[int, str, str]] = []
         prepared: typing.List[typing.Tuple] = []
+        # Row number each id was first seen on. Two rows targeting one row would each validate
+        # against its unmodified state and then both save, so the earlier one is silently lost.
+        id_rows: typing.Dict[typing.Any, int] = {}
 
         # First pass: resolve + validate every row, collecting all errors (all-or-nothing).
         for index, raw_row in enumerate(rows, start=2):  # row 1 is the header
             serializer, is_update, row_errors = self.prepare_row(raw_row, request)
+
+            raw_id = raw_row.get("id")
+            if not is_empty(raw_id) and "id" not in row_errors:
+                first_seen = id_rows.get(raw_id)
+                if first_seen is not None:
+                    row_errors["id"] = (
+                        f"{self.model.__name__} {raw_id} also appears on row {first_seen}; "
+                        "each row must target a distinct row"
+                    )
+                else:
+                    id_rows[raw_id] = index
+
             if row_errors:
                 for field, message in row_errors.items():
                     errors.append((index, field, message))
             else:
-                prepared.append((serializer, is_update))
+                prepared.append((serializer, is_update, index))
 
         if errors:
             self.stdout.write(self.style.ERROR(f"Import failed: {len(errors)} error(s); nothing committed."))
@@ -370,17 +491,18 @@ class BaseImportCommand(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"Row {row_number}: {field}: {message}"))
             raise CommandError("Import aborted due to validation errors.")
 
-        # Second pass: persist.
-        created = updated = 0
-        for serializer, is_update in prepared:
-            serializer.save()
+        # Second pass: persist. Duplicates are already rejected, so no row's snapshot can be
+        # disturbed by another row's save.
+        created = updated = unchanged = 0
+        for serializer, is_update, row_number in prepared:
+            fields = self.changelog_fields(serializer) if is_update else []
+            before = self._snapshot(serializer.instance, fields) if is_update else {}
+            instance = serializer.save()
             if is_update:
                 updated += 1
+                if not self.print_row_change(row_number, instance, before, self._snapshot(instance, fields)):
+                    unchanged += 1
             else:
                 created += 1
 
-        if dry_run:
-            transaction.set_rollback(True)
-            self.stdout.write(self.style.WARNING(f"DRY RUN: would create {created}, update {updated}; rolled back."))
-        else:
-            self.stdout.write(self.style.SUCCESS(f"Created {created}, updated {updated}."))
+        return created, updated, unchanged
