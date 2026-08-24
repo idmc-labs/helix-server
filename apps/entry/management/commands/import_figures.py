@@ -26,16 +26,21 @@ class Command(BaseImportCommand):
     help = (
         "Bulk update existing figures from an .xlsx sheet. "
         "Use --make-template to generate a blank template. "
-        "This importer only updates existing rows (matched by id); it never creates."
+        "Each row names its figure by either id or uuid, exactly one; it never creates."
     )
 
     model = Figure
     update_serializer = FigureSerializer
     update_only = True
 
+    # A sheet built from a figure export carries ids; one built from the system that supplied the
+    # figures carries uuids, which hulk writes into Figure.uuid as well as its own row. Either
+    # names a figure, so both are offered and a row supplies exactly one.
+    match_columns = (("id", "pk"), ("uuid", "uuid"))
+
     # geo_locations and disaggregation_age are nested list serializers, which a single cell cannot
-    # hold; locations have their own importer, keyed by FigureLocation id. uuid identifies the
-    # figure across systems (hulk matches entities on it), so it is not data an operator edits.
+    # hold; locations have their own importer, keyed by FigureLocation id. uuid is a key rather than
+    # data: hulk holds the same value on its own row, so editing one side would break that pairing.
     # entry re-parents the figure rather than editing it.
     #
     # country is left out because the rule that a figure's locations sit inside its country is
@@ -48,7 +53,6 @@ class Command(BaseImportCommand):
         {
             "geo_locations",
             "disaggregation_age",
-            "uuid",
             "entry",
             "country",
             "tags",

@@ -157,10 +157,15 @@ class TestImportFiguresCommand(HelixTestCase):
 
     def test_denylisted_fields_are_not_columns(self):
         columns = ImportFiguresCommand().import_columns()
-        for field in ("geo_locations", "disaggregation_age", "uuid", "entry", "country", "tags", "sources"):
+        for field in ("geo_locations", "disaggregation_age", "entry", "country", "tags", "sources"):
             self.assertNotIn(field, columns)
-        self.assertIn("id", columns)
         self.assertIn("event", columns)
+
+    def test_both_keys_lead_the_columns(self):
+        columns = ImportFiguresCommand().import_columns()
+        self.assertEqual(columns[:2], ["id", "uuid"])
+        # Neither key is required on its own: a row supplies exactly one.
+        self.assertEqual(ImportFiguresCommand().required_create_columns(), set())
 
     def test_a_sheet_naming_a_denylisted_column_is_rejected(self):
         path = write_sheet(["id", "country"], [{"id": self.figure.id, "country": self.country.id}])
@@ -332,6 +337,110 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertEqual(self.figure.reported, 100)
         self.assertEqual(other.reported, 700)
         self.assertEqual(Figure.objects.count(), 2)
+
+    # ----- naming a row by id or by uuid -----
+
+    def test_a_row_identified_by_uuid_patches_that_figure(self):
+        other = self._second_figure()
+        path = write_sheet(["uuid", "reported"], [{"uuid": str(self.figure.uuid), "reported": 250}])
+        call_command("import_figures", path)
+
+        self.figure.refresh_from_db()
+        other.refresh_from_db()
+        self.assertEqual(self.figure.reported, 250)
+        self.assertEqual(other.reported, 700)  # the other figure is untouched
+
+    def test_an_unknown_uuid_fails_the_row(self):
+        path = write_sheet(
+            ["uuid", "reported"],
+            [{"uuid": "4a1c9f2e-0000-4000-8000-000000000000", "reported": 250}],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn("no Figure found with uuid 4a1c9f2e-0000-4000-8000-000000000000", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 100)
+
+    def test_supplying_both_keys_fails_the_row(self):
+        path = write_sheet(
+            ["id", "uuid", "reported"],
+            [{"id": self.figure.id, "uuid": str(self.figure.uuid), "reported": 250}],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        # Rejected even though the two keys agree: a row names a figure one way.
+        self.assertIn("exactly one of id · uuid is required; 2 given", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 100)
+
+    def test_supplying_neither_key_fails_the_row(self):
+        path = write_sheet(["id", "uuid", "reported"], [{"id": None, "uuid": None, "reported": 250}])
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+        output = out.getvalue()
+
+        self.assertIn("exactly one of id · uuid is required; none given", output)
+        self.assertIn("only updates existing Figure rows", output)
+        self.assertEqual(Figure.objects.count(), 1)
+
+    def test_a_uuid_shared_by_two_figures_fails_the_row(self):
+        # Figure.uuid lost its unique constraint in 2021 and helix stores uuids it did not
+        # generate, so a shared uuid is possible and must not resolve to an arbitrary figure.
+        shared = self.figure.uuid
+        twin = self._second_figure()
+        Figure.objects.filter(pk=twin.pk).update(uuid=shared)
+
+        path = write_sheet(["uuid", "reported"], [{"uuid": str(shared), "reported": 250}])
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+        output = out.getvalue()
+
+        self.assertIn(f"uuid {shared} matches more than one Figure", output)
+        self.assertIn(str(self.figure.pk), output)
+        self.assertIn(str(twin.pk), output)
+        self.figure.refresh_from_db()
+        twin.refresh_from_db()
+        self.assertEqual(self.figure.reported, 100)
+        self.assertEqual(twin.reported, 700)
+
+    def test_one_figure_named_by_id_on_one_row_and_uuid_on_another_is_a_duplicate(self):
+        # The duplicate check keys on the resolved figure, so it catches a collision the two
+        # sheets' key columns disguise.
+        path = write_sheet(
+            ["id", "uuid", "reported"],
+            [
+                {"id": self.figure.id, "uuid": None, "reported": 250},
+                {"id": None, "uuid": str(self.figure.uuid), "reported": 300},
+            ],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn(f"Figure {self.figure.id} also appears on row 2", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 100)
+
+    def test_a_uuid_keyed_edit_leaves_the_uuid_alone(self):
+        # uuid is a key, not data: hulk holds the same value on its own row, so this importer
+        # must never write it.
+        original = self.figure.uuid
+        path = write_sheet(["uuid", "reported"], [{"uuid": str(original), "reported": 250}])
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.uuid, original)
+        self.assertEqual(self.figure.reported, 250)
+        # The key never shows up as a change, and neither does the injected id.
+        self.assertNotIn("uuid=", out.getvalue())
+        self.assertNotIn("id=", out.getvalue())
 
     def test_the_importer_is_not_capped_at_the_bulk_operation_threshold(self):
         # The bulk operation refuses more than QUERYSET_COUNT_THRESHOLD (100) figures. An operator
