@@ -3,7 +3,6 @@
 import datetime
 import enum
 import typing
-from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
@@ -252,13 +251,6 @@ class BaseImportCommand(BaseCommand):
                 return ""
         return None
 
-    def serializer_context(self, request) -> typing.Dict:
-        """
-        Context handed to every row's serializer. Subclasses extend it when their serializer
-        needs more than the request (e.g. a figure's bulk manager).
-        """
-        return {"request": request}
-
     def resolve_row(self, column: str, field: str, key):
         """
         Find the single row `key` names. Returns (instance, error_message); exactly one is set.
@@ -309,7 +301,7 @@ class BaseImportCommand(BaseCommand):
         names = DISPLAY_SEP.join(self.match_column_names)
         is_update = bool(supplied)
 
-        context = self.serializer_context(request)
+        context = {"request": request}
         serializer = None
         if len(supplied) > 1:
             row_errors[supplied[0][0]] = f"exactly one of {names} is required; {len(supplied)} given"
@@ -549,22 +541,12 @@ class BaseImportCommand(BaseCommand):
         )
         return True
 
-    @contextmanager
-    def import_context(self):
-        """
-        Wraps the whole import, inside the transaction. Subclasses that need per-run state which
-        writes when it closes (a figure import recomputes event review status there) enter it here,
-        so those writes are covered by the same transaction a dry run rolls back.
-        """
-        yield
-
     @transaction.atomic
     def run_import(self, rows: typing.List[typing.Dict], request, dry_run: bool):
-        with self.import_context():
-            created, updated, unchanged = self.apply_rows(rows, request)
+        created, updated, unchanged = self.apply_rows(rows, request)
 
-        # Reported once import_context has closed: it may write on exit, and Django refuses any
-        # further query in an atomic block once rollback is flagged.
+        # Reported after the work, because Django refuses any further query in an atomic block
+        # once rollback is flagged.
         if dry_run:
             transaction.set_rollback(True)
             self.stdout.write(self.style.WARNING(f"DRY RUN: would create {created}, update {updated}; rolled back."))

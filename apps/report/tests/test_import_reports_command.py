@@ -11,7 +11,7 @@ from apps.entry.models import Figure
 from apps.report.management.commands.import_reports import Command as ImportReportsCommand
 from apps.report.models import Report
 from apps.users.enums import USER_ROLE
-from utils.factories import CountryFactory, CrisisFactory, TagFactory, UserFactory
+from utils.factories import CountryFactory, CrisisFactory, TagFactory, UserFactory, ViolenceSubTypeFactory
 from utils.tests import HelixTestCase, create_user_with_role
 
 
@@ -189,6 +189,32 @@ class TestImportReportsCommand(HelixTestCase):
 
         report.refresh_from_db()
         self.assertEqual(list(report.filter_figure_tags.values_list("id", flat=True)), [tag.id])
+
+    def test_a_cell_the_serializer_empties_is_reported_as_ignored(self):
+        # validate_figure_crisis_type clears the violence sub-types unless CONFLICT is among the
+        # crisis types, so this cell cannot land. The row is still updated; the discarded cell must
+        # not vanish in silence.
+        report = self._report()
+        sub_type = ViolenceSubTypeFactory.create(name="ProbeViolenceSubType")
+        path = write_sheet(
+            ["id", "filter_figure_crisis_types", "filter_figure_violence_sub_types"],
+            [
+                {
+                    "id": report.id,
+                    "filter_figure_crisis_types": "DISASTER",
+                    "filter_figure_violence_sub_types": "ProbeViolenceSubType",
+                }
+            ],
+        )
+        out = StringIO()
+        call_command("import_reports", path, user_email=self.editor.email, stdout=out)
+        output = out.getvalue()
+
+        report.refresh_from_db()
+        self.assertEqual(report.filter_figure_violence_sub_types.count(), 0)
+        self.assertNotIn(sub_type.id, list(report.filter_figure_violence_sub_types.values_list("id", flat=True)))
+        self.assertIn("CELL_IGNORED\trow=2\tfilter_figure_violence_sub_types=ProbeViolenceSubType", output)
+        self.assertIn("cell(s) were ignored", output)
 
     # ----- shared framework behaviour -----
 
