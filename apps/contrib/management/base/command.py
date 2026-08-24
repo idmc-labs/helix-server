@@ -485,7 +485,17 @@ class BaseImportCommand(BaseCommand):
             return None, False
         if field.many_to_many:
             return sorted(getattr(instance, name).values_list("pk", flat=True)), True
-        return getattr(instance, field.attname, None), True
+        value = getattr(instance, field.attname, None)
+        if field.is_relation:
+            return value, True
+        # Through the field, because the after-snapshot reads the instance in memory and a
+        # serializer may assign a type the column does not store: ReportSerializer writes a
+        # datetime into a DateField, which would otherwise read as a change from
+        # date(2020,1,1) to datetime(2020,1,1) while the stored value never moved.
+        try:
+            return field.to_python(value), True
+        except DjangoValidationError:
+            return value, True
 
     def _snapshot(self, instance, names) -> typing.Dict:
         snapshot = {}

@@ -216,6 +216,29 @@ class TestImportReportsCommand(HelixTestCase):
         self.assertIn("CELL_IGNORED\trow=2\tfilter_figure_violence_sub_types=ProbeViolenceSubType", output)
         self.assertIn("cell(s) were ignored", output)
 
+    def test_a_gidd_report_normalisation_is_not_reported_as_a_change(self):
+        # ReportSerializer assigns datetime(year,1,1) to a DateField. The stored value is already
+        # that date, so nothing moves; the changelog must not invent a change from the type alone.
+        report = Report.objects.create(
+            name="GIDD Probe",
+            is_gidd_report=True,
+            gidd_report_year=2020,
+            filter_figure_start_after=date(2020, 1, 1),
+            filter_figure_end_before=date(2020, 12, 31),
+        )
+        path = write_sheet(["id"], [{"id": report.id}])
+        out = StringIO()
+        call_command("import_reports", path, user_email=self.editor.email, stdout=out)
+        output = out.getvalue()
+
+        # The dates never moved in the database, so they must not appear.
+        self.assertNotIn("filter_figure_start_after", output)
+        self.assertNotIn("filter_figure_end_before", output)
+        # The row is still reported: the GIDD branch does make real changes (empty arrays,
+        # is_public), and suppressing a type difference must not suppress those.
+        self.assertIn("ROW_UPDATED", output)
+        self.assertIn("is_public=False->True", output)
+
     # ----- shared framework behaviour -----
 
     def test_an_unknown_id_fails_the_row(self):
