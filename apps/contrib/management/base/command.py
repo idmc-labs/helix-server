@@ -21,6 +21,16 @@ from .utils import DISPLAY_SEP, is_empty
 User = get_user_model()
 
 
+class PreparedRow(typing.NamedTuple):
+    """One resolved sheet row, ready to save or to report on."""
+
+    serializer: typing.Any
+    is_update: bool
+    errors: typing.Dict[str, str]
+    #: Cells the operator filled that the serializer emptied.
+    ignored_cells: typing.List[str]
+
+
 class BaseImportCommand(BaseCommand):
     """
     Reusable management command for bulk creating/updating model rows from an xlsx sheet,
@@ -310,9 +320,8 @@ class BaseImportCommand(BaseCommand):
             if error:
                 row_errors[column] = error
             else:
-                # The mixin validating figures reads attrs["id"] rather than self.instance, so the
-                # resolved pk is handed back to the serializer to keep a partial update partial.
-                # See future-work.md; drop this once that reads self.instance.
+                # The resolved pk, not the cell: a key written as text or as a float would
+                # otherwise reach the serializer in whatever shape the sheet stored it.
                 data["id"] = instance.pk
                 serializer = self.update_serializer(instance=instance, data=data, partial=True, context=context)
         elif self.update_only:
@@ -332,7 +341,7 @@ class BaseImportCommand(BaseCommand):
                 row_errors[field] = DISPLAY_SEP.join(str(error) for error in error_list)
 
         ignored = self.overridden_cells(serializer, raw_row, cleared) if not row_errors else []
-        return serializer, is_update, row_errors, ignored
+        return PreparedRow(serializer, is_update, row_errors, ignored)
 
     #: Values a serializer leaves behind when it rejects a supplied cell.
     _EMPTIED = (None, [], "")
@@ -577,7 +586,8 @@ class BaseImportCommand(BaseCommand):
 
         # First pass: resolve + validate every row, collecting all errors (all-or-nothing).
         for index, raw_row in enumerate(rows, start=2):  # row 1 is the header
-            serializer, is_update, row_errors, ignored = self.prepare_row(raw_row, request)
+            row = self.prepare_row(raw_row, request)
+            serializer, is_update, row_errors, ignored = row.serializer, row.is_update, row.errors, row.ignored_cells
 
             if is_update and serializer is not None:
                 pk = serializer.instance.pk

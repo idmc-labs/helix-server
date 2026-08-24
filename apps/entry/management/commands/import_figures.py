@@ -1,36 +1,65 @@
-import typing
-from contextlib import contextmanager
+from collections import OrderedDict
+
+from django.core.exceptions import ValidationError
+from rest_framework import serializers
 
 from apps.contrib.commons import DATE_ACCURACY
-from apps.contrib.management.base import (
-    BaseImportCommand,
-    EnumLookup,
-    FKById,
-    FKByName,
-)
-from apps.crisis.models import Crisis
+from apps.contrib.management.base import BaseImportCommand, EnumLookup
+from apps.contrib.serializers import MetaInformationSerializerMixin
 from apps.entry.models import Figure
-from apps.entry.serializers import FigureSerializer
-from apps.entry.utils import BulkUpdateFigureManager
-from apps.event.models import (
-    DisasterSubCategory,
-    DisasterSubType,
-    Event,
-    OsvSubType,
-    OtherSubType,
-    ViolenceSubType,
-)
+
+
+class FigureRoleAndDatesSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
+    """
+    The narrow slice of a figure this importer may edit: its role and its dates.
+
+    Deliberately not built on `FigureSerializer`. That one carries
+    `CommonFigureValidationMixin`, which re-checks a figure's whole stored state — so a figure
+    whose historical data no longer satisfies current rules cannot be edited at all, and since an
+    import is all-or-nothing, one such figure stops the entire run. Measured against a prod-like
+    snapshot, 4,545 of 191,192 figures fail at least one of those checks.
+
+    The mixin also derives values, which is why skipping it is only safe for this field set: it
+    computes `total_figures` (`editable=False`, computed nowhere else) from `reported`,
+    `household_size` and `unit`, and denormalises `violence` / `disaster_type` /
+    `disaster_sub_category` / `disaster_category` from the sub-type foreign keys. None of the five
+    fields here feed either, so nothing needs deriving and nothing falls out of step.
+
+    What is also lost, and wanted: `end_date_accuracy` is no longer silently cleared for a stock
+    category, and a figure keeps its review status when its dates are corrected.
+    """
+
+    class Meta:
+        model = Figure
+        fields = [
+            "id",
+            "role",
+            "start_date",
+            "end_date",
+            "start_date_accuracy",
+            "end_date_accuracy",
+        ]
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        # The one rule wholly about the fields being edited. Checked against the row as it will
+        # end up, so a sheet that moves only start_date cannot step past a stored end_date.
+        start_date = attrs.get("start_date", getattr(self.instance, "start_date", None))
+        end_date = attrs.get("end_date", getattr(self.instance, "end_date", None))
+        if start_date and end_date and start_date > end_date:
+            raise ValidationError(OrderedDict({"start_date": f"{start_date} is after end_date {end_date}"}))
+        return attrs
 
 
 class Command(BaseImportCommand):
     help = (
-        "Bulk update existing figures from an .xlsx sheet. "
+        "Bulk update the role and dates of existing figures from an .xlsx sheet. "
         "Use --make-template to generate a blank template. "
         "Each row names its figure by either id or uuid, exactly one; it never creates."
     )
 
     model = Figure
-    update_serializer = FigureSerializer
+    update_serializer = FigureRoleAndDatesSerializer
     update_only = True
 
     # A sheet built from a figure export carries ids; one built from the system that supplied the
@@ -38,71 +67,8 @@ class Command(BaseImportCommand):
     # names a figure, so both are offered and a row supplies exactly one.
     match_columns = (("id", "pk"), ("uuid", "uuid"))
 
-    # geo_locations and disaggregation_age are nested list serializers, which a single cell cannot
-    # hold; locations have their own importer, keyed by FigureLocation id. uuid is a key rather than
-    # data: hulk holds the same value on its own row, so editing one side would break that pairing.
-    # entry re-parents the figure rather than editing it.
-    #
-    # country is left out because the rule that a figure's locations sit inside its country is
-    # checked only when locations are sent (FigureSerializer._validate_geo_locations returns early
-    # otherwise), and this importer never sends them. event is kept because its own cross-checks,
-    # against the event's countries and dates, do run on a partial update.
-    #
-    # The many-to-many fields are deferred.
-    EXTRA_EXCLUDED_FIELDS = frozenset(
-        {
-            "geo_locations",
-            "disaggregation_age",
-            "entry",
-            "country",
-            "tags",
-            "context_of_violence",
-            "sources",
-        }
-    )
-
-    # The sub-type taxonomies are small and their names are unique, so they resolve by name and
-    # enumerate into the template. Events are too many to enumerate and their names are not
-    # unique, so they are referenced by id.
     lookups = [
-        EnumLookup("quantifier", Figure.QUANTIFIER),
-        EnumLookup("unit", Figure.UNIT),
-        EnumLookup("category", Figure.FIGURE_CATEGORY_TYPES),
-        EnumLookup("term", Figure.FIGURE_TERMS),
-        EnumLookup("displacement_occurred", Figure.DISPLACEMENT_OCCURRED),
         EnumLookup("role", Figure.ROLE),
         EnumLookup("start_date_accuracy", DATE_ACCURACY),
         EnumLookup("end_date_accuracy", DATE_ACCURACY),
-        EnumLookup("figure_cause", Crisis.CRISIS_TYPE),
-        FKById("event", Event),
-        # error_on_multiple so a name that stops being unique fails the row instead of silently
-        # resolving to whichever row was cached first.
-        FKByName("violence_sub_type", ViolenceSubType, "name", error_on_multiple=True),
-        FKByName("disaster_sub_category", DisasterSubCategory, "name", error_on_multiple=True),
-        FKByName("disaster_sub_type", DisasterSubType, "name", error_on_multiple=True),
-        FKByName("other_sub_type", OtherSubType, "name", error_on_multiple=True),
-        FKByName("osv_sub_type", OsvSubType, "name", error_on_multiple=True),
     ]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._bulk_manager: typing.Optional[BulkUpdateFigureManager] = None
-
-    def serializer_context(self, request) -> typing.Dict:
-        context = super().serializer_context(request)
-        context["bulk_manager"] = self._bulk_manager
-        return context
-
-    @contextmanager
-    def import_context(self):
-        """
-        FigureSerializer records each touched event on a bulk manager and, on exit, recomputes those
-        events' review status from their figures. Without it every event the import touched is left
-        with a stale status, so the run is wrapped the way the bulk figure mutation wraps its own.
-        """
-        with BulkUpdateFigureManager() as bulk_manager:
-            self._bulk_manager = bulk_manager
-            try:
-                yield
-            finally:
-                self._bulk_manager = None
