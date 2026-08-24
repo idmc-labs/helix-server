@@ -123,7 +123,7 @@ class TestImportOrganizationsCommand(HelixTestCase):
 
         request = generate_dummy_request(self.bot_user)
         raw_row = {"name": "Test Org", "organization_kind": "Nonexistent Kind"}
-        _serializer, _is_update, row_errors = Command().prepare_row(raw_row, request)
+        _serializer, _is_update, row_errors, _ignored = Command().prepare_row(raw_row, request)
 
         # The specific lookup error is preserved; the generic "required" did not overwrite it.
         self.assertIn("organization_kind", row_errors)

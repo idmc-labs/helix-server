@@ -8,7 +8,7 @@ from django.core.management.base import CommandError
 from openpyxl import Workbook, load_workbook
 
 from apps.entry.management.commands.import_figures import Command as ImportFiguresCommand
-from apps.entry.models import Figure
+from apps.entry.models import DisaggregatedAge, Figure
 from apps.entry.serializers import FigureSerializer
 from utils.factories import CountryFactory, EventFactory, FigureFactory
 from utils.tests import HelixTestCase
@@ -336,6 +336,50 @@ class TestImportFiguresCommand(HelixTestCase):
         self.figure.refresh_from_db()
         self.assertEqual(self.figure.reported, 100)
 
+    def test_three_data_rows_update_exactly_three_figures(self):
+        # The header is consumed by read_rows while apply_rows numbers rows from 2, so the count
+        # and the reported row numbers are two separate chances to be off by one.
+        second = self._second_figure()
+        third = self._second_figure()
+        figures = [self.figure, second, third]
+        path = write_sheet(
+            ["id", "reported"],
+            [{"id": figure.id, "reported": 300 + index} for index, figure in enumerate(figures)],
+        )
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+        output = out.getvalue()
+
+        self.assertIn("Created 0, updated 3.", output)
+        for index, figure in enumerate(figures):
+            figure.refresh_from_db()
+            self.assertEqual(figure.reported, 300 + index)
+
+        # Exactly three changelog lines, numbered 2, 3, 4 — never 1, and never a fourth.
+        changed = [line for line in output.splitlines() if line.startswith("ROW_UPDATED")]
+        self.assertEqual(len(changed), 3)
+        self.assertEqual(
+            sorted(line.split("\trow=")[1].split("\t")[0] for line in changed),
+            ["2", "3", "4"],
+        )
+
+    def test_a_row_number_in_an_error_points_at_the_offending_sheet_row(self):
+        # Same off-by-one risk on the error path: the third data row is sheet row 4.
+        second = self._second_figure()
+        path = write_sheet(
+            ["id", "reported"],
+            [
+                {"id": self.figure.id, "reported": 300},
+                {"id": second.id, "reported": 301},
+                {"id": 9999999, "reported": 302},
+            ],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn("Row 4: id: no Figure found with id 9999999", out.getvalue())
+
     def test_a_header_only_sheet_imports_nothing(self):
         path = write_sheet(["id", "reported"], [])
         out = StringIO()
@@ -402,6 +446,123 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertIn("the header row does not name", str(caught.exception))
         self.figure.refresh_from_db()
         self.assertEqual(self.figure.reported, 100)
+
+    # ----- what the log says, and what the serializer overrides -----
+
+    def test_a_duplicated_header_is_refused(self):
+        # zip() pairs a header with the cell below it, so a repeated header would keep one cell and
+        # drop the other in silence.
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Data"
+        worksheet.append(["id", "reported", "reported"])
+        worksheet.append([self.figure.id, 250, None])
+        tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+        workbook.save(tmp.name)
+
+        with self.assertRaises(CommandError) as caught:
+            call_command("import_figures", tmp.name, stdout=StringIO())
+
+        self.assertIn("Duplicate column(s): reported", str(caught.exception))
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 100)
+
+    def test_a_date_formatted_cell_is_accepted(self):
+        # A spreadsheet has no date type distinct from datetime, so openpyxl hands back a datetime.
+        path = write_sheet(["id", "start_date"], [{"id": self.figure.id, "start_date": date(2020, 6, 15)}])
+        call_command("import_figures", path, stdout=StringIO())
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.start_date, date(2020, 6, 15))
+
+    def test_an_enum_change_reports_the_member_name(self):
+        Figure.objects.filter(pk=self.figure.pk).update(role=Figure.ROLE.TRIANGULATION)
+        path = write_sheet(["id", "role"], [{"id": self.figure.id, "role": "RECOMMENDED"}])
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.RECOMMENDED.value)
+        # The member name, not the translated label: labels are not unique and cannot be grepped
+        # for the token the sheet wrote.
+        self.assertIn("role=TRIANGULATION->RECOMMENDED", out.getvalue())
+
+    def test_two_long_values_that_cut_to_the_same_text_report_no_values(self):
+        self.figure.calculation_logic = "x" * 200 + "OLD"
+        self.figure.save()
+        path = write_sheet(
+            ["id", "calculation_logic"],
+            [{"id": self.figure.id, "calculation_logic": "x" * 200 + "NEW"}],
+        )
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+        output = out.getvalue()
+
+        self.figure.refresh_from_db()
+        self.assertTrue(self.figure.calculation_logic.endswith("NEW"))
+        # Quoting both would show a change from a value to itself, so the field is named instead.
+        self.assertIn("calculation_logic=changed", output)
+        self.assertNotIn("->", output.split("calculation_logic=")[1].split("\t")[0])
+
+    def test_two_long_values_that_still_differ_when_cut_report_both(self):
+        self.figure.calculation_logic = "OLD " + "x" * 200
+        self.figure.save()
+        path = write_sheet(
+            ["id", "calculation_logic"],
+            [{"id": self.figure.id, "calculation_logic": "NEW " + "x" * 200}],
+        )
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+
+        # The cut is harmless here: the two are still told apart, so both are shown.
+        self.assertIn("calculation_logic=OLD ", out.getvalue())
+        self.assertIn("->NEW ", out.getvalue())
+
+    def test_a_cell_the_serializer_empties_is_reported_as_ignored(self):
+        # IDPS is a stock category, so the serializer clears end_date_accuracy whatever the sheet
+        # says. The row is still updated; the discarded cell must not vanish in silence.
+        self.figure.end_date_accuracy = None
+        self.figure.save()
+        path = write_sheet(
+            ["id", "reported", "end_date_accuracy"],
+            [{"id": self.figure.id, "reported": 250, "end_date_accuracy": "MONTH"}],
+        )
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+        output = out.getvalue()
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 250)
+        self.assertIsNone(self.figure.end_date_accuracy)
+        self.assertIn("CELL_IGNORED\trow=2\tend_date_accuracy=MONTH", output)
+        self.assertIn("cell(s) were ignored", output)
+
+    def test_a_deliberately_cleared_cell_is_not_reported_as_ignored(self):
+        self.figure.source_excerpt = "Some excerpt."
+        self.figure.save()
+        path = write_sheet(["id", "source_excerpt"], [{"id": self.figure.id, "source_excerpt": "<clear>"}])
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+
+        self.figure.refresh_from_db()
+        self.assertFalse(self.figure.source_excerpt)
+        self.assertNotIn("CELL_IGNORED", out.getvalue())
+
+    def test_an_injected_write_to_an_excluded_field_is_still_reported(self):
+        # disaggregation_age is kept out of the columns, but the serializer empties it whenever
+        # is_disaggregated is unset. Being un-editable is not a reason to leave the write unlogged.
+        age = DisaggregatedAge.objects.create(sex=1, value=10, age_from=0, age_to=5)
+        self.figure.disaggregation_age.set([age])
+        self.figure.is_disaggregated = False
+        self.figure.save()
+
+        path = write_sheet(["id", "reported"], [{"id": self.figure.id, "reported": 250}])
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.disaggregation_age.count(), 0)
+        self.assertIn(f"disaggregation_age=[{age.pk}]->[]", out.getvalue())
 
     # ----- all-or-nothing -----
     #

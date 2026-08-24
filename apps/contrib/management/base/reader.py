@@ -48,6 +48,16 @@ def read_rows(
             "header: a blank header would read the values beside it against the wrong columns."
         )
 
+    # zip() pairs a header with the cell below it, so a header appearing twice keeps only the
+    # rightmost column and discards the other in silence.
+    seen: typing.Set[str] = set()
+    repeated = sorted({header for header in headers if header in seen or seen.add(header)})
+    if repeated:
+        raise CommandError(
+            f"Duplicate column(s): {DISPLAY_SEP.join(repeated)}. Each column may appear once: "
+            "a repeated header would keep one of its cells and drop the other without saying which."
+        )
+
     allowed = set(allowed_columns)
     unknown = [header for header in headers if header not in allowed]
     if unknown:

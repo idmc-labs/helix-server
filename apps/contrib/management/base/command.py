@@ -1,5 +1,7 @@
 """The reusable bulk-import management command base class."""
 
+import datetime
+import enum
 import typing
 from contextlib import contextmanager
 
@@ -165,6 +167,16 @@ class BaseImportCommand(BaseCommand):
             return field.child
         return None
 
+    def _narrow_cell(self, column: str, value):
+        """
+        A spreadsheet has no date type distinct from datetime, so openpyxl hands back a datetime
+        for any date-formatted cell. A DateField column takes its date part; a DateTimeField keeps
+        the whole value.
+        """
+        if isinstance(value, datetime.datetime) and isinstance(self._scalar_field(column), drf_serializers.DateField):
+            return value.date()
+        return value
+
     def _split_list_value(self, column: str, value):
         """Split a delimited cell for a list column; any other column's value passes through."""
         if self._child_field(column) is None:
@@ -259,6 +271,7 @@ class BaseImportCommand(BaseCommand):
         """Resolve a raw row and build its serializer. Returns (serializer_or_none, is_update, row_errors)."""
         row_errors: typing.Dict[str, str] = {}
         data: typing.Dict = {}
+        cleared: typing.Set[str] = set()
         for header, value in raw_row.items():
             lookup = self.lookup_map.get(header)
             if is_empty(value):
@@ -268,9 +281,10 @@ class BaseImportCommand(BaseCommand):
                 # Explicitly clear: nullable -> None, non-null blank-allowed string -> "",
                 # a lookup's own list fields -> [].
                 data[header] = lookup.clear_value() if lookup is not None else self._scalar_clear_value(header)
+                cleared.add(header)
                 continue
             if lookup is None:
-                data[header] = self._split_list_value(header, value)
+                data[header] = self._split_list_value(header, self._narrow_cell(header, value))
                 continue
             try:
                 data[header] = lookup.resolve(value)
@@ -317,7 +331,34 @@ class BaseImportCommand(BaseCommand):
                 error_list = errors if isinstance(errors, list) else [errors]
                 row_errors[field] = DISPLAY_SEP.join(str(error) for error in error_list)
 
-        return serializer, is_update, row_errors
+        ignored = self.overridden_cells(serializer, raw_row, cleared) if not row_errors else []
+        return serializer, is_update, row_errors, ignored
+
+    #: Values a serializer leaves behind when it rejects a supplied cell.
+    _EMPTIED = (None, [], "")
+
+    def overridden_cells(self, serializer, raw_row: typing.Dict, cleared: typing.Set[str]) -> typing.List[str]:
+        """
+        Cells the operator filled that the serializer then emptied, so the sheet asked for
+        something the row will not get.
+
+        The comparison is against what survived validation, not against the raw cell: the payload
+        is type-coerced on the way in, so a direct comparison would flag every cell. Only a cell
+        emptied or dropped is reported - an override that swapped one value for another would not
+        be seen, and no serializer here does that. Cells cleared on purpose are not overrides.
+        """
+        if serializer is None or not hasattr(serializer, "_validated_data"):
+            return []
+        validated = serializer.validated_data
+        ignored = []
+        for header in self.import_columns():
+            if header in cleared or header in self.match_column_names:
+                continue
+            if is_empty(raw_row.get(header)):
+                continue
+            if header not in validated or validated[header] in self._EMPTIED:
+                ignored.append(f"{header}={raw_row.get(header)}")
+        return ignored
 
     # ----- template metadata + checks -----
 
@@ -443,12 +484,16 @@ class BaseImportCommand(BaseCommand):
 
     def changelog_fields(self, serializer) -> typing.List[str]:
         """
-        Fields to record before/after. Everything the serializer resolved for this row, including
+        Fields to record before/after: everything the serializer resolved for this row, including
         values it injected itself, since those are writes the operator did not ask for and would
-        otherwise go unrecorded. `id` identifies the row rather than changing, and the metadata
-        denylist is not the operator's edit.
+        otherwise go unrecorded.
+
+        EXTRA_EXCLUDED_FIELDS is deliberately NOT subtracted. That denylist says a field is not an
+        editable column, which is a different question from whether a write to it is worth
+        reporting: a field kept out of the sheet can still be written by the serializer, and that
+        is exactly the write an operator has no other way to find out about.
         """
-        skipped = self.excluded_fields | {"id"}
+        skipped = self.EXCLUDED_FIELDS | set(self.match_column_names) | {"id"}
         return [name for name in serializer.validated_data if name not in skipped]
 
     @classmethod
@@ -457,7 +502,13 @@ class BaseImportCommand(BaseCommand):
         One-line rendering of a stored value. Prose fields hold newlines and run to paragraphs,
         either of which would break the one-line-per-row format, so whitespace is collapsed and a
         long value is cut — the line says which field moved and how it starts, not the full text.
+
+        An enum renders as its member name, which is the token a sheet writes, so a log line can be
+        grepped for what the operator typed. Its label is translated and is not unique across
+        members, so two different values can print identically.
         """
+        if isinstance(value, enum.Enum):
+            return value.name
         text = " ".join(str(value).split())
         if len(text) > cls.CHANGELOG_VALUE_CHARS:
             return text[: cls.CHANGELOG_VALUE_CHARS] + "..."
@@ -469,11 +520,17 @@ class BaseImportCommand(BaseCommand):
         place and nothing else records what they held before, so this is the only account of it.
         Returns whether anything moved.
         """
-        moved = [
-            f"{name}={self.render_change_value(before[name])}->{self.render_change_value(after[name])}"
-            for name in before
-            if before[name] != after[name]
-        ]
+        moved = []
+        for name in before:
+            if before[name] == after[name]:
+                continue
+            was, now = self.render_change_value(before[name]), self.render_change_value(after[name])
+            if was == now:
+                # Both values were cut back to the same text, so quoting them would show a change
+                # from a value to itself. Name the field and say why it carries no values.
+                moved.append(f"{name}=changed (first {self.CHANGELOG_VALUE_CHARS} chars identical)")
+            else:
+                moved.append(f"{name}={was}->{now}")
         if not moved:
             return False
         self.stdout.write(
@@ -516,10 +573,11 @@ class BaseImportCommand(BaseCommand):
         # Keyed by the resolved primary key rather than the cell, so a sheet writing the same id
         # as a number on one row and as text on another is still one target.
         pk_rows: typing.Dict[typing.Any, int] = {}
+        ignored_cells: typing.List[typing.Tuple[int, str]] = []
 
         # First pass: resolve + validate every row, collecting all errors (all-or-nothing).
         for index, raw_row in enumerate(rows, start=2):  # row 1 is the header
-            serializer, is_update, row_errors = self.prepare_row(raw_row, request)
+            serializer, is_update, row_errors, ignored = self.prepare_row(raw_row, request)
 
             if is_update and serializer is not None:
                 pk = serializer.instance.pk
@@ -536,6 +594,8 @@ class BaseImportCommand(BaseCommand):
                     errors.append((index, field, message))
             else:
                 prepared.append((serializer, is_update, index))
+                for cell in ignored:
+                    ignored_cells.append((index, cell))
 
         if errors:
             self.stdout.write(self.style.ERROR(f"Import failed: {len(errors)} error(s); nothing committed."))
@@ -557,4 +617,21 @@ class BaseImportCommand(BaseCommand):
             else:
                 created += 1
 
+        self.print_ignored_cells(ignored_cells)
         return created, updated, unchanged
+
+    def print_ignored_cells(self, ignored_cells: typing.List[typing.Tuple[int, str]]):
+        """
+        Report cells the serializer emptied. The row was still written, so this is not an error -
+        but the sheet asked for something it did not get, and nothing else says so.
+        """
+        if not ignored_cells:
+            return
+        self.stdout.write(
+            self.style.WARNING(
+                f"{len(ignored_cells)} cell(s) were ignored: the serializer emptied them because they "
+                "do not apply to the row as it stands. The rows themselves were still updated."
+            )
+        )
+        for row_number, cell in ignored_cells:
+            self.stdout.write(self.style.WARNING(f"CELL_IGNORED\trow={row_number}\t{cell}"))
