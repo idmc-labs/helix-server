@@ -27,8 +27,8 @@ class BaseImportCommand(BaseCommand):
     Subclasses set: model, create_serializer, update_serializer, lookups.
 
     Set ``update_only = True`` for importers that only patch existing rows
-    (e.g. backfills): a blank ``id`` is then rejected instead of creating a
-    row, and ``create_serializer`` may be left unset.
+    (e.g. backfills): a row with no match key is then rejected instead of
+    creating a row, and ``create_serializer`` may be left unset.
     """
 
     model = None
@@ -36,9 +36,14 @@ class BaseImportCommand(BaseCommand):
     update_serializer = None
     lookups: typing.List[BaseLookup] = []
 
-    #: When True, rows without an ``id`` are rejected (no create path). The
+    #: When True, rows without a match key are rejected (no create path). The
     #: template and column derivation fall back to ``update_serializer``.
     update_only = False
+
+    #: Ordered ``(sheet column, model field)`` pairs an existing row may be named by. A row must
+    #: supply exactly one of them; keys identify a row and are never written to it. Override to
+    #: offer a second way in, e.g. ``(("id", "pk"), ("uuid", "uuid"))``.
+    match_columns: typing.Tuple[typing.Tuple[str, str], ...] = (("id", "pk"),)
 
     DATA_SHEET = "Data"
 
@@ -109,20 +114,29 @@ class BaseImportCommand(BaseCommand):
         update_fields = self._writable_fields(self.update_serializer)
         excluded = self.excluded_fields
 
-        columns: typing.List[str] = []
-        if "id" in update_fields:
-            columns.append("id")
+        # Match keys lead, so the columns naming a row sit together at the front of the sheet.
+        columns: typing.List[str] = [column for column, _ in self.match_columns]
         for name in create_fields + update_fields:
             if name not in columns and name not in excluded:
                 columns.append(name)
         return columns
 
+    @property
+    def match_column_names(self) -> typing.Tuple[str, ...]:
+        return tuple(column for column, _ in self.match_columns)
+
     def required_create_columns(self) -> typing.Set[str]:
-        """Importable columns that required by create serializer."""
+        """
+        Importable columns an operator must supply.
+
+        With one match key that key is required outright. With several a row needs exactly one of
+        them, so none is required on its own and the template says so in their notes instead.
+        """
         importable = set(self.import_columns())
         if self.update_only:
-            # No create path; id is the only column an operator must supply.
-            return {"id"} & importable
+            if len(self.match_columns) == 1:
+                return set(self.match_column_names) & importable
+            return set()
         serializer = self.create_serializer()
         return {name for name, field in serializer.fields.items() if field.required and name in importable}
 
@@ -168,8 +182,8 @@ class BaseImportCommand(BaseCommand):
                 datatype = lookup.data_type()
                 # Name/enum matching is case-sensitive; id-based references are not.
                 types[column] = f"{datatype}, case-sensitive" if lookup.case_sensitive else datatype
-            elif column == "id":
-                types[column] = "number"
+            elif column in self.match_column_names:
+                types[column] = "number" if column == "id" else "text"
             else:
                 child = self._child_field(column)
                 field = self._scalar_field(column) if child is None else child
@@ -185,8 +199,12 @@ class BaseImportCommand(BaseCommand):
         for column in self.import_columns():
             if column in lookups:
                 notes[column] = lookups[column].note()
-            elif column == "id":
-                notes[column] = ""
+            elif column in self.match_column_names:
+                notes[column] = (
+                    f"identifies the row; supply exactly one of {DISPLAY_SEP.join(self.match_column_names)}"
+                    if len(self.match_columns) > 1
+                    else ""
+                )
             else:
                 child = self._child_field(column)
                 field = self._scalar_field(column) if child is None else child
@@ -219,6 +237,24 @@ class BaseImportCommand(BaseCommand):
         """
         return {"request": request}
 
+    def resolve_row(self, column: str, field: str, key):
+        """
+        Find the single row `key` names. Returns (instance, error_message); exactly one is set.
+
+        Two rows are fetched rather than one because a match field is not necessarily unique —
+        ``Figure.uuid`` carries whatever uuid an external import supplied and lost its unique
+        constraint in 2021. An ambiguous key names both candidates instead of picking one.
+        """
+        queryset = self.model.objects.filter(**{field: key})
+        matches = list(queryset[:2])
+        if not matches:
+            return None, f"no {self.model.__name__} found with {column} {key}"
+        if len(matches) > 1:
+            # Only reached on an ambiguous key, so naming every candidate is worth one more query.
+            ids = ", ".join(str(pk) for pk in queryset.values_list("pk", flat=True))
+            return None, (f"{column} {key} matches more than one {self.model.__name__} ({ids}); cannot tell which to edit")
+        return matches[0], None
+
     def prepare_row(self, raw_row: typing.Dict, request):
         """Resolve a raw row and build its serializer. Returns (serializer_or_none, is_update, row_errors)."""
         row_errors: typing.Dict[str, str] = {}
@@ -241,21 +277,36 @@ class BaseImportCommand(BaseCommand):
             except ResolutionError as exc:
                 row_errors[header] = str(exc)
 
-        raw_id = raw_row.get("id")
-        is_update = not is_empty(raw_id)
+        # A key names a row; it is never written to it, so no key reaches the serializer payload.
+        for column in self.match_column_names:
+            data.pop(column, None)
+
+        supplied = [(column, field) for column, field in self.match_columns if not is_empty(raw_row.get(column))]
+        names = DISPLAY_SEP.join(self.match_column_names)
+        is_update = bool(supplied)
 
         context = self.serializer_context(request)
         serializer = None
-        if is_update:
-            instance = self.model.objects.filter(pk=raw_id).first()
-            if instance is None:
-                row_errors["id"] = f"no {self.model.__name__} found with id {raw_id}"
+        if len(supplied) > 1:
+            row_errors[supplied[0][0]] = f"exactly one of {names} is required; {len(supplied)} given"
+        elif is_update:
+            column, field = supplied[0]
+            key = raw_row.get(column)
+            instance, error = self.resolve_row(column, field, key)
+            if error:
+                row_errors[column] = error
             else:
+                # The mixin validating figures reads attrs["id"] rather than self.instance, so the
+                # resolved pk is handed back to the serializer to keep a partial update partial.
+                # See future-work.md; drop this once that reads self.instance.
+                data["id"] = instance.pk
                 serializer = self.update_serializer(instance=instance, data=data, partial=True, context=context)
         elif self.update_only:
-            row_errors["id"] = f"id is required; this importer only updates existing {self.model.__name__} rows"
+            row_errors[self.match_column_names[0]] = (
+                f"exactly one of {names} is required; none given. "
+                f"This importer only updates existing {self.model.__name__} rows"
+            )
         else:
-            data.pop("id", None)
             serializer = self.create_serializer(data=data, context=context)
 
         if serializer is not None and not serializer.is_valid():
@@ -460,24 +511,25 @@ class BaseImportCommand(BaseCommand):
         """Validate every row, then persist. Returns (created, updated, unchanged)."""
         errors: typing.List[typing.Tuple[int, str, str]] = []
         prepared: typing.List[typing.Tuple] = []
-        # Row number each id was first seen on. Two rows targeting one row would each validate
-        # against its unmodified state and then both save, so the earlier one is silently lost.
-        id_rows: typing.Dict[typing.Any, int] = {}
+        # Row number each targeted row was first seen on. Two rows aimed at one row would each
+        # validate against its unmodified state and then both save, silently losing the earlier.
+        # Keyed by the resolved primary key rather than the cell, so a sheet writing the same id
+        # as a number on one row and as text on another is still one target.
+        pk_rows: typing.Dict[typing.Any, int] = {}
 
         # First pass: resolve + validate every row, collecting all errors (all-or-nothing).
         for index, raw_row in enumerate(rows, start=2):  # row 1 is the header
             serializer, is_update, row_errors = self.prepare_row(raw_row, request)
 
-            raw_id = raw_row.get("id")
-            if not is_empty(raw_id) and "id" not in row_errors:
-                first_seen = id_rows.get(raw_id)
+            if is_update and serializer is not None:
+                pk = serializer.instance.pk
+                first_seen = pk_rows.get(pk)
                 if first_seen is not None:
-                    row_errors["id"] = (
-                        f"{self.model.__name__} {raw_id} also appears on row {first_seen}; "
-                        "each row must target a distinct row"
+                    row_errors[self.match_column_names[0]] = (
+                        f"{self.model.__name__} {pk} also appears on row {first_seen}; each row must target a distinct row"
                     )
                 else:
-                    id_rows[raw_id] = index
+                    pk_rows[pk] = index
 
             if row_errors:
                 for field, message in row_errors.items():
