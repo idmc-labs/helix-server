@@ -4,6 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from django.forms.models import model_to_dict
 from django.utils import timezone
 
 from apps.common.enums import QA_RULE_TYPE
@@ -796,6 +797,34 @@ class TestEventListQuery(HelixGraphQLTestCase):
 
 
 class CloneEventTest(HelixGraphQLTestCase):
+    #: Every field a clone is expected to copy from its source event.
+    EVENT_FIELDS_CARRIED_BY_CLONE = frozenset(
+        {
+            "actor",
+            "context_of_violence",
+            "countries",
+            "crisis",
+            "disaster_category",
+            "disaster_sub_category",
+            "disaster_sub_type",
+            "disaster_type",
+            "end_date",
+            "end_date_accuracy",
+            "event_narrative",
+            "event_type",
+            "glide_numbers",
+            "ignore_qa",
+            "include_triangulation_in_qa",
+            "name",
+            "osv_sub_type",
+            "other_sub_type",
+            "start_date",
+            "start_date_accuracy",
+            "violence",
+            "violence_sub_type",
+        }
+    )
+
     def setUp(self) -> None:
         self.mutation = """mutation cloneEvent($event: ID!) {
             cloneEvent(data: {event: $event}) {
@@ -894,6 +923,14 @@ class CloneEventTest(HelixGraphQLTestCase):
         cloned = Event.objects.get(id=content["data"]["cloneEvent"]["result"]["id"])
         self.assertIsNone(cloned.old_id)
         self.assertIsNone(cloned.version_id)
+
+    def test_clone_event_carries_only_reviewed_fields(self):
+        """A new Event field joins the clone by default, because ``model_to_dict`` is
+        opt-out. If this fails, decide which the new field is: a description of the
+        event, which belongs here, or something owned by the source row's identity,
+        provenance or review workflow, which belongs in ``CLONE_EXCLUDED_FIELDS``."""
+        carried = set(model_to_dict(self.event, exclude=list(Event.CLONE_EXCLUDED_FIELDS)))
+        self.assertEqual(carried, self.EVENT_FIELDS_CARRIED_BY_CLONE)
 
     def test_event_list_filter(self):
         response = self.query(self.mutation, variables=self.variables)
