@@ -85,7 +85,7 @@ class FigureLocationSerializer(serializers.ModelSerializer):
         choices=FigureLocation.GEOCODER.choices(),
         required=True,
     )
-    country_code = serializers.CharField(required=True)
+    country_code = serializers.CharField(required=True, max_length=8)
 
     def validate_lat(self, value):
         if value is None:

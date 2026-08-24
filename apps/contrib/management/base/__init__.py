@@ -5,6 +5,7 @@ Reusable bulk-import framework for management commands.
 from .command import BaseImportCommand
 from .lookups import (
     BaseLookup,
+    CodeLookup,
     EnumArrayLookup,
     EnumLookup,
     FKById,
@@ -18,6 +19,7 @@ from .lookups import (
 __all__ = [
     "BaseImportCommand",
     "BaseLookup",
+    "CodeLookup",
     "EnumArrayLookup",
     "EnumLookup",
     "FKById",

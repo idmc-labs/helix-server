@@ -245,6 +245,55 @@ class EnumArrayLookup(BaseLookup):
         return "multiple choice"
 
 
+class CodeLookup(BaseLookup):
+    """
+    Validates a scalar code column against the values of a model field (e.g. a location's
+    country_code against Country.iso2), matching case-insensitively and storing the canonical
+    value from that field rather than the casing the operator typed.
+    """
+
+    case_sensitive = False
+
+    def __init__(self, field: str, model, source_field: str, list_values: bool = False):
+        self.field = field
+        self.model = model
+        self.source_field = source_field
+        self.list_values = list_values
+        self._cache: typing.Optional[typing.Dict[str, typing.List[str]]] = None
+
+    @property
+    def lookup_map(self) -> typing.Dict[str, typing.List[str]]:
+        if self._cache is None:
+            cache: typing.Dict[str, typing.List[str]] = {}
+            for value in self.model.objects.values_list(self.source_field, flat=True):
+                if value is None or not str(value).strip():
+                    continue
+                canonical = str(value).strip()
+                cache.setdefault(canonical.casefold(), []).append(canonical)
+            self._cache = cache
+        return self._cache
+
+    def resolve(self, value):
+        if is_empty(value):
+            return None
+        matches = self.lookup_map.get(str(value).strip().casefold(), [])
+        if not matches:
+            raise ResolutionError(f"'{value}' is not a known {self.model.__name__} {self.source_field}")
+        return matches[0]
+
+    def enumerate_values(self) -> typing.List[str]:
+        return sorted(canonical for matches in self.lookup_map.values() for canonical in matches)
+
+    def note(self) -> str:
+        return f"{self.model.__name__} {self.source_field}"
+
+    def duplicate_values(self) -> typing.List[str]:
+        return sorted(key for key, matches in self.lookup_map.items() if len(set(matches)) > 1)
+
+    def data_type(self) -> str:
+        return "code"
+
+
 class QualifiedFKByName(BaseLookup):
     """
     Resolves a foreign key for a hierarchical lookup written as 'Parent > Child'

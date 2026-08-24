@@ -123,7 +123,7 @@ class TestImportOrganizationsCommand(HelixTestCase):
 
         request = generate_dummy_request(self.bot_user)
         raw_row = {"name": "Test Org", "organization_kind": "Nonexistent Kind"}
-        _serializer, _is_update, row_errors = Command().prepare_row(raw_row, request)
+        row_errors = Command().prepare_row(raw_row, request).errors
 
         # The specific lookup error is preserved; the generic "required" did not overwrite it.
         self.assertIn("organization_kind", row_errors)
@@ -214,6 +214,9 @@ class TestImportOrganizationsCommand(HelixTestCase):
         self.assertIn("Template Shape", readme_text)
         self.assertIn("Allowed Choices", readme_text)
         # Usage + types + notes.
+        # This importer creates as well as updates, so it keeps the blank-id create wording.
+        self.assertIn("Leave 'id' blank to CREATE", readme_text)
+        self.assertIn("Required (create)", readme_text)
         self.assertIn("<clear>", readme_text)
         self.assertIn("single choice, case-sensitive", readme_text)  # category type + case
         self.assertIn("multiple reference, case-sensitive", readme_text)  # countries type + case
