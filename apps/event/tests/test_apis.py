@@ -4,6 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from django.utils import timezone
 
 from apps.common.enums import QA_RULE_TYPE
 from apps.contrib.migrate_commands import merge_events
@@ -847,13 +848,11 @@ class CloneEventTest(HelixGraphQLTestCase):
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
 
-    def test_clone_event_with_every_foreign_key_set(self):
+    def test_clone_event_resolves_every_foreign_key(self):
         """``model_to_dict`` returns a pk for every FK, so each one has to be
         resolved back to an instance before ``Event.objects.create``."""
         self.event.osv_sub_type = OsvSubType.objects.create(name="osv sub type")
         self.event.other_sub_type = OtherSubtypeFactory.create(name="other sub type")
-        self.event.assignee = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        self.event.assigner = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
         self.event.save()
 
         response = self.query(self.mutation, variables=self.variables)
@@ -862,8 +861,25 @@ class CloneEventTest(HelixGraphQLTestCase):
         cloned = Event.objects.get(id=content["data"]["cloneEvent"]["result"]["id"])
         self.assertEqual(cloned.osv_sub_type_id, self.event.osv_sub_type_id)
         self.assertEqual(cloned.other_sub_type_id, self.event.other_sub_type_id)
-        self.assertEqual(cloned.assignee_id, self.event.assignee_id)
-        self.assertEqual(cloned.assigner_id, self.event.assigner_id)
+
+    def test_clone_event_does_not_carry_over_assignment_or_review_state(self):
+        """Assignment is granted through the assign mutations, which notify the
+        participants. A ``SIGNED_OFF`` clone would also enter the review state
+        machine part-way through, having no figures to sign off."""
+        self.event.assignee = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.event.assigner = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
+        self.event.assigned_at = timezone.now()
+        self.event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+        self.event.save()
+
+        response = self.query(self.mutation, variables=self.variables)
+        content = response.json()
+        self.assertIsNone(content["data"]["cloneEvent"]["errors"], content)
+        cloned = Event.objects.get(id=content["data"]["cloneEvent"]["result"]["id"])
+        self.assertIsNone(cloned.assignee_id)
+        self.assertIsNone(cloned.assigner_id)
+        self.assertIsNone(cloned.assigned_at)
+        self.assertEqual(cloned.review_status, Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED)
 
     def test_event_list_filter(self):
         response = self.query(self.mutation, variables=self.variables)

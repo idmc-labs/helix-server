@@ -308,6 +308,27 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             SIGNED_OFF_BUT_CHANGED: _("Signed-off but changed"),
         }
 
+    # Fields clone_and_save_event drops. model_to_dict is opt-out, so a field absent
+    # from here is carried into the clone: it must describe the event itself, not the
+    # source row's identity, provenance or review workflow.
+    CLONE_EXCLUDED_FIELDS = frozenset(
+        {
+            "id",
+            "created_at",
+            "created_by",
+            "last_modified_by",
+            # Assignment is granted through the assign mutations, which also notify the
+            # participants; a clone nobody has been told about has no assignee.
+            "assigner",
+            "assignee",
+            "assigned_at",
+            # A clone carries no figures, so its review has not started. Inheriting a
+            # status also breaks Figure.update_event_status_and_send_notifications,
+            # which transitions out of the previous status.
+            "review_status",
+        }
+    )
+
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = "total_flow_nd_figures"
     IDP_FIGURES_ANNOTATE = "total_stock_idp_figures"
@@ -821,15 +842,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         return self.name or str(self.id)
 
     def clone_and_save_event(self, user: "User"):
-        event_data = model_to_dict(
-            self,
-            exclude=[
-                "id",
-                "created_at",
-                "created_by",
-                "last_modified_by",
-            ],
-        )
+        event_data = model_to_dict(self, exclude=list(self.CLONE_EXCLUDED_FIELDS))
         # Clone m2m keys fields
         countries = event_data.pop("countries")
         context_of_violence = event_data.pop("context_of_violence")
@@ -845,8 +858,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             "disaster_type": DisasterType,
             "osv_sub_type": OsvSubType,
             "other_sub_type": OtherSubType,
-            "assigner": User,
-            "assignee": User,
         }
         for field, model in foreign_key_fields_dict.items():
             if event_data[field]:
