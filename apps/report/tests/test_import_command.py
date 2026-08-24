@@ -158,3 +158,20 @@ class TestImportReportsCommand(HelixTestCase):
         message = err.getvalue()
         self.assertIn("filter_figure_regions", message)
         self.assertIn("';' separator", message)
+
+    def test_clear_empties_an_id_based_m2m(self):
+        # M2MById inherited the base clear value of None, which a many-to-many serializer field
+        # refuses, so an id-based relation could be set but never emptied.
+        report = Report.objects.create(
+            name="Has crises",
+            created_by=self.admin,
+            filter_figure_start_after=datetime.date(2020, 1, 1),
+            filter_figure_end_before=datetime.date(2020, 12, 31),
+        )
+        report.filter_figure_crises.set([self.crisis])
+
+        path = write_sheet(["id", "filter_figure_crises"], [{"id": report.id, "filter_figure_crises": "<clear>"}])
+        call_command("import_reports", path, "--user-email", self.admin.email)
+
+        report.refresh_from_db()
+        self.assertEqual(report.filter_figure_crises.count(), 0)
