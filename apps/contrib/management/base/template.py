@@ -3,6 +3,7 @@
 import typing
 
 from .lookups import BaseLookup
+from .utils import DISPLAY_SEP
 
 FONT_NAME = "Arial"
 FONT_SIZE = 10
@@ -59,6 +60,7 @@ def _write_readme(
     column_types,
     column_notes,
     update_only,
+    match_columns,
 ):
     span = 4  # widest section (the Template Shape table): Column | Type | Required | Note
 
@@ -95,14 +97,21 @@ def _write_readme(
     # H2 How to use this template.
     heading("How to use this template", 12)
     blank()
-    id_usage = (
-        "Enter an existing record's id in every row. This importer only UPDATES; it never creates records."
-        if update_only
-        else "Leave 'id' blank to CREATE a new record; enter an existing record's id to UPDATE it."
-    )
+    keys = list(match_columns) or ["id"]
+    if not update_only:
+        key_usage = f"Leave '{keys[0]}' blank to CREATE a new record; enter an existing record's {keys[0]} to UPDATE it."
+    elif len(keys) > 1:
+        key_usage = (
+            f"Name the record to update with exactly one of {DISPLAY_SEP.join(keys)} in every row - "
+            "a row giving both, or neither, is rejected. This importer only UPDATES; it never creates records."
+        )
+    else:
+        key_usage = (
+            f"Enter an existing record's {keys[0]} in every row. This importer only UPDATES; it never creates records."
+        )
     for text in [
         f"Fill in the '{data_sheet}' sheet, one row per record.",
-        id_usage,
+        key_usage,
         "On update, only the columns you fill are changed; a blank or whitespace-only cell leaves that field unchanged.",
         f"To clear a field on update, put {clear_token} in the cell.",
         "List columns accept multiple values separated by ';'.",
@@ -117,16 +126,15 @@ def _write_readme(
     heading("Template Shape", 12)
     blank()
     required_header = "Required" if update_only else "Required (create)"
-    id_note = "id of the row to update" if update_only else "leave blank to create; set an existing id to update"
     for col, text in enumerate(["Column", "Type", required_header, "Note"], start=1):
         _cell(sheet, row, col, text, bold=True)
     row += 1
     for column in columns:
-        if column == "id":
-            required = "yes" if update_only else "no"
-        else:
-            required = "yes" if column in required_columns else "no"
-        note = id_note if column == "id" else column_notes.get(column, "")
+        # Every column, keys included, is described by what the command computed. A key column
+        # used to be special-cased here, which said "id required in every row" even for an
+        # importer that accepts either of two keys and rejects a row supplying both.
+        required = "yes" if column in required_columns else "no"
+        note = column_notes.get(column, "")
         _cell(sheet, row, 1, column)
         _cell(sheet, row, 2, column_types.get(column, "text"))
         _cell(sheet, row, 3, required)
@@ -169,6 +177,7 @@ def write_template(
     column_types: typing.Dict[str, str],
     column_notes: typing.Dict[str, str],
     update_only: bool = False,
+    match_columns: typing.Sequence[str] = (),
 ) -> None:
     """
     Write a blank template workbook. All written cells use Arial 10 for portability (openpyxl
@@ -193,6 +202,7 @@ def write_template(
         column_types=column_types,
         column_notes=column_notes,
         update_only=update_only,
+        match_columns=match_columns,
     )
 
     data = workbook.create_sheet(data_sheet)

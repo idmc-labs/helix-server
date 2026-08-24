@@ -126,13 +126,78 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
         self.assertEqual(self.figure.start_date, date(2020, 6, 1))
 
-    def test_the_clear_token_clears_the_end_date(self):
+    def test_the_clear_token_clears_a_stock_figures_end_date(self):
         # A stock figure's end date is its reporting date, and clearing it is a real edit.
+        self.assertIn(self.figure.category, Figure.stock_list())
         path = write_sheet(["id", "end_date"], [{"id": self.figure.id, "end_date": "<clear>"}])
         call_command("import_figures", path)
 
         self.figure.refresh_from_db()
         self.assertIsNone(self.figure.end_date)
+
+    def test_clearing_a_flow_figures_end_date_is_refused(self):
+        # FigureSerializer._validate_category compares a flow figure's end_date against today with
+        # no null guard, so a cleared end_date makes the figure raise TypeError on every later save.
+        figure = self._figure(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)
+        self.assertIn(figure.category, Figure.flow_list())
+
+        path = write_sheet(["id", "end_date"], [{"id": figure.id, "end_date": "<clear>"}])
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn("must keep an end date", out.getvalue())
+        figure.refresh_from_db()
+        self.assertIsNotNone(figure.end_date)
+
+    def test_a_date_beyond_the_apps_future_bound_is_refused(self):
+        # Writing a date the app would reject leaves a row that fails validation on every later
+        # edit, which is the trap the narrow serializer exists to avoid.
+        path = write_sheet(
+            ["id", "start_date", "end_date"],
+            [{"id": self.figure.id, "start_date": date(2999, 1, 1), "end_date": date(2999, 12, 31)}],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn("years in the future", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.start_date, date(2020, 6, 1))
+
+    def test_a_future_end_date_on_a_flow_figure_is_refused(self):
+        figure = self._figure(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)
+        path = write_sheet(["id", "end_date"], [{"id": figure.id, "end_date": date(2030, 1, 1)}])
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn("past date", out.getvalue())
+
+    def test_a_malformed_key_is_a_row_error_not_a_traceback(self):
+        # A key column takes raw sheet text; a typo must join the per-row error list rather than
+        # replace the whole report with a traceback carrying no row number.
+        for column, bad in (("uuid", "not-a-uuid"), ("id", "12a")):
+            with self.subTest(column=column):
+                path = write_sheet([column, "role"], [{column: bad, "role": "TRIANGULATION"}])
+                out = StringIO()
+                with self.assertRaises(CommandError):
+                    call_command("import_figures", path, stdout=out)
+                self.assertIn(f"Row 2: {column}", out.getvalue())
+                self.assertIn("is not a valid", out.getvalue())
+
+    def test_the_readme_states_the_two_key_rule(self):
+        tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+        call_command("import_figures", make_template=tmp.name, stdout=StringIO())
+        workbook = load_workbook(tmp.name)
+
+        text = "\n".join(str(cell.value) for row in workbook["README"].iter_rows() for cell in row if cell.value is not None)
+        self.assertIn("exactly one of", text)
+        # Neither key is marked required on its own, since supplying both is rejected.
+        shape = [
+            (row[0].value, row[2].value) for row in workbook["README"].iter_rows() if row and row[0].value in ("id", "uuid")
+        ]
+        self.assertEqual(sorted(shape), [("id", "no"), ("uuid", "no")])
 
     def test_an_end_date_accuracy_cell_is_written_rather_than_cleared(self):
         # FigureSerializer nulls end_date_accuracy for a stock category (IDPS is one). Without that

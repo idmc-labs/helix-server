@@ -5,6 +5,7 @@ import enum
 import typing
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from rest_framework import serializers as drf_serializers
@@ -221,11 +222,12 @@ class BaseImportCommand(BaseCommand):
             if column in lookups:
                 notes[column] = lookups[column].note()
             elif column in self.match_column_names:
-                notes[column] = (
-                    f"identifies the row; supply exactly one of {DISPLAY_SEP.join(self.match_column_names)}"
-                    if len(self.match_columns) > 1
-                    else ""
-                )
+                if len(self.match_columns) > 1:
+                    notes[column] = f"identifies the row; supply exactly one of {DISPLAY_SEP.join(self.match_column_names)}"
+                elif self.update_only:
+                    notes[column] = f"{column} of the row to update"
+                else:
+                    notes[column] = f"leave blank to create; set an existing {column} to update"
             else:
                 child = self._child_field(column)
                 field = self._scalar_field(column) if child is None else child
@@ -259,8 +261,15 @@ class BaseImportCommand(BaseCommand):
         ``Figure.uuid`` carries whatever uuid an external import supplied and lost its unique
         constraint in 2021. An ambiguous key names both candidates instead of picking one.
         """
-        queryset = self.model.objects.filter(**{field: key})
-        matches = list(queryset[:2])
+        try:
+            queryset = self.model.objects.filter(**{field: key})
+            matches = list(queryset[:2])
+        except (DjangoValidationError, ValueError, TypeError):
+            # A key column takes raw sheet text, and a field converts it on the way into the query:
+            # a malformed uuid or a non-numeric id raises here. Without this the framework's
+            # promise — every row checked, every error named with its row — is replaced by a
+            # traceback that does not say which of thousands of rows is bad.
+            return None, f"{key!r} is not a valid {column}"
         if not matches:
             return None, f"no {self.model.__name__} found with {column} {key}"
         if len(matches) > 1:
@@ -270,7 +279,7 @@ class BaseImportCommand(BaseCommand):
         return matches[0], None
 
     def prepare_row(self, raw_row: typing.Dict, request):
-        """Resolve a raw row and build its serializer. Returns (serializer_or_none, is_update, row_errors)."""
+        """Resolve a raw row and build its serializer. Returns a PreparedRow."""
         row_errors: typing.Dict[str, str] = {}
         data: typing.Dict = {}
         cleared: typing.Set[str] = set()
@@ -345,8 +354,10 @@ class BaseImportCommand(BaseCommand):
 
         The comparison is against what survived validation, not against the raw cell: the payload
         is type-coerced on the way in, so a direct comparison would flag every cell. Only a cell
-        emptied or dropped is reported - an override that swapped one value for another would not
-        be seen, and no serializer here does that. Cells cleared on purpose are not overrides.
+        emptied or dropped is reported. An override that swaps one value for another is NOT seen:
+        ReportSerializer.validate_report does that on its GIDD branch, setting
+        filter_figure_start_after/end_before to the report year's bounds and is_public to True.
+        Cells cleared on purpose are not overrides.
         """
         if serializer is None or not hasattr(serializer, "_validated_data"):
             return []
@@ -442,6 +453,7 @@ class BaseImportCommand(BaseCommand):
                 column_types=self.column_types(),
                 column_notes=self.column_notes(),
                 update_only=self.update_only,
+                match_columns=self.match_column_names,
             )
             self.stdout.write(self.style.SUCCESS(f"Template written to {out_path}"))
             return

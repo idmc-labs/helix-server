@@ -1,12 +1,14 @@
 from collections import OrderedDict
 
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.contrib.commons import DATE_ACCURACY
 from apps.contrib.management.base import BaseImportCommand, EnumLookup
 from apps.contrib.serializers import MetaInformationSerializerMixin
 from apps.entry.models import Figure
+from utils.validations import is_date_within_future_bound
 
 
 class FigureRoleAndDatesSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
@@ -27,6 +29,10 @@ class FigureRoleAndDatesSerializer(MetaInformationSerializerMixin, serializers.M
 
     What is also lost, and wanted: `end_date_accuracy` is no longer silently cleared for a stock
     category, and a figure keeps its review status when its dates are corrected.
+
+    What had to be carried over rather than dropped: the checks that are themselves decided by
+    these six fields. A date the app would refuse must not be written here, or the row fails
+    validation on every later edit — the very trap this class exists to avoid.
     """
 
     class Meta:
@@ -42,12 +48,34 @@ class FigureRoleAndDatesSerializer(MetaInformationSerializerMixin, serializers.M
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
-        # The one rule wholly about the fields being edited. Checked against the row as it will
-        # end up, so a sheet that moves only start_date cannot step past a stored end_date.
+        errors = OrderedDict()
+
+        # Every rule here is decided by the row as it will end up — the supplied value, else the
+        # stored one — so a sheet that moves only one of a pair still gets checked against the
+        # other. Anything needing a field outside this serializer's six is left to the app.
         start_date = attrs.get("start_date", getattr(self.instance, "start_date", None))
         end_date = attrs.get("end_date", getattr(self.instance, "end_date", None))
+        category = getattr(self.instance, "category", None)
+
         if start_date and end_date and start_date > end_date:
-            raise ValidationError(OrderedDict({"start_date": f"{start_date} is after end_date {end_date}"}))
+            errors["start_date"] = f"{start_date} is after end_date {end_date}"
+
+        # A date the app itself would refuse must not be written here either: the row would then
+        # fail validation on every later edit, which is the trap this serializer exists to avoid.
+        errors.update(is_date_within_future_bound(start_date, "start_date"))
+        errors.update(is_date_within_future_bound(end_date, "end_date"))
+
+        if category in Figure.flow_list():
+            # FigureSerializer._validate_category compares a flow figure's end_date against today
+            # without a null guard, so clearing it leaves a row that raises TypeError on every
+            # later save. Its year_difference also goes null, dropping it out of flow reporting.
+            if end_date is None:
+                errors["end_date"] = "A flow figure must keep an end date; clearing it would make the figure uneditable"
+            elif end_date > timezone.now().date():
+                errors["end_date"] = "This must be a past date for a flow figure"
+
+        if errors:
+            raise ValidationError(errors)
         return attrs
 
 
