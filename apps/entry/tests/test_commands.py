@@ -528,6 +528,205 @@ class TestUpdateAhhsCommand(HelixTestCase):
         self.assertIn("retrospective update in AHHS", self.figure.calculation_logic)
         self.assertIn("\n\n", self.figure.calculation_logic)
 
+    def _mismatched_figure(self, household_size, total_figures, excerpt_idu=None):
+        """A household figure whose stored household size disagrees with the active AHHS of 5.0."""
+        return FigureFactory.create(
+            event=self.figure.event,
+            country=self.country,
+            unit=Figure.UNIT.HOUSEHOLD,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            start_date=date(self.YEAR, 6, 1),
+            end_date=date(self.YEAR, 6, 30),
+            reported=10,
+            household_size=household_size,
+            total_figures=total_figures,
+            excerpt_idu=excerpt_idu,
+        )
+
+    def test_force_rewrites_a_figure_whose_household_size_does_not_match_the_ahhs(self):
+        # The mirror of test_figure_with_mismatched_household_size_is_skipped.
+        mismatched = self._mismatched_figure(4.0, 40, "A total of 40 people were displaced.")
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers", force_all_figures=True)
+
+        mismatched.refresh_from_db()
+        self.assertEqual(mismatched.household_size, 6.0)
+        self.assertEqual(mismatched.total_figures, 60)
+        self.assertEqual(mismatched.excerpt_idu, "A total of 60 people were displaced.")
+
+    def test_force_reconciles_a_figure_when_the_csv_row_is_identical(self):
+        # Nothing about the AHHS record changes, so without force the country is out of scope
+        # entirely. Force answers for every country the CSV named.
+        mismatched = self._mismatched_figure(4.0, 40)
+
+        csv_path = self._write_csv([self._default_row(ahhs="5")])
+        call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="numbers", force_all_figures=True)
+
+        active = self._active_hhs_qs()
+        self.assertEqual(active.count(), 1)
+        self.assertEqual(active.get().pk, self.active_hhs.pk)
+
+        mismatched.refresh_from_db()
+        self.assertEqual(mismatched.household_size, 5.0)
+        self.assertEqual(mismatched.total_figures, 50)
+
+    def test_force_is_rejected_with_none_mode(self):
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        with self.assertRaises(CommandError):
+            call_command("update_ahhs", csv_path, year=self.YEAR, figure_update_mode="none", force_all_figures=True)
+
+    def test_force_dry_run_rolls_back(self):
+        mismatched = self._mismatched_figure(4.0, 40)
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        call_command(
+            "update_ahhs",
+            csv_path,
+            year=self.YEAR,
+            figure_update_mode="numbers",
+            force_all_figures=True,
+            dry_run=True,
+        )
+
+        mismatched.refresh_from_db()
+        self.assertEqual(mismatched.household_size, 4.0)
+        self.assertEqual(mismatched.total_figures, 40)
+
+    def test_forced_figure_matching_an_archived_ahhs_is_a_catch_up_and_is_not_flagged(self):
+        # 4.0 stood for this country-year at some point, so overwriting the figure needs no review.
+        HouseholdSizeFactory.create(
+            country=self.country,
+            year=self.YEAR,
+            size=4.0,
+            is_active=False,
+            reference_date=date(self.YEAR, 1, 1),
+            gap_filling_method=HouseholdSize.GAP_FILLING_METHOD.EXACT_YEAR,
+        )
+        mismatched = self._mismatched_figure(4.0, 40, "A total of 40 people were displaced.")
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        out = StringIO()
+        call_command(
+            "update_ahhs",
+            csv_path,
+            year=self.YEAR,
+            figure_update_mode="numbers",
+            force_all_figures=True,
+            stdout=out,
+        )
+        output = out.getvalue()
+
+        mismatched.refresh_from_db()
+        self.assertEqual(mismatched.household_size, 6.0)
+        self.assertIn("caught up with a superseded AHHS 1", output)
+        self.assertIn("no AHHS on record ever matched 0", output)
+        self.assertIn(f"FIGURE_CHANGED\tfigure={mismatched.pk}\t", output)
+        self.assertIn("forced=ahhs_on_record_was_5.0", output)
+        self.assertNotIn("matches no AHHS ever recorded", output)
+
+    def test_forced_figure_matching_no_recorded_ahhs_is_overwritten_and_flagged(self):
+        # 3.3 was never on record for this country-year, so nothing explains where it came from.
+        mismatched = self._mismatched_figure(3.3, 33, "A total of 33 people were displaced.")
+
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        out = StringIO()
+        call_command(
+            "update_ahhs",
+            csv_path,
+            year=self.YEAR,
+            figure_update_mode="numbers",
+            force_all_figures=True,
+            stdout=out,
+        )
+        output = out.getvalue()
+
+        mismatched.refresh_from_db()
+        self.assertEqual(mismatched.household_size, 6.0)
+        self.assertEqual(mismatched.total_figures, 60)
+        self.assertIn("caught up with a superseded AHHS 0", output)
+        self.assertIn("no AHHS on record ever matched 1", output)
+        self.assertIn("1 figures: stored household size matches no AHHS ever recorded", output)
+        self.assertIn(f"MANUAL_VERIFICATION\tfigure={mismatched.pk}", output)
+        self.assertIn("total=33->60", output)
+        self.assertIn("Figures needing manual verification: 1", output)
+
+    def test_force_leaves_a_figure_untouched_when_the_ahhs_is_zero(self):
+        csv_path = self._write_csv([self._default_row(ahhs="")])
+        out = StringIO()
+        call_command(
+            "update_ahhs",
+            csv_path,
+            year=self.YEAR,
+            figure_update_mode="numbers",
+            force_all_figures=True,
+            stdout=out,
+        )
+        output = out.getvalue()
+
+        self.assertEqual(self._active_hhs_qs().get().size, 0.0)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.household_size, 5.0)
+        self.assertEqual(self.figure.total_figures, 50)
+        self.assertIn("1 figures: AHHS is zero; figure left untouched rather than zeroed", output)
+        self.assertIn(f"MANUAL_VERIFICATION\tfigure={self.figure.pk}", output)
+
+    def test_an_inconsistent_total_is_reported_without_being_rewritten(self):
+        # household_size already agrees with the AHHS, so nothing here justifies a rewrite.
+        self.figure.total_figures = 999
+        self.figure.save()
+
+        csv_path = self._write_csv([self._default_row(ahhs="5")])
+        out = StringIO()
+        call_command(
+            "update_ahhs",
+            csv_path,
+            year=self.YEAR,
+            figure_update_mode="numbers",
+            force_all_figures=True,
+            stdout=out,
+        )
+        output = out.getvalue()
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.total_figures, 999)
+        self.assertIn("1 figures: total_figures does not equal reported x household_size", output)
+        self.assertIn("does not equal reported 10 x household size 5.0 (50)", output)
+
+    def test_force_states_its_scope_before_writing(self):
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        out = StringIO()
+        call_command(
+            "update_ahhs",
+            csv_path,
+            year=self.YEAR,
+            figure_update_mode="numbers",
+            force_all_figures=True,
+            stdout=out,
+        )
+        output = out.getvalue()
+
+        self.assertIn(f"FORCE: reconciling every household figure in {self.YEAR} against the active AHHS.", output)
+        self.assertIn("countries in scope: 1 (from CSV)", output)
+        self.assertIn("figures matched: 1", output)
+        self.assertIn("writes will be committed", output)
+
+    def test_the_force_scope_says_when_nothing_will_be_committed(self):
+        csv_path = self._write_csv([self._default_row(ahhs="6")])
+        out = StringIO()
+        call_command(
+            "update_ahhs",
+            csv_path,
+            year=self.YEAR,
+            figure_update_mode="numbers",
+            force_all_figures=True,
+            dry_run=True,
+            stdout=out,
+        )
+
+        self.assertIn("dry run: nothing will be committed", out.getvalue())
+
 
 class TestUpdateFigureEventMigrations(HelixGraphQLTestCase):
     def test_update_figure_event_migrations(self):
