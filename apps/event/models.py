@@ -317,6 +317,10 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             "created_at",
             "created_by",
             "last_modified_by",
+            # Keys into the legacy system the event was imported from. A clone has no
+            # counterpart there, and sharing old_id makes lookups by it ambiguous.
+            "old_id",
+            "version_id",
             # Assignment is granted through the assign mutations, which also notify the
             # participants; a clone nobody has been told about has no assignee.
             "assigner",

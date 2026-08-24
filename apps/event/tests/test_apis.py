@@ -881,6 +881,20 @@ class CloneEventTest(HelixGraphQLTestCase):
         self.assertIsNone(cloned.assigned_at)
         self.assertEqual(cloned.review_status, Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED)
 
+    def test_clone_event_does_not_carry_over_legacy_provenance_ids(self):
+        """``old_id`` identifies the row the event was imported from and is looked up
+        by, so a clone sharing it would make those lookups ambiguous."""
+        self.event.old_id = "legacy-1"
+        self.event.version_id = "v1"
+        self.event.save()
+
+        response = self.query(self.mutation, variables=self.variables)
+        content = response.json()
+        self.assertIsNone(content["data"]["cloneEvent"]["errors"], content)
+        cloned = Event.objects.get(id=content["data"]["cloneEvent"]["result"]["id"])
+        self.assertIsNone(cloned.old_id)
+        self.assertIsNone(cloned.version_id)
+
     def test_event_list_filter(self):
         response = self.query(self.mutation, variables=self.variables)
         content = response.json()
