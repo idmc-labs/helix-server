@@ -4,13 +4,15 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from django.forms.models import model_to_dict
+from django.utils import timezone
 
 from apps.common.enums import QA_RULE_TYPE
 from apps.contrib.migrate_commands import merge_events
 from apps.contrib.models import BulkApiOperation
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
-from apps.event.models import EventCode
+from apps.event.models import Event, EventCode, OsvSubType
 from apps.report.models import Report
 from apps.review.models import UnifiedReviewComment
 from apps.users.enums import USER_ROLE
@@ -795,6 +797,34 @@ class TestEventListQuery(HelixGraphQLTestCase):
 
 
 class CloneEventTest(HelixGraphQLTestCase):
+    #: Every field a clone is expected to copy from its source event.
+    EVENT_FIELDS_CARRIED_BY_CLONE = frozenset(
+        {
+            "actor",
+            "context_of_violence",
+            "countries",
+            "crisis",
+            "disaster_category",
+            "disaster_sub_category",
+            "disaster_sub_type",
+            "disaster_type",
+            "end_date",
+            "end_date_accuracy",
+            "event_narrative",
+            "event_type",
+            "glide_numbers",
+            "ignore_qa",
+            "include_triangulation_in_qa",
+            "name",
+            "osv_sub_type",
+            "other_sub_type",
+            "start_date",
+            "start_date_accuracy",
+            "violence",
+            "violence_sub_type",
+        }
+    )
+
     def setUp(self) -> None:
         self.mutation = """mutation cloneEvent($event: ID!) {
             cloneEvent(data: {event: $event}) {
@@ -846,6 +876,61 @@ class CloneEventTest(HelixGraphQLTestCase):
         }
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
+
+    def test_clone_event_resolves_every_foreign_key(self):
+        """``model_to_dict`` returns a pk for every FK, so each one has to be
+        resolved back to an instance before ``Event.objects.create``."""
+        self.event.osv_sub_type = OsvSubType.objects.create(name="osv sub type")
+        self.event.other_sub_type = OtherSubtypeFactory.create(name="other sub type")
+        self.event.save()
+
+        response = self.query(self.mutation, variables=self.variables)
+        content = response.json()
+        self.assertIsNone(content["data"]["cloneEvent"]["errors"], content)
+        cloned = Event.objects.get(id=content["data"]["cloneEvent"]["result"]["id"])
+        self.assertEqual(cloned.osv_sub_type_id, self.event.osv_sub_type_id)
+        self.assertEqual(cloned.other_sub_type_id, self.event.other_sub_type_id)
+
+    def test_clone_event_does_not_carry_over_assignment_or_review_state(self):
+        """Assignment is granted through the assign mutations, which notify the
+        participants. A ``SIGNED_OFF`` clone would also enter the review state
+        machine part-way through, having no figures to sign off."""
+        self.event.assignee = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.event.assigner = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
+        self.event.assigned_at = timezone.now()
+        self.event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+        self.event.save()
+
+        response = self.query(self.mutation, variables=self.variables)
+        content = response.json()
+        self.assertIsNone(content["data"]["cloneEvent"]["errors"], content)
+        cloned = Event.objects.get(id=content["data"]["cloneEvent"]["result"]["id"])
+        self.assertIsNone(cloned.assignee_id)
+        self.assertIsNone(cloned.assigner_id)
+        self.assertIsNone(cloned.assigned_at)
+        self.assertEqual(cloned.review_status, Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED)
+
+    def test_clone_event_does_not_carry_over_legacy_provenance_ids(self):
+        """``old_id`` identifies the row the event was imported from and is looked up
+        by, so a clone sharing it would make those lookups ambiguous."""
+        self.event.old_id = "legacy-1"
+        self.event.version_id = "v1"
+        self.event.save()
+
+        response = self.query(self.mutation, variables=self.variables)
+        content = response.json()
+        self.assertIsNone(content["data"]["cloneEvent"]["errors"], content)
+        cloned = Event.objects.get(id=content["data"]["cloneEvent"]["result"]["id"])
+        self.assertIsNone(cloned.old_id)
+        self.assertIsNone(cloned.version_id)
+
+    def test_clone_event_carries_only_reviewed_fields(self):
+        """A new Event field joins the clone by default, because ``model_to_dict`` is
+        opt-out. If this fails, decide which the new field is: a description of the
+        event, which belongs here, or something owned by the source row's identity,
+        provenance or review workflow, which belongs in ``CLONE_EXCLUDED_FIELDS``."""
+        carried = set(model_to_dict(self.event, exclude=list(Event.CLONE_EXCLUDED_FIELDS)))
+        self.assertEqual(carried, self.EVENT_FIELDS_CARRIED_BY_CLONE)
 
     def test_event_list_filter(self):
         response = self.query(self.mutation, variables=self.variables)

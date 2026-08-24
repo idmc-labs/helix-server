@@ -451,3 +451,77 @@ class TestHulkFigureImportDates(HelixGraphQLTestCase):
         row = self._stock_row(stock_date=self._near_future(), stock_reporting_date=self._near_future())
         with helix_client_context(self.stub_client):
             pyhelix_models.HulkFigureImport(**row)
+
+
+class TestHulkFigureImportIduText(HelixGraphQLTestCase):
+    """``FigureSerializer.create`` generates ``excerpt_idu`` when the row leaves
+    it blank, and never overwrites a supplied one — so requiring it here would
+    force producers to invent text that reaches production as a real excerpt."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        stub_manager = types.SimpleNamespace(validate_id_exists=lambda _id: None)
+        self.stub_client = types.SimpleNamespace(
+            violence_sub_type_manager=stub_manager,
+            disaster_sub_type_manager=stub_manager,
+            other_sub_type_manager=stub_manager,
+        )
+
+    def _row(self, **overrides) -> dict:
+        row = {
+            "uuid": "88888888-8888-8888-8888-888888888888",
+            "entry_id": 1,
+            "event_id": 1,
+            "figure_cause": "CONFLICT",
+            "violence_sub_type_id": 1,
+            "category": "NEW_DISPLACEMENT",
+            "term": "DISPLACED",
+            "quantifier": "EXACT",
+            "unit": "PERSON",
+            "figure_role": "RECOMMENDED",
+            "country_id": 1,
+            "start_date": "2020-01-01",
+            "start_date_accuracy": "DAY",
+            "end_date": "2020-01-31",
+            "end_date_accuracy": "DAY",
+            "reported_figure": 100,
+            "is_housing_destruction": False,
+            "displacement_occurred": "BEFORE",
+            "is_disaggregated": False,
+            "analysis_text": "analysis",
+            "source_excerpt_text": "excerpt",
+            "include_idu": True,
+            "idu_text": "",
+            "locations": [
+                {
+                    "uuid": "77777777-7777-7777-7777-777777777777",
+                    "display_name": "Kathmandu",
+                    "country_name": "Nepal",
+                    "country_code": "NP",
+                    "identifier": "ORIGIN",
+                    "accuracy": "ADM0",
+                    "geocoder": "GEONAME",
+                    "latitude": 27.7,
+                    "longitude": 85.3,
+                }
+            ],
+            "sources_id": [1],
+        }
+        row.update(overrides)
+        return row
+
+    def test_include_idu_without_text_allowed(self):
+        with helix_client_context(self.stub_client):
+            figure = pyhelix_models.HulkFigureImport(**self._row(idu_text=""))
+        self.assertEqual(figure.idu_text, "")
+
+    def test_idu_text_may_be_omitted_entirely(self):
+        row = self._row()
+        row.pop("idu_text")
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+
+    def test_supplied_idu_text_kept(self):
+        with helix_client_context(self.stub_client):
+            figure = pyhelix_models.HulkFigureImport(**self._row(idu_text="real excerpt"))
+        self.assertEqual(figure.idu_text, "real excerpt")
