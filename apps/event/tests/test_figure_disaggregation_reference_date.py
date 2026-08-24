@@ -1,3 +1,5 @@
+import datetime
+
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 from apps.event.models import Event
@@ -101,6 +103,77 @@ class TestFigureDisaggregationReferenceDate(HelixTestCase):
         self.assertEqual(cte, (self.EXPECTED_IDP, self.EXPECTED_ND))
         self.assertEqual(sub, (self.EXPECTED_IDP, self.EXPECTED_ND))
         self.assertEqual(cte, sub, "CTE (list sort) and subquery (aggregate path) must agree")
+
+
+class TestCrisisFigureDisaggregationScopedAggregate(HelixTestCase):
+    """`CrisisFilter` serves `aggregate_figures` from the CTE, passing a filtered figure set and --
+    for a report scope -- an explicit reference date. So the crisis CTE must match the subquery
+    under those arguments too, not only in the default scope every other test here covers.
+
+    Event deliberately has no counterpart: `EventFilter` keeps the subquery for that path (see the
+    comment in `EventFilter.qs`), so its CTE is only ever called in the default scope.
+
+    Same data as `TestFigureDisaggregationReferenceDate`.
+
+    Scoped set (every figure except the one ending 2022-06-30):
+      IDPS: end=2022-03-31 total=100 ; end=NULL total=999   -> reference date 2022-03-31, IDP = 100
+      ND:   end=2022-02-10 total=8   ; end=2022-06-01 total=200                        -> ND = 208
+
+    Explicit reference date 2022-03-31 over the full set: IDP = 100 (exact end_date match), ND = 208.
+    """
+
+    EXPECTED_ND = 208
+    SCOPED_REFERENCE_DATE = datetime.date(2022, 3, 31)
+    EXPECTED_SCOPED_IDP = 100
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.crisis = CrisisFactory.create(
+            crisis_type=Crisis.CRISIS_TYPE.CONFLICT, start_date="2022-01-01", end_date="2022-12-31"
+        )
+        cls.event = EventFactory.create(
+            crisis=cls.crisis, event_type=Crisis.CRISIS_TYPE.CONFLICT, start_date="2022-01-01", end_date="2022-12-31"
+        )
+        common = dict(event=cls.event, role=Figure.ROLE.RECOMMENDED)
+        for total, end_date in ((100, "2022-03-31"), (50, "2022-06-30"), (999, None)):
+            FigureFactory.create(
+                **common,
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                total_figures=total,
+                start_date="2022-01-01",
+                end_date=end_date,
+            )
+        for total, start_date, end_date in ((8, "2022-01-10", "2022-02-10"), (200, "2022-05-01", "2022-06-01")):
+            FigureFactory.create(
+                **common,
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                total_figures=total,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+    def _both_paths(self, **scope):
+        qs = Crisis.objects.filter(id=self.crisis.id)
+        cte = Crisis.annotate_total_figure_disaggregation_via_cte(qs, **scope).get()
+        sub = qs.annotate(**Crisis._total_figure_disaggregation_subquery(**scope)).get()
+        keys = (
+            Crisis.IDP_FIGURES_ANNOTATE,
+            Crisis.ND_FIGURES_ANNOTATE,
+            Crisis.IDP_FIGURES_REFERENCE_DATE_ANNOTATE,
+        )
+        return tuple(getattr(cte, key) for key in keys), tuple(getattr(sub, key) for key in keys)
+
+    def test_filtered_scope(self):
+        # A scope that removes the figure holding the unscoped reference date, so a helper ignoring
+        # `figures` would report the unscoped 50 rather than the scoped 100.
+        cte, sub = self._both_paths(figures=Figure.objects.exclude(end_date=datetime.date(2022, 6, 30)))
+        self.assertEqual(cte, (self.EXPECTED_SCOPED_IDP, self.EXPECTED_ND, self.SCOPED_REFERENCE_DATE))
+        self.assertEqual(cte, sub, "CTE and subquery must agree on a filtered figure scope")
+
+    def test_explicit_reference_date(self):
+        cte, sub = self._both_paths(figures=Figure.objects.all(), reference_date=self.SCOPED_REFERENCE_DATE)
+        self.assertEqual(cte, (self.EXPECTED_SCOPED_IDP, self.EXPECTED_ND, self.SCOPED_REFERENCE_DATE))
+        self.assertEqual(cte, sub, "CTE and subquery must agree on an explicit reference date")
 
 
 class TestFigureDisaggregationNdOnly(HelixTestCase):
