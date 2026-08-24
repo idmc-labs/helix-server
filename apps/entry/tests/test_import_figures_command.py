@@ -270,6 +270,139 @@ class TestImportFiguresCommand(HelixTestCase):
         self.figure.refresh_from_db()
         self.assertEqual(self.figure.reported, 100)
 
+    # ----- a template an operator has edited -----
+    #
+    # Sheets arrive reordered, stripped of columns, and with the README gone. Only an unknown
+    # column or a missing key should stop an import; nothing else may silently misread a row.
+
+    def test_the_readme_sheet_is_not_required(self):
+        # --make-template writes README + Data; an operator may keep only the data.
+        path = write_sheet(["id", "reported"], [{"id": self.figure.id, "reported": 250}])
+        workbook = load_workbook(path)
+        self.assertEqual(workbook.sheetnames, ["Data"])  # write_sheet already omits README
+
+        call_command("import_figures", path)
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 250)
+
+    def test_extra_sheets_are_ignored_and_data_is_found_by_name(self):
+        path = write_sheet(["id", "reported"], [{"id": self.figure.id, "reported": 250}])
+        workbook = load_workbook(path)
+        readme = workbook.create_sheet("README", 0)  # placed first, so it is the active sheet
+        readme["A1"] = "Instructions an operator left in place"
+        workbook.save(path)
+
+        call_command("import_figures", path)
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 250)
+
+    def test_columns_may_be_dropped(self):
+        # Only two of the 41 columns are kept.
+        path = write_sheet(["uuid", "reported"], [{"uuid": str(self.figure.uuid), "reported": 250}])
+        call_command("import_figures", path)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 250)
+        self.assertEqual(self.figure.calculation_logic, "Original logic.")
+
+    def test_columns_may_be_reordered(self):
+        path = write_sheet(
+            ["calculation_logic", "reported", "id"],
+            [{"id": self.figure.id, "reported": 250, "calculation_logic": "Reordered."}],
+        )
+        call_command("import_figures", path)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 250)
+        self.assertEqual(self.figure.calculation_logic, "Reordered.")
+
+    def test_a_sheet_of_only_the_key_column_changes_nothing(self):
+        path = write_sheet(["id"], [{"id": self.figure.id}])
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+
+        self.assertIn("1 of the updated rows had no effective change.", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 100)
+
+    def test_dropping_every_key_column_is_refused(self):
+        # The one thing an operator may not remove.
+        path = write_sheet(["reported"], [{"reported": 250}])
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn("exactly one of id · uuid is required; none given", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 100)
+
+    def test_a_header_only_sheet_imports_nothing(self):
+        path = write_sheet(["id", "reported"], [])
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+
+        self.assertIn("Created 0, updated 0.", out.getvalue())
+
+    def test_a_blank_row_between_rows_is_skipped(self):
+        other = self._second_figure()
+        path = write_sheet(["id", "reported"], [{"id": self.figure.id, "reported": 250}])
+        workbook = load_workbook(path)
+        worksheet = workbook["Data"]
+        worksheet.append([None, None])
+        worksheet.append([other.id, 800])
+        workbook.save(path)
+
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+
+        self.assertIn("Created 0, updated 2.", out.getvalue())
+        self.figure.refresh_from_db()
+        other.refresh_from_db()
+        self.assertEqual(self.figure.reported, 250)
+        self.assertEqual(other.reported, 800)
+
+    def test_a_cleared_header_cell_is_refused_rather_than_shifting_the_columns(self):
+        # Clearing a header cell but leaving its column is an easy slip in Excel. Dropping the
+        # blank would read reported against the household_size cell and write 6.0 over 250.
+        path = write_sheet(
+            ["id", "household_size", "reported"],
+            [{"id": self.figure.id, "household_size": 6.0, "reported": 250}],
+        )
+        workbook = load_workbook(path)
+        workbook["Data"]["B1"] = None  # header cleared, column still there
+        workbook.save(path)
+
+        with self.assertRaises(CommandError) as caught:
+            call_command("import_figures", path, stdout=StringIO())
+
+        self.assertIn("Column(s) B have no header", str(caught.exception))
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 100)
+
+    def test_a_trailing_blank_header_over_an_empty_column_is_tolerated(self):
+        # Stray formatting past the data is not an error: nothing follows it to misalign.
+        path = write_sheet(["id", "reported"], [{"id": self.figure.id, "reported": 250}])
+        workbook = load_workbook(path)
+        workbook["Data"]["D1"] = "   "
+        workbook.save(path)
+
+        call_command("import_figures", path)
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 250)
+
+    def test_a_value_in_an_unheaded_column_is_refused(self):
+        path = write_sheet(["id", "reported"], [{"id": self.figure.id, "reported": 250}])
+        workbook = load_workbook(path)
+        workbook["Data"]["D2"] = "orphaned value"  # no header above it
+        workbook.save(path)
+
+        with self.assertRaises(CommandError) as caught:
+            call_command("import_figures", path, stdout=StringIO())
+
+        self.assertIn("the header row does not name", str(caught.exception))
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.reported, 100)
+
     # ----- all-or-nothing -----
     #
     # Unlike the bulk figure mutation, which wraps save_item per item and reports the rest in
