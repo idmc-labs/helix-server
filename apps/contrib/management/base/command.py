@@ -29,6 +29,8 @@ class PreparedRow(typing.NamedTuple):
     errors: typing.Dict[str, str]
     #: Cells the operator filled that the serializer emptied.
     ignored_cells: typing.List[str]
+    #: Set when --max-id excluded the row; it is neither validated nor written.
+    skipped: bool = False
 
 
 class BaseImportCommand(BaseCommand):
@@ -99,6 +101,16 @@ class BaseImportCommand(BaseCommand):
         parser.add_argument("--user-email", type=str, help="Email of the user to attribute changes to.")
         parser.add_argument("--dry-run", action="store_true", help="Validate and save, then roll back.")
         parser.add_argument(
+            "--max-id",
+            dest="max_id",
+            type=int,
+            metavar="N",
+            help=(
+                "Skip rows whose target's id is greater than N. The id compared is the resolved "
+                "primary key, not the cell, so this works for a sheet keyed by uuid too."
+            ),
+        )
+        parser.add_argument(
             "--make-template",
             dest="make_template",
             type=str,
@@ -111,6 +123,9 @@ class BaseImportCommand(BaseCommand):
     @property
     def lookup_map(self) -> typing.Dict[str, BaseLookup]:
         return {lookup.field: lookup for lookup in self.lookups}
+
+    #: Upper bound on the target id, from --max-id; None means no bound.
+    max_id: typing.Optional[int] = None
 
     #: Field map per serializer class, built once per invocation.
     _fields_cache: typing.Optional[typing.Dict] = None
@@ -396,6 +411,10 @@ class BaseImportCommand(BaseCommand):
             instance, error = self.resolve_row(column, field, key, resolved)
             if error:
                 row_errors[column] = error
+            elif self.max_id is not None and instance.pk > self.max_id:
+                # Excluded before validation: the row is not this run's to write, so whether it
+                # would have passed is not a question worth answering or reporting on.
+                return PreparedRow(None, True, {}, [], skipped=True)
             else:
                 # The resolved pk, not the cell: a key written as text or as a float would
                 # otherwise reach the serializer in whatever shape the sheet stored it.
@@ -513,6 +532,7 @@ class BaseImportCommand(BaseCommand):
         for lookup in self.lookups:
             lookup.reset()  # caches are per-invocation; never reuse across runs
         self._fields_cache = None
+        self.max_id = options.get("max_id")
 
         if options.get("make_template"):
             out_path = options["make_template"]
@@ -679,6 +699,9 @@ class BaseImportCommand(BaseCommand):
         # Changelog lines are held back rather than written as they happen: a run that fails at its
         # last row commits nothing, and lines already printed would claim changes that never landed.
         changelog: typing.List[str] = []
+        # Rows --max-id excluded. Reported rather than dropped quietly: a sheet that asked for a
+        # row and did not get it must say so, or "no failure" only means "no failure reported".
+        skipped: typing.List[int] = []
         created = updated = unchanged = 0
 
         for chunk_start, chunk in self._chunks(rows, self.RESOLVE_CHUNK_SIZE):
@@ -687,6 +710,9 @@ class BaseImportCommand(BaseCommand):
             for offset, raw_row in enumerate(chunk):
                 index = chunk_start + offset
                 row = self.prepare_row(raw_row, request, resolved)
+                if row.skipped:
+                    skipped.append(index)
+                    continue
                 serializer, is_update, row_errors, ignored = (
                     row.serializer,
                     row.is_update,
@@ -739,8 +765,22 @@ class BaseImportCommand(BaseCommand):
 
         for line in changelog:
             self.stdout.write(self.style.SUCCESS(line))
+        self.print_skipped_rows(skipped)
         self.print_ignored_cells(ignored_cells)
         return created, updated, unchanged
+
+    def print_skipped_rows(self, skipped: typing.List[int]):
+        """Name every row --max-id excluded, so the sheet's unmet asks are on the record."""
+        if not skipped:
+            return
+        self.stdout.write(
+            self.style.WARNING(
+                f"{len(skipped)} row(s) were skipped: their target's id is greater than "
+                f"--max-id {self.max_id}. Nothing was read from or written to those rows."
+            )
+        )
+        for row_number in skipped:
+            self.stdout.write(self.style.WARNING(f"ROW_SKIPPED\trow={row_number}"))
 
     def print_ignored_cells(self, ignored_cells: typing.List[typing.Tuple[int, str]]):
         """

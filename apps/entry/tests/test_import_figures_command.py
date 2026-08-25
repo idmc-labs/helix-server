@@ -895,3 +895,77 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
         self.assertEqual(other.role, Figure.ROLE.RECOMMENDED.value)  # untouched by row 2
         self.assertEqual(other.start_date, date(2020, 6, 5))
+
+    # ----- --max-id -----
+
+    def test_max_id_skips_rows_whose_target_is_above_the_bound(self):
+        low, high = self.figure, self._figure()
+        self.assertLess(low.id, high.id)
+        path = write_sheet(
+            ["id", "role"],
+            [{"id": low.id, "role": "TRIANGULATION"}, {"id": high.id, "role": "TRIANGULATION"}],
+        )
+        out = StringIO()
+        call_command("import_figures", path, max_id=low.id, stdout=out)
+
+        low.refresh_from_db()
+        high.refresh_from_db()
+        self.assertEqual(low.role, Figure.ROLE.TRIANGULATION.value)
+        self.assertEqual(high.role, Figure.ROLE.RECOMMENDED.value)  # excluded
+        self.assertIn("Created 0, updated 1.", out.getvalue())
+
+    def test_a_skipped_row_is_reported_by_its_row_number(self):
+        # Never silently dropped: the sheet asked for the row and did not get it.
+        low, high = self.figure, self._figure()
+        path = write_sheet(
+            ["id", "role"],
+            [{"id": low.id, "role": "TRIANGULATION"}, {"id": high.id, "role": "TRIANGULATION"}],
+        )
+        out = StringIO()
+        call_command("import_figures", path, max_id=low.id, stdout=out)
+
+        output = out.getvalue()
+        self.assertIn("1 row(s) were skipped", output)
+        self.assertIn(f"--max-id {low.id}", output)
+        self.assertIn("ROW_SKIPPED\trow=3", output)
+
+    def test_max_id_bounds_a_uuid_keyed_row_by_its_resolved_id(self):
+        # A uuid sheet has no id cell, so the bound has to come from the resolved primary key.
+        high = self._figure()
+        path = write_sheet(["uuid", "role"], [{"uuid": str(high.uuid), "role": "TRIANGULATION"}])
+        out = StringIO()
+        call_command("import_figures", path, max_id=high.id - 1, stdout=out)
+
+        high.refresh_from_db()
+        self.assertEqual(high.role, Figure.ROLE.RECOMMENDED.value)
+        self.assertIn("1 row(s) were skipped", out.getvalue())
+
+    def test_the_bound_is_inclusive(self):
+        path = write_sheet(["id", "role"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
+        call_command("import_figures", path, max_id=self.figure.id, stdout=StringIO())
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
+
+    def test_a_skipped_row_is_not_validated(self):
+        # The row is not this run's to write, so whether it would have passed is moot — an invalid
+        # cell above the bound must not fail the import.
+        high = self._figure()
+        path = write_sheet(["id", "role"], [{"id": high.id, "role": "NOT_A_ROLE"}])
+        out = StringIO()
+        call_command("import_figures", path, max_id=high.id - 1, stdout=out)
+
+        self.assertIn("1 row(s) were skipped", out.getvalue())
+        self.assertNotIn("Import failed", out.getvalue())
+
+    def test_without_the_flag_nothing_is_skipped(self):
+        low, high = self.figure, self._figure()
+        path = write_sheet(
+            ["id", "role"],
+            [{"id": low.id, "role": "TRIANGULATION"}, {"id": high.id, "role": "TRIANGULATION"}],
+        )
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+
+        self.assertNotIn("ROW_SKIPPED", out.getvalue())
+        self.assertIn("Created 0, updated 2.", out.getvalue())
