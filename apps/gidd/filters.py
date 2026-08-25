@@ -173,52 +173,6 @@ class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
         return queryset.filter(year__in=value)
 
 
-class GiddDisplacementFilter(ReleaseMetadataFilter):
-    # Enum-typed rather than a ChoiceFilter: django-filter drops a field that fails form validation
-    # from `cleaned_data`, so `filter_queryset` skipped it and an unknown cause returned every row.
-    cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="cause")
-    countries_iso3 = StringListFilter(method="filter_countries_iso3")
-    start_year = django_filters.NumberFilter(method="filter_start_year")
-    end_year = django_filters.NumberFilter(method="filter_end_year")
-    hazard_categories = IDListFilter(method="filter_hazard_categories")
-    hazard_sub_categories = IDListFilter(method="filter_hazard_sub_categories")
-    hazard_types = IDListFilter(method="filter_hazard_types")
-    hazard_sub_types = IDListFilter(method="filter_hazard_sub_types")
-    violence_types = IDListFilter(method="filter_violence_types")
-    violence_sub_types = IDListFilter(method="filter_violence_sub_types")
-
-    class Meta:
-        model = GiddDisplacement
-        fields = {}
-
-    def filter_countries_iso3(self, queryset, name, value):
-        return queryset.filter(iso3__in=value)
-
-    def filter_start_year(self, queryset, name, value):
-        return queryset.filter(year__gte=value)
-
-    def filter_end_year(self, queryset, name, value):
-        return queryset.filter(year__lte=value)
-
-    def filter_hazard_categories(self, queryset, name, value):
-        return queryset.filter(hazard_category__in=value)
-
-    def filter_hazard_sub_categories(self, queryset, name, value):
-        return queryset.filter(hazard_sub_category__in=value)
-
-    def filter_hazard_types(self, queryset, name, value):
-        return queryset.filter(hazard_type__in=value)
-
-    def filter_hazard_sub_types(self, queryset, name, value):
-        return queryset.filter(hazard_sub_type__in=value)
-
-    def filter_violence_types(self, queryset, name, value):
-        return queryset.filter(violence__in=value)
-
-    def filter_violence_sub_types(self, queryset, name, value):
-        return queryset.filter(violence_sub_type__in=value)
-
-
 class GiddEventDisplacementFilter(ReleaseMetadataFilter):
     # Enum-typed rather than a ChoiceFilter: django-filter drops a field that fails form validation
     # from `cleaned_data`, so `filter_queryset` skipped it and an unknown cause returned every row.
@@ -297,7 +251,6 @@ GIDD_TRACKING_FILTERS = {
     PublicFigureAnalysisFilter: ExternalApiDump.ExternalApiType.GIDD_PFA_GRAPHQL,
     DisasterStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL,
     ConflictStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL,
-    GiddDisplacementFilter: ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_GRAPHQL,
     GiddEventDisplacementFilter: ExternalApiDump.ExternalApiType.GIDD_NEW_EVENTS_GRAPHQL,
 }
 

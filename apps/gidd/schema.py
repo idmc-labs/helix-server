@@ -26,7 +26,6 @@ from .filters import (
     ConflictStatisticsFilter,
     DisasterStatisticsFilter,
     GiddCountryDisplacementFilter,
-    GiddDisplacementFilter,
     GiddEventDisplacementFilter,
     GiddStatusLogFilter,
     PublicFigureAnalysisFilter,
@@ -184,71 +183,6 @@ class GiddPublicFigureAnalysisListType(CustomDjangoListObjectType):
         filterset_class = PublicFigureAnalysisFilter
 
 
-class GiddDisplacementType(RelationBatchedDjangoObjectType):
-    country_id = graphene.ID(required=True)
-    cause = graphene.Field(CrisisTypeGrapheneEnum)
-    cause_display = EnumDescription(source="get_cause_display")
-    violence_id = graphene.ID()
-    violence_sub_type_id = graphene.ID()
-    hazard_category_id = graphene.ID()
-    hazard_sub_category_id = graphene.ID()
-    hazard_type_id = graphene.ID()
-    hazard_sub_type_id = graphene.ID()
-
-    class Meta:
-        model = GiddDisplacement
-        fields = (
-            "id",
-            "iso3",
-            "country_name",
-            "year",
-            "violence_name",
-            "violence_sub_type_name",
-            "hazard_category_name",
-            "hazard_sub_category_name",
-            "hazard_type_name",
-            "hazard_sub_type_name",
-            "new_displacement",
-            "new_displacement_rounded",
-            "total_displacement",
-            "total_displacement_rounded",
-        )
-
-    @staticmethod
-    def resolve_country_id(root, info, **kwargs):
-        return root.country_id
-
-    @staticmethod
-    def resolve_violence_id(root, info, **kwargs):
-        return root.violence_id
-
-    @staticmethod
-    def resolve_violence_sub_type_id(root, info, **kwargs):
-        return root.violence_sub_type_id
-
-    @staticmethod
-    def resolve_hazard_category_id(root, info, **kwargs):
-        return root.hazard_category_id
-
-    @staticmethod
-    def resolve_hazard_sub_category_id(root, info, **kwargs):
-        return root.hazard_sub_category_id
-
-    @staticmethod
-    def resolve_hazard_type_id(root, info, **kwargs):
-        return root.hazard_type_id
-
-    @staticmethod
-    def resolve_hazard_sub_type_id(root, info, **kwargs):
-        return root.hazard_sub_type_id
-
-
-class GiddDisplacementListType(CustomDjangoListObjectType):
-    class Meta:
-        model = GiddDisplacement
-        filterset_class = GiddDisplacementFilter
-
-
 class GiddEventDisplacementType(RelationBatchedDjangoObjectType):
     country_id = graphene.ID(required=True)
     event_id = graphene.ID()
@@ -335,11 +269,6 @@ class GiddHazardType(graphene.ObjectType):
 
 
 class GiddHazardSubCategoryType(graphene.ObjectType):
-    id = graphene.ID(required=True)
-    name = graphene.String(required=True)
-
-
-class GiddViolenceType(graphene.ObjectType):
     id = graphene.ID(required=True)
     name = graphene.String(required=True)
 
@@ -477,10 +406,6 @@ class Query(graphene.ObjectType):
         GiddHazardType,
         client_id=graphene.String(required=True),
     )
-    gidd_public_violence_types = graphene.List(
-        GiddViolenceType,
-        client_id=graphene.String(required=True),
-    )
     gidd_public_violence_sub_types = graphene.List(
         GiddViolenceSubType,
         client_id=graphene.String(required=True),
@@ -505,11 +430,6 @@ class Query(graphene.ObjectType):
         GiddCombinedStatisticsType,
         **get_filtering_args_from_filterset(DisasterStatisticsFilter, GiddCombinedStatisticsType),
         required=True,
-        client_id=graphene.String(required=True),
-    )
-    gidd_public_displacements = DjangoPaginatedListObjectField(
-        GiddDisplacementListType,
-        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize", page_size=50),
         client_id=graphene.String(required=True),
     )
     gidd_public_events = DjangoPaginatedListObjectField(
@@ -907,24 +827,6 @@ class Query(graphene.ObjectType):
             )
             .values("hazard_type__id", "hazard_type__name")
             .distinct("hazard_type__id", "hazard_type__name")
-        ]
-
-    @staticmethod
-    def resolve_gidd_public_violence_types(parent, info, **kwargs):
-        client_id = kwargs.pop("client_id")
-        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_VIOLENCE_TYPES_GRAPHQL)
-
-        return [
-            GiddViolenceType(
-                id=row["violence__id"],
-                name=row["violence_name"],
-            )
-            for row in GiddDisplacement.objects.filter(
-                cause=Crisis.CRISIS_TYPE.CONFLICT,
-                violence__isnull=False,
-            )
-            .values("violence__id", "violence_name")
-            .distinct("violence__id", "violence_name")
         ]
 
     @staticmethod

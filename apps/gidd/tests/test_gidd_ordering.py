@@ -1,14 +1,18 @@
 """`?ordering=` on the public GIDD REST lists, and the tiebreaker that makes it total.
 
-`GiddOrderingFilter` (apps/gidd/views.py) completes a caller's sort key with the primary key,
-the same rule `nulls_last_order_queryset` applies to the GraphQL lists -- the Client side of it
-is pinned in `apps/contrib/tests/test_ordering_allowlist_registry.py`. These endpoints page by
-OFFSET, so a sort key with ties has no stable page boundary: the database is free to return a
-tie group in a different order per request, which lets a row arrive on two pages while another
-is never returned at all.
+`GiddOrderingFilter` (apps/gidd/views.py) completes a caller's sort key so that no two result
+rows compare equal. Which columns do that depends on the queryset: a row-level queryset is made
+total by its primary key, an aggregate by its GROUP BY keys -- an aggregate has no pk of its own,
+and ordering one by `id` folds `id` into the group, so the page carries one row per underlying
+row while `count()`, which clears ordering, keeps reporting the grouped total.
+
+These endpoints page by OFFSET, so a sort key with ties has no stable page boundary: the database
+is free to return a tie group in a different order per request, which lets a row arrive on two
+pages while another is never returned at all.
 
 The direction of the tiebreak follows the LEADING key, so a tie group reads the same way round
-as the sort that was asked for.
+as the sort that was asked for. The Client side of the same rule is pinned in
+`apps/contrib/tests/test_ordering_allowlist_registry.py`.
 """
 
 from rest_framework.exceptions import ValidationError
@@ -29,12 +33,19 @@ CONFLICTS_URL = "/external-api/gidd/conflicts/"
 RELEASE_YEAR = 2024
 DATA_YEARS = (RELEASE_YEAR - 5, RELEASE_YEAR - 4)
 
-PK_SQL = f'"{Conflict._meta.db_table}"."{Conflict._meta.pk.column}"'
-YEAR_SQL = f'"{Conflict._meta.db_table}"."year"'
-ISO3_SQL = f'"{Conflict._meta.db_table}"."iso3"'
+PK_SQL = f'"{GiddDisplacement._meta.db_table}"."{GiddDisplacement._meta.pk.column}"'
+YEAR_SQL = f'"{GiddDisplacement._meta.db_table}"."year"'
+ISO3_SQL = f'"{GiddDisplacement._meta.db_table}"."iso3"'
 
-ROW_COUNT = 12
+# Countries, not rows: `/gidd/conflicts/` aggregates `GiddDisplacement` to one row per
+# country x year, so a tie group has to be built out of distinct countries sharing a year.
+COUNTRY_COUNT = 12
 PAGE_SIZE = 4
+# Two disaggregated rows per country x year, so the published row count differs from the stored
+# one and an aggregate ordered by pk would visibly break the page.
+ROWS_PER_COUNTRY = 2
+FIRST_ROW_FIGURE = 1
+SECOND_ROW_FIGURE = 2
 
 
 class GiddConflictListMixin:
@@ -56,34 +67,48 @@ class GiddConflictListMixin:
             pre_release_year=RELEASE_YEAR - 1,
             modified_by=self.user,
         )
-        self.country = CountryFactory.create(iso3="AFG", iso2="AF", idmc_short_name="Afghanistan")
 
     def tearDown(self):
         external_api_cache.delete("client_ids")
         super().tearDown()
 
-    def create_conflict(self, year, new_displacement):
-        # `iso3` and `country_name` are denormalised onto the row, so they are set from the
-        # country rather than left to diverge from it.
-        return Conflict.objects.create(
-            country=self.country,
-            iso3=self.country.iso3,
-            country_name=self.country.idmc_short_name,
+    def create_country(self, iso3, name):
+        # `iso2` is left unset: nothing on these lists reads it, and inventing one per country
+        # would only add a column the assertions never look at.
+        return CountryFactory.create(iso3=iso3, idmc_short_name=name)
+
+    def create_displacement(self, country, year, new_displacement, violence_sub_type_name=None):
+        # `iso3` and `country_name` are denormalised onto the row -- the endpoint groups on the
+        # denormalised columns, not on the FK -- so they are set from the country rather than
+        # left to diverge from it. `cause` is what the conflict list filters on.
+        return GiddDisplacement.objects.create(
+            country=country,
+            iso3=country.iso3,
+            country_name=country.idmc_short_name,
             year=year,
+            cause=Crisis.CRISIS_TYPE.CONFLICT,
+            violence_sub_type_name=violence_sub_type_name,
             new_displacement=new_displacement,
+            total_displacement=new_displacement,
         )
 
 
 class TestGiddOrderingIsTotal(GiddConflictListMixin, HelixAPITestCase):
-    """The compiled ORDER BY, driven through the view's real backend chain."""
+    """The compiled ORDER BY, driven through the view's real backend chain.
+
+    A PLAIN queryset on purpose: it is the branch of `tiebreak_fields` that resolves to the
+    primary key, and the pk is a single column whose position in the compiled ORDER BY can be
+    asserted exactly. The aggregate branch is covered by `TestGiddOrderingPagesTiesStably`.
+    """
 
     def setUp(self):
         super().setUp()
         self.factory = APIRequestFactory()
+        self.country = self.create_country("AFG", "Afghanistan")
         # Rows, so the ORDER BY under test belongs to a queryset that actually returns
         # something: a chain that had filtered everything away would compile the same SQL.
         for index, year in enumerate(DATA_YEARS):
-            self.create_conflict(year, index)
+            self.create_displacement(self.country, year, index)
 
     def order_by_sql(self, ordering):
         request = self.factory.get(CONFLICTS_URL, {"client_id": self.CLIENT_CODE, "ordering": ordering})
@@ -91,9 +116,10 @@ class TestGiddOrderingIsTotal(GiddConflictListMixin, HelixAPITestCase):
         view.action = "list"
         view.args, view.kwargs = (), {}
         view.request = Request(request)
-        # `get_queryset()` is bypassed on purpose: it tracks the client id as a side effect, and
-        # the ordering backend only ever sees the queryset handed to `filter_queryset`.
-        queryset = view.filter_queryset(Conflict.objects.all())
+        # `get_queryset()` is bypassed on purpose: it tracks the client id as a side effect, it
+        # returns the aggregate rather than a row-level queryset, and the ordering backend only
+        # ever sees the queryset handed to `filter_queryset`.
+        queryset = view.filter_queryset(GiddDisplacement.objects.all())
         assert queryset.count() == len(DATA_YEARS), f"the filter chain returned {queryset.count()} rows"
         return str(queryset.query).split("ORDER BY")[-1].strip()
 
@@ -117,15 +143,42 @@ class TestGiddOrderingIsTotal(GiddConflictListMixin, HelixAPITestCase):
 
 
 class TestGiddOrderingPagesTiesStably(GiddConflictListMixin, HelixAPITestCase):
-    """The property the tiebreaker exists for, which no single page can show."""
+    """The property the tiebreaker exists for, which no single page can show.
+
+    This is also the ONLY direct coverage of the GROUP-BY-key tiebreak: `/gidd/conflicts/` is a
+    `.values().annotate()` aggregate, so `tiebreak_fields` returns `iso3`, `country_name` and
+    `year` here rather than the pk. Ordering this queryset by pk instead would fold `id` into the
+    GROUP BY and hand back one row per stored row, while `count()` -- which clears ordering --
+    would keep reporting the grouped total: page and count would disagree, and the assertions
+    below would fail on both.
+
+    The tie group is built at the aggregate's grain: several COUNTRIES share a `year`, so they
+    tie on the requested sort key and are separated only by `iso3`. Six countries per year
+    against a four-row page means a tie group straddles two page boundaries.
+    """
 
     def setUp(self):
         super().setUp()
-        # `new_displacement` identifies the row: the conflict serializer exposes no `id`, and
-        # `year` is the tie generator, so it is the only per-row value a page can be read by.
-        self.markers = list(range(1, ROW_COUNT + 1))
-        for marker in self.markers:
-            self.create_conflict(DATA_YEARS[marker % len(DATA_YEARS)], marker)
+        # `iso3` identifies the row: the conflict serializer exposes no `id`, and `year` is the
+        # tie generator, so it is the only per-row value a page can be read by.
+        self.year_by_iso3 = {}
+        for index in range(COUNTRY_COUNT):
+            iso3 = f"T{index:02d}"
+            # `year` alternates while `iso3` ascends, so the expected sequence is NOT sorted
+            # `iso3`: a page must respect the requested key AND the tiebreak, not either alone.
+            year = DATA_YEARS[index % len(DATA_YEARS)]
+            country = self.create_country(iso3, f"Country {index:02d}")
+            self.create_displacement(country, year, FIRST_ROW_FIGURE, "International armed conflict")
+            self.create_displacement(country, year, SECOND_ROW_FIGURE, "Civil unrest")
+            self.year_by_iso3[iso3] = year
+
+        # Non-vacuity guard: the stored grain must differ from the published one, or an
+        # aggregate that leaked its underlying rows would page identically.
+        assert GiddDisplacement.objects.count() == COUNTRY_COUNT * ROWS_PER_COUNTRY
+
+    @property
+    def expected_order(self):
+        return [iso3 for _, iso3 in sorted((year, iso3) for iso3, year in self.year_by_iso3.items())]
 
     def page(self, offset):
         response = self.client.get(
@@ -137,16 +190,19 @@ class TestGiddOrderingPagesTiesStably(GiddConflictListMixin, HelixAPITestCase):
 
     def test_a_tied_sort_key_pages_without_repeats_or_gaps(self):
         seen, years = [], []
-        for offset in range(0, ROW_COUNT, PAGE_SIZE):
+        for offset in range(0, COUNTRY_COUNT, PAGE_SIZE):
             payload = self.page(offset)
-            assert payload["count"] == ROW_COUNT, f"the list held {payload['count']} rows, not {ROW_COUNT}"
+            assert payload["count"] == COUNTRY_COUNT, f"the list held {payload['count']} rows, not {COUNTRY_COUNT}"
             results = payload["results"]
             assert len(results) == PAGE_SIZE, f"offset {offset} returned {len(results)} rows"
-            seen += [row["new_displacement"] for row in results]
+            # The page carries the aggregate, not the rows it was summed from.
+            for row in results:
+                assert row["new_displacement"] == FIRST_ROW_FIGURE + SECOND_ROW_FIGURE, row
+            seen += [row["iso3"] for row in results]
             years += [row["year"] for row in results]
 
         assert len(seen) == len(set(seen)), f"a row came back on more than one page: {seen}"
-        assert set(seen) == set(self.markers), f"paging skipped a row: {sorted(set(self.markers) - set(seen))}"
+        assert set(seen) == set(self.year_by_iso3), f"paging skipped a row: {sorted(set(self.year_by_iso3) - set(seen))}"
         assert years == sorted(years), f"the requested sort did not hold across pages: {years}"
 
 
@@ -196,3 +252,4 @@ class GiddComputedFieldOrderingTest(GiddConflictListMixin, HelixAPITestCase):
     def test_an_unknown_term_is_still_refused(self):
         with self.assertRaises(ValidationError):
             self.order_by_sql(ConflictViewSet, GiddDisplacement.objects.all(), "not_a_column")
+        assert seen == self.expected_order, f"the tie group was not ordered by the group keys: {seen}"
