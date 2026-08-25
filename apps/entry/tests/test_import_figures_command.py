@@ -290,6 +290,58 @@ class TestImportFiguresCommand(HelixTestCase):
         self.figure.refresh_from_db()
         self.assertEqual(self.figure.start_date, date(2020, 6, 1))
 
+    # ----- the date rules are scoped to rows that supply a date -----
+
+    # A role correction is the whole reason this importer exists, and the figures needing one are
+    # the oldest — the ones whose stored dates predate today's rules. Checking those dates on a row
+    # that does not touch them would refuse the correction, and since the import is all-or-nothing,
+    # one such figure would stop every other row in the sheet.
+
+    def test_a_role_only_row_is_accepted_on_a_flow_figure_with_no_stored_end_date(self):
+        figure = self._figure(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)
+        Figure.objects.filter(pk=figure.pk).update(end_date=None)
+
+        path = write_sheet(["id", "role"], [{"id": figure.id, "role": "TRIANGULATION"}])
+        call_command("import_figures", path)
+
+        figure.refresh_from_db()
+        self.assertEqual(figure.role, Figure.ROLE.TRIANGULATION.value)
+        self.assertIsNone(figure.end_date)
+
+    def test_a_role_only_row_is_accepted_on_a_flow_figure_whose_stored_end_date_is_future(self):
+        figure = self._figure(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)
+        Figure.objects.filter(pk=figure.pk).update(end_date=date(2030, 1, 1))
+
+        path = write_sheet(["id", "role"], [{"id": figure.id, "role": "TRIANGULATION"}])
+        call_command("import_figures", path)
+
+        figure.refresh_from_db()
+        self.assertEqual(figure.role, Figure.ROLE.TRIANGULATION.value)
+        self.assertEqual(figure.end_date, date(2030, 1, 1))
+
+    def test_a_role_only_row_is_accepted_on_a_figure_whose_stored_dates_are_inverted(self):
+        Figure.objects.filter(pk=self.figure.pk).update(start_date=date(2020, 9, 1), end_date=date(2020, 6, 30))
+
+        path = write_sheet(["id", "role"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
+        call_command("import_figures", path)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
+        self.assertEqual(self.figure.start_date, date(2020, 9, 1))
+
+    def test_an_accuracy_only_row_is_accepted_on_a_figure_whose_stored_dates_are_inverted(self):
+        # An accuracy is not a date and no rule reads one, so an accuracy cannot make any of the
+        # date rules newly true. Folding the accuracies into the group would refuse this row over
+        # dates it never touches.
+        Figure.objects.filter(pk=self.figure.pk).update(start_date=date(2020, 9, 1), end_date=date(2020, 6, 30))
+
+        path = write_sheet(["id", "end_date_accuracy"], [{"id": self.figure.id, "end_date_accuracy": "MONTH"}])
+        call_command("import_figures", path)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.end_date_accuracy, DATE_ACCURACY.MONTH.value)
+        self.assertEqual(self.figure.end_date, date(2020, 6, 30))
+
     # ----- naming a row by id or by uuid -----
 
     def test_a_row_identified_by_uuid_patches_that_figure(self):
