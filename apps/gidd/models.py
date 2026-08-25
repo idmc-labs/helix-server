@@ -826,6 +826,9 @@ class GiddEventDisplacement(models.Model):
         }
     )
 
+    # CTEManager so the witness derivation can render a WITH clause: Disaster's event codes are
+    # aggregated across all of an event's countries, which is one CTE joined back on the event
+    # rather than a correlated subquery rescanning EventCode per output row.
     event = models.ForeignKey("event.Event", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
     event_raw_id = models.IntegerField(null=True, blank=True)
     event_name = models.CharField(verbose_name=_("Event name"), max_length=256)
@@ -845,6 +848,17 @@ class GiddEventDisplacement(models.Model):
     start_date_accuracy = models.TextField(blank=True, null=True)
     end_date_accuracy = models.TextField(blank=True, null=True)
     event_codes_type = ArrayField(models.CharField(verbose_name=_("Event Code Types"), max_length=256), default=list)
+    # The retired Disaster table published an event's codes across ALL its countries -- its
+    # subquery compared EventCode.country to itself, so the country condition was a tautology, and
+    # /gidd/disasters/ still publishes that shape. Stored rather than re-derived per request: a
+    # released dump must not change because EventCode moved on, and reading a column keeps the
+    # export a streamable queryset. `event_codes` above stays country-correct, for GraphQL.
+    all_country_event_codes = ArrayField(
+        models.CharField(verbose_name=_("Event Codes (all countries)"), max_length=256), default=list
+    )
+    all_country_event_codes_type = ArrayField(
+        models.CharField(verbose_name=_("Event Code Types (all countries)"), max_length=256), default=list
+    )
     glide_numbers = ArrayField(models.CharField(verbose_name=_("Glide Numbers"), max_length=256), default=list)
     displacement_occurred = ArrayField(
         base_field=enum.EnumField(Figure.DISPLACEMENT_OCCURRED, verbose_name=_("Displacement occurred")),
