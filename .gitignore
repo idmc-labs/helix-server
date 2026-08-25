@@ -34,3 +34,7 @@ coverage.xml
 htmlcov
 sitecus
 /temp
+
+docs/
+Pipfile
+Pipfile.lock
