@@ -230,6 +230,13 @@ class StatusLog(models.Model):
 
 
 class ConflictLegacy(models.Model):
+    """Pre-2016 conflict displacement, imported once from CSV.
+
+    Nothing writes this table: the importer that populated it is gone and the generation derives
+    every year it covers from `Figure`. It is retained because those rows are the only copy of the
+    pre-2016 series in the system -- they are not derivable from Helix data.
+    """
+
     total_displacement = models.BigIntegerField(blank=True, null=True)
     new_displacement = models.BigIntegerField(blank=True, null=True)
     year = models.IntegerField()
@@ -248,6 +255,8 @@ class ConflictLegacy(models.Model):
 
 
 class DisasterLegacy(models.Model):
+    """Pre-2016 disaster displacement, imported once from CSV. See ConflictLegacy."""
+
     year = models.IntegerField()
     iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
     event_name = models.CharField(verbose_name=_("Event name"), max_length=256)
@@ -343,51 +352,6 @@ class PublicFigureAnalysis(models.Model):
         "report.Report", verbose_name=_("Report"), null=True, related_name="+", on_delete=models.SET_NULL
     )
     report_raw_id = models.IntegerField()
-
-
-class DisplacementData(models.Model):
-    # See Conflict. Unrounded figures are included so a caller can sort by the value it aggregates
-    # on, not only the display value.
-    ORDERING_ALLOWLIST = frozenset(
-        {
-            "conflict_new_displacement",
-            "conflict_new_displacement_rounded",
-            "conflict_total_displacement",
-            "conflict_total_displacement_rounded",
-            "country_name",
-            "disaster_new_displacement",
-            "disaster_new_displacement_rounded",
-            "disaster_total_displacement",
-            "disaster_total_displacement_rounded",
-            "id",
-            "iso3",
-            "year",
-        }
-    )
-
-    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
-    country_name = models.CharField(verbose_name=_("Country name"), max_length=256)
-    country = models.ForeignKey(
-        "country.Country", related_name="displacements", on_delete=models.PROTECT, verbose_name=_("Country")
-    )
-
-    conflict_total_displacement = models.BigIntegerField(null=True, verbose_name=_("Conflict total idps"))
-    conflict_new_displacement = models.BigIntegerField(null=True, verbose_name=_("Conflict total nd"))
-
-    disaster_total_displacement = models.BigIntegerField(null=True, verbose_name=_("Disaster total nds"))
-    disaster_new_displacement = models.BigIntegerField(null=True, verbose_name=_("Disaster total nd"))
-
-    year = models.IntegerField(verbose_name=_("Year"))
-
-    # Don't use these rounded fields to aggregate, just used to display and sort
-    conflict_total_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Conflict total idps"))
-    conflict_new_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Conflict total nd"))
-
-    disaster_total_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Disaster total nds"))
-    disaster_new_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Disaster total nd"))
-
-    def __str__(self):
-        return self.iso3
 
 
 class IdpsSaddEstimate(models.Model):
@@ -835,6 +799,22 @@ class GiddEventDisplacement(models.Model):
     Conflict rows: violence + violence_sub_type set; hazard fields null.
     Disaster rows: hazard_type + hazard_sub_type set; violence fields null.
     """
+
+    # giddPublicEvents (replaces the old giddPublicDisasters). Unauthenticated; the frontend
+    # Gidd/EventsTable sortable columns (mirrors the retired Disaster.ORDERING_ALLOWLIST).
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "country_name",
+            "created_at",
+            "event_name",
+            "hazard_category_name",
+            "hazard_type_name",
+            "id",
+            "new_displacement_rounded",
+            "start_date",
+            "year",
+        }
+    )
 
     event = models.ForeignKey("event.Event", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
     event_raw_id = models.IntegerField(null=True, blank=True)

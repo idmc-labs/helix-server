@@ -773,8 +773,6 @@ type CountryType {
   events(filters: EventFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EventListType
   eventCodeCountry: [EventCodeType!]!
   contextualupdateSet: [ContextualUpdateType!]!
-  giddDisplacements: [GiddDisplacementType!]!
-  giddEventDisplacements: [GiddEventDisplacementType!]!
   lastSummary: SummaryType
   lastContextualAnalysis: ContextualAnalysisType
   entries(filters: EntryExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType

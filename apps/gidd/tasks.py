@@ -18,7 +18,7 @@ from django.db.models import (
 from django.db.models.functions import Cast, Coalesce, Concat, Mod
 from django.db.models.sql.constants import LOUTER
 from django.utils import timezone
-from django_cte import CTEQuerySet, With
+from django_cte import With
 
 from apps.common.utils import EXTERNAL_TUPLE_SEPARATOR
 from apps.country.models import Country
@@ -32,7 +32,6 @@ from utils.db import Array
 from .models import (
     Conflict,
     Disaster,
-    DisplacementData,
     GiddDisplacement,
     GiddEvent,
     GiddEventDisplacement,
@@ -55,11 +54,6 @@ def get_gidd_years():
     )
 
 
-# Empty-group cover for every CTE-nested ArrayAgg below. Generation is
-# INSERT..SELECT, so the values never reach python and an aggregate's
-# `convert_value` never runs — from Django 5.0, where the empty-group `default=`
-# moved into convert_value, `default=` is inert here rather than redundant.
-# Every read of a CTE array column must stay wrapped in one of these.
 def empty_int_array():
     return Value([], output_field=ArrayField(models.IntegerField()))
 
@@ -135,162 +129,6 @@ def figures_in_year_window(year, event_type=None):
         end_date=datetime.datetime(year=year, month=12, day=31),
     )
     return nd_figure_qs | stock_figure_qs
-
-
-def update_conflict_and_disaster_data():
-    for year in get_gidd_years():
-        # Create new conflict figures
-        conflict_figure_qs = figures_in_year_window(year, Crisis.CRISIS_TYPE.CONFLICT)
-        bulk_insert_from_queryset(
-            Conflict,
-            Figure.objects.filter(id__in=conflict_figure_qs.values("id"))
-            .order_by()
-            .values("country__idmc_short_name", "country__iso3")
-            .annotate(
-                total_displacement=Sum(
-                    Case(
-                        When(category=Figure.FIGURE_CATEGORY_TYPES.IDPS, then=F("total_figures")),
-                        output_field=IntegerField(),
-                    )
-                ),
-                new_displacement=Sum(
-                    Case(
-                        When(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT, then=F("total_figures")),
-                        output_field=IntegerField(),
-                    )
-                ),
-            ),
-            dict(
-                # Grouped by (name, iso3) plus this FK reference — the same
-                # effective grouping the old annotate(country=...) produced.
-                country_id=F("country"),
-                total_displacement=F("total_displacement"),
-                new_displacement=F("new_displacement"),
-                total_displacement_rounded=rounded_figure_expr("total_displacement"),
-                new_displacement_rounded=rounded_figure_expr("new_displacement"),
-                year=Value(year, output_field=IntegerField()),
-                iso3=F("country__iso3"),
-                country_name=F("country__idmc_short_name"),
-            ),
-        )
-
-        # Sync disaster data. No year floor: the pre-2016 generation derives every year from
-        # real figures, so skipping year < 2016 here would leave Disaster empty for 2008-2015
-        # while Conflict, DisplacementData, GiddFigure and GiddEvent were all populated.
-
-        # Event codes come from one (event, country)-grouped CTE joined back on
-        # the group keys — a correlated subquery per output row would rescan
-        # EventCode twice per row. Per-column ArrayAggs share one tuple
-        # `ordering` so the code and type-label arrays stay aligned in the old
-        # distinct-tuple sort order.
-        event_code_order = Array(
-            F("event_code"),
-            Cast(models.F("event_code_type"), models.CharField()),
-            F("country__iso3"),
-            output_field=ArrayField(models.CharField()),
-        )
-        # Grouped by event ONLY: the old subquery's country condition was a
-        # tautology (EventCode.country compared to itself), so every row
-        # carried ALL of its event's codes across countries.
-        event_code_cte = With(
-            EventCode.objects.annotate(code_tuple=event_code_order)
-            .order_by()
-            .values("event")
-            .annotate(
-                codes=ArrayAgg("event_code", ordering="code_tuple"),
-                type_labels=ArrayAgg(enum_label_case("event_code_type", EventCode.EVENT_CODE_TYPE), ordering="code_tuple"),
-            )
-            .values("event", "codes", "type_labels"),
-            name="disaster_event_code_agg",
-        )
-        disaster_figure_qs = figures_in_year_window(year, Crisis.CRISIS_TYPE.DISASTER)
-        disaster_base = (
-            Figure.objects.filter(id__in=disaster_figure_qs.values("id"))
-            .order_by()
-            .values(
-                "event__id",
-                "event__name",
-                "event__disaster_category",
-                "event__disaster_sub_category",
-                "event__disaster_type",
-                "event__disaster_sub_type",
-                "event__disaster_category__name",
-                "event__disaster_sub_category__name",
-                "event__disaster_type__name",
-                "event__disaster_sub_type__name",
-                "event__start_date",
-                "event__end_date",
-                "event__start_date_accuracy",
-                "event__end_date_accuracy",
-                "event__glide_numbers",
-                "country",
-                "country__iso3",
-                "country__idmc_short_name",
-            )
-            .annotate(
-                new_displacement=Sum(
-                    Case(
-                        When(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT, then=F("total_figures")),
-                        output_field=IntegerField(),
-                    )
-                ),
-                total_displacement=Sum(
-                    Case(
-                        When(category=Figure.FIGURE_CATEGORY_TYPES.IDPS, then=F("total_figures")),
-                        output_field=IntegerField(),
-                    )
-                ),
-            )
-        )
-        disaster_base = event_code_cte.join(
-            disaster_base,
-            event_id=event_code_cte.col.event_id,
-            _join_type=LOUTER,
-        ).with_cte(event_code_cte)
-        bulk_insert_from_queryset(
-            Disaster,
-            disaster_base,
-            dict(
-                event_id=F("event__id"),
-                event_raw_id=F("event__id"),
-                event_name=F("event__name"),
-                year=Value(year, output_field=IntegerField()),
-                start_date=F("event__start_date"),
-                start_date_accuracy=enum_label_case(
-                    "event__start_date_accuracy", Event._meta.get_field("start_date_accuracy").enum
-                ),
-                end_date=F("event__end_date"),
-                end_date_accuracy=enum_label_case(
-                    "event__end_date_accuracy", Event._meta.get_field("end_date_accuracy").enum
-                ),
-                hazard_category_id=F("event__disaster_category"),
-                hazard_sub_category_id=F("event__disaster_sub_category"),
-                hazard_type_id=F("event__disaster_type"),
-                hazard_sub_type_id=F("event__disaster_sub_type"),
-                hazard_category_name=F("event__disaster_category__name"),
-                hazard_sub_category_name=F("event__disaster_sub_category__name"),
-                hazard_type_name=F("event__disaster_type__name"),
-                hazard_sub_type_name=F("event__disaster_sub_type__name"),
-                glide_numbers=Coalesce(F("event__glide_numbers"), empty_char_array()),
-                new_displacement=F("new_displacement"),
-                total_displacement=F("total_displacement"),
-                new_displacement_rounded=rounded_figure_expr("new_displacement"),
-                total_displacement_rounded=rounded_figure_expr("total_displacement"),
-                iso3=F("country__iso3"),
-                country_id=F("country"),
-                country_name=F("country__idmc_short_name"),
-                displacement_occurred=Coalesce(
-                    ArrayAgg(
-                        F("displacement_occurred"),
-                        distinct=True,
-                        filter=Q(displacement_occurred__isnull=False),
-                    ),
-                    empty_int_array(),
-                ),
-                event_codes=Coalesce(event_code_cte.col.codes, empty_char_array()),
-                event_codes_type=Coalesce(event_code_cte.col.type_labels, empty_char_array()),
-            ),
-        )
 
 
 def update_public_figure_analysis():
@@ -400,81 +238,6 @@ def update_public_figure_analysis():
 
     # Bulk create public analysis
     PublicFigureAnalysis.objects.bulk_create(data)
-
-
-def update_displacement_data():
-    # The python join, DB-side: a union CTE of the (country, year) pairs
-    # present in either table + grouped-sum CTEs joined back LOUTER
-    # (correlated subqueries would rescan the tables per output row).
-    pairs_cte = With(
-        Conflict.objects.order_by()
-        .values("country_id", "year")
-        .union(Disaster.objects.order_by().values("country_id", "year")),
-        name="displacement_pairs",
-    )
-    conflict_cte = With(
-        Conflict.objects.order_by()
-        .values("country_id", "year")
-        .annotate(
-            total_displacement=Sum("total_displacement"),
-            new_displacement=Sum("new_displacement"),
-        ),
-        name="displacement_conflict_agg",
-    )
-    disaster_cte = With(
-        Disaster.objects.order_by()
-        .values("country_id", "year")
-        .annotate(
-            total_displacement=Sum("total_displacement"),
-            new_displacement=Sum("new_displacement"),
-        ),
-        name="displacement_disaster_agg",
-    )
-
-    # Conflict has a plain manager, so With.queryset() hands back a plain
-    # QuerySet around its CTEQuery — rewrap to get `.with_cte`.
-    pairs_queryset = pairs_cte.queryset()
-    base = CTEQuerySet(model=pairs_queryset.model, query=pairs_queryset.query).with_cte(pairs_cte)
-    base = conflict_cte.join(
-        base, country_id=conflict_cte.col.country_id, year=conflict_cte.col.year, _join_type=LOUTER
-    ).with_cte(conflict_cte)
-    base = disaster_cte.join(
-        base, country_id=disaster_cte.col.country_id, year=disaster_cte.col.year, _join_type=LOUTER
-    ).with_cte(disaster_cte)
-    base = base.annotate(
-        conflict_total=conflict_cte.col.total_displacement,
-        conflict_new=conflict_cte.col.new_displacement,
-        disaster_total=disaster_cte.col.total_displacement,
-        disaster_new=disaster_cte.col.new_displacement,
-    ).filter(
-        Q(conflict_total__isnull=False)
-        | Q(conflict_new__isnull=False)
-        | Q(disaster_total__isnull=False)
-        | Q(disaster_new__isnull=False)
-    )
-    # Insert in (year, country) order: serial ids follow the SELECT order and
-    # the public displacement list pages by id — the old python loop inserted
-    # years ascending.
-    base = base.order_by("year", "country_id")
-
-    bulk_insert_from_queryset(
-        DisplacementData,
-        base,
-        dict(
-            iso3=F("country__iso3"),
-            country_name=F("country__idmc_short_name"),
-            country_id=F("country_id"),
-            conflict_total_displacement=F("conflict_total"),
-            conflict_new_displacement=F("conflict_new"),
-            disaster_total_displacement=F("disaster_total"),
-            disaster_new_displacement=F("disaster_new"),
-            conflict_total_displacement_rounded=rounded_figure_expr("conflict_total"),
-            conflict_new_displacement_rounded=rounded_figure_expr("conflict_new"),
-            disaster_new_displacement_rounded=rounded_figure_expr("disaster_new"),
-            disaster_total_displacement_rounded=rounded_figure_expr("disaster_total"),
-            year=F("year"),
-        ),
-    )
 
 
 def update_idps_sadd_estimates_country_names():
@@ -1064,32 +827,117 @@ GIDD_GENERATION_LOCK_KEY = "update_gidd_data"
 GIDD_GENERATION_LOCK_TTL = GIDD_GENERATION_TIMEOUT + 60 * 5
 
 
+def _all_country_event_code_cte():
+    """An event's codes across ALL its countries.
+
+    The shape the REST disaster payload publishes: a country that registered a code but produced
+    no figures has no row of its own, so aggregating over rows would drop its code.
+    `GiddEventDisplacement.event_codes` stays country-correct.
+    """
+    return With(
+        EventCode.objects.annotate(code_tuple=_event_code_sort_tuple())
+        .order_by()
+        .values("event")
+        .annotate(
+            codes=ArrayAgg("event_code", ordering="code_tuple"),
+            type_labels=ArrayAgg(enum_label_case("event_code_type", EventCode.EVENT_CODE_TYPE), ordering="code_tuple"),
+        )
+        .values("event", "codes", "type_labels"),
+        name="witness_event_code_all_countries",
+    )
+
+
+def update_witness_tables():
+    """Derive Conflict and Disaster from GiddEventDisplacement.
+
+    Nothing serves from these two any more; they exist so the pair that replaced them can be
+    diffed against the shape they replace, and they are deleted once that agreement holds. Deriving
+    them from the new tables rather than from Figure is what makes the comparison meaningful: if the
+    new tables are wrong, these are wrong the same way, and a cross-ref gate against a ref that
+    still builds them from Figure catches it.
+    """
+    # Conflict is country x year: roll the event grain up, discarding the typology split.
+    bulk_insert_from_queryset(
+        Conflict,
+        GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.CONFLICT)
+        .order_by()
+        .values("country_id", "iso3", "country_name", "year")
+        .annotate(nd=Sum("new_displacement"), td=Sum("total_displacement")),
+        dict(
+            country_id=F("country_id"),
+            iso3=F("iso3"),
+            country_name=F("country_name"),
+            year=F("year"),
+            new_displacement=F("nd"),
+            total_displacement=F("td"),
+            new_displacement_rounded=rounded_figure_expr("nd"),
+            total_displacement_rounded=rounded_figure_expr("td"),
+        ),
+    )
+
+    # Disaster shares the event grain exactly, so this is a column copy -- which makes a row-count
+    # difference an immediate signal rather than something to be aggregated away.
+    all_codes = _all_country_event_code_cte()
+    disaster_base = GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.DISASTER).order_by()
+    disaster_base = all_codes.join(disaster_base, event_id=all_codes.col.event_id, _join_type=LOUTER).with_cte(all_codes)
+    bulk_insert_from_queryset(
+        Disaster,
+        disaster_base,
+        dict(
+            event_id=F("event_id"),
+            event_raw_id=F("event_raw_id"),
+            event_name=F("event_name"),
+            year=F("year"),
+            country_id=F("country_id"),
+            iso3=F("iso3"),
+            country_name=F("country_name"),
+            start_date=F("start_date"),
+            start_date_accuracy=F("start_date_accuracy"),
+            end_date=F("end_date"),
+            end_date_accuracy=F("end_date_accuracy"),
+            hazard_category_id=F("hazard_category_id"),
+            hazard_category_name=F("hazard_category_name"),
+            hazard_sub_category_id=F("hazard_sub_category_id"),
+            hazard_sub_category_name=F("hazard_sub_category_name"),
+            hazard_type_id=F("hazard_type_id"),
+            hazard_type_name=F("hazard_type_name"),
+            hazard_sub_type_id=F("hazard_sub_type_id"),
+            hazard_sub_type_name=F("hazard_sub_type_name"),
+            new_displacement=F("new_displacement"),
+            new_displacement_rounded=F("new_displacement_rounded"),
+            total_displacement=F("total_displacement"),
+            total_displacement_rounded=F("total_displacement_rounded"),
+            glide_numbers=F("glide_numbers"),
+            displacement_occurred=F("displacement_occurred"),
+            event_codes=Coalesce(all_codes.col.codes, empty_char_array()),
+            event_codes_type=Coalesce(all_codes.col.type_labels, empty_char_array()),
+        ),
+    )
+
+
 @redis_lock(GIDD_GENERATION_LOCK_KEY, GIDD_GENERATION_LOCK_TTL)
 def _generate_gidd_data(log_id):
     try:
         with transaction.atomic():
             # DELETE
-            # -- Delete all the conflicts TODO: Find way to update records
-            Conflict.objects.all().delete()
-            # -- Delete disasters
-            Disaster.objects.all().delete()
             # -- Delete all the public figure analysis objects
             PublicFigureAnalysis.objects.all().delete()
-            DisplacementData.objects.all().delete()
             # -- Delete all the GiddFigure objects
             GiddFigure.objects.all().delete()
             # -- Delete all the GiddEvent objects
             GiddEvent.objects.all().delete()
             GiddEventDisplacement.objects.all().delete()
             GiddDisplacement.objects.all().delete()
+            # Witness tables, derived below from the new ones.
+            Conflict.objects.all().delete()
+            Disaster.objects.all().delete()
 
             # Create new data for GIDD
-            update_conflict_and_disaster_data()
             update_public_figure_analysis()
-            update_displacement_data()
             update_idps_sadd_estimates_country_names()
             update_gidd_event_and_gidd_figure_data()
             update_new_gidd_tables()
+            update_witness_tables()
             StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.SUCCESS, completed_at=timezone.now())
         logger.info("GIDD data updated.")
     except Exception as e:

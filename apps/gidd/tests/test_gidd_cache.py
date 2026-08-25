@@ -6,10 +6,11 @@ from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.crisis.models import Crisis
 from apps.gidd.cache import GiddExportCache
 from apps.gidd.models import (
-    Disaster,
-    DisplacementData,
+    GiddDisplacement,
+    GiddEventDisplacement,
     ReleaseMetadata,
     StatusLog,
 )
@@ -370,7 +371,8 @@ class TestGiddExportCacheAPI(GiddCacheTestMixin, HelixTestCase):
     def setUp(self):
         super().setUp()
         self.client = APIClient()
-        Disaster.objects.create(
+        GiddEventDisplacement.objects.create(
+            cause=Crisis.CRISIS_TYPE.DISASTER,
             country=self.country,
             iso3="AFG",
             country_name="Afghanistan",
@@ -387,12 +389,14 @@ class TestGiddExportCacheAPI(GiddCacheTestMixin, HelixTestCase):
             hazard_type_name="Earthquake",
             hazard_sub_type_name="Ground shaking",
         )
-        DisplacementData.objects.create(
+        GiddDisplacement.objects.create(
+            cause=Crisis.CRISIS_TYPE.DISASTER,
             country=self.country,
             iso3="AFG",
             country_name="Afghanistan",
             year=2024,
-            disaster_new_displacement=1000,
+            new_displacement=1000,
+            new_displacement_rounded=1000,
         )
 
     @patch("apps.gidd.cache.external_storage")
