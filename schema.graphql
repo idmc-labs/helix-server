@@ -1357,6 +1357,17 @@ type DisplacementByHazardType {
   label: String!
   newDisplacements: Int
   newDisplacementsRounded: Int
+  totalDisplacements: Int
+  totalDisplacementsRounded: Int
+}
+
+type DisplacementByViolenceType {
+  id: ID!
+  label: String!
+  newDisplacements: Int
+  newDisplacementsRounded: Int
+  totalDisplacements: Int
+  totalDisplacementsRounded: Int
 }
 
 type DjangoDebug {
@@ -2459,6 +2470,7 @@ type GiddConflictStatisticsType {
   totalDisplacementsRounded: Int
   totalDisplacementCountries: Int
   internalDisplacementCountries: Int
+  displacementsByViolenceSubType: [DisplacementByViolenceType!]
   newDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
   newDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
   totalDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
@@ -2683,6 +2695,11 @@ type GiddHazardType {
   name: String!
 }
 
+type GiddPublicCountryGeographicalGroupType {
+  id: ID!
+  name: String!
+}
+
 type GiddPublicCountryRegionType {
   id: ID!
   name: String!
@@ -2693,6 +2710,7 @@ type GiddPublicCountryType {
   iso3: String!
   idmcShortName: String!
   region: GiddPublicCountryRegionType
+  geographicalGroup: GiddPublicCountryGeographicalGroupType
   centroid: [Float]
 }
 
