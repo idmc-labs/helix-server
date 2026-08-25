@@ -100,6 +100,19 @@ def _get_location_accuracy_labels(location_accuracy: typing.List[typing.Tuple[in
     return string_join(EXTERNAL_ARRAY_SEPARATOR, [_get_location_accuracy_label(accuracy) for accuracy in location_accuracy])
 
 
+def _join_keeping_gaps(values) -> str:
+    """Join with a slot for every element, so a p-code stays under its own location.
+
+    `string_join` drops `None`, which would shift every later code one position left and leave a
+    reader unable to tell which location has no code.
+    """
+    return EXTERNAL_ARRAY_SEPARATOR.join("" if value is None else str(value) for value in values or [])
+
+
+def _get_pcode_accuracy_labels(pcode_accuracy) -> str:
+    return _join_keeping_gaps([_get_pcode_accuracy_label(accuracy) for accuracy in pcode_accuracy or []])
+
+
 def _get_location_type_labels(location_type: typing.List[typing.Tuple[int]]) -> str:
     return string_join(EXTERNAL_ARRAY_SEPARATOR, [_get_location_type_label(type) for type in location_type])
 
@@ -2139,6 +2152,9 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                     string_join(EXTERNAL_ARRAY_SEPARATOR, item["locations_names"]),
                     _get_location_accuracy_labels(item["locations_accuracy"]),
                     _get_location_type_labels(item["locations_type"]),
+                    _join_keeping_gaps(item["locations_pcode"]),
+                    _get_pcode_accuracy_labels(item["locations_pcode_accuracy"]),
+                    _join_keeping_gaps(item["locations_pcode_source"]),
                     self._get_displacement_occurred(item["displacement_occurred"]),
                 ]
             )

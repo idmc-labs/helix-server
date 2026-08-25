@@ -1,9 +1,13 @@
+import io
+
+import openpyxl
 from django.test import TestCase
 
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, FigureLocation
-from apps.gidd.models import GiddFigure, StatusLog
+from apps.gidd.models import GiddFigure, PublicFigureAnalysis, StatusLog
 from apps.gidd.tasks import update_gidd_data
+from apps.gidd.views import DisaggregationViewSet
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     CountryFactory,
@@ -116,3 +120,47 @@ class GiddFigureLocationPcodeTestCase(TestCase):
         assert gidd_figure.locations_pcode == []
         assert gidd_figure.locations_pcode_accuracy == []
         assert gidd_figure.locations_pcode_source == []
+
+    def test_the_xlsx_writes_a_cell_for_every_header(self):
+        """A header without a matching cell shifts every later column silently.
+
+        The sheet is built from two independent lists -- one of header labels, one of row values --
+        so adding a column to one and not the other yields a workbook that opens fine and puts each
+        value under the wrong name. Nothing else in the suite compares the two widths.
+        """
+        figure = FigureFactory.create(
+            entry=EntryFactory.create(publish_date="2019-01-01"),
+            event=self.event,
+            country=self.country,
+            role=Figure.ROLE.RECOMMENDED,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            total_figures=500,
+            start_date="2018-01-01",
+            end_date="2018-12-31",
+        )
+        figure.geo_locations.add(
+            FigureLocationFactory.create(
+                display_name="Zone-B", pcode="NPL-B", pcode_accuracy=FigureLocation.PCODE_ACCURACY.ADM2, pcode_source="HDX"
+            )
+        )
+        self.generate(figure)
+
+        workbook = DisaggregationViewSet()._export_disaggregated_excel(
+            "probe.xlsx", GiddFigure.objects.all(), PublicFigureAnalysis.objects.none()
+        )
+        # The sheets are write-only, so the widths are read back off the saved artifact.
+        buffer = io.BytesIO()
+        workbook.save(buffer)
+        buffer.seek(0)
+        rows = list(openpyxl.load_workbook(buffer, read_only=True)["1_Disaggregated_Data"].values)
+        assert len(rows) > 1, "no data row was written, so the widths cannot be compared"
+        header = rows[0]
+        for index, row in enumerate(rows[1:], start=1):
+            assert len(row) == len(header), f"data row {index} has {len(row)} cells against {len(header)} headers"
+
+        position = {name: i for i, name in enumerate(header)}
+        assert position["Pcode"] == position["Locations type"] + 1
+        assert position["Pcode accuracy"] == position["Pcode"] + 1
+        assert position["Pcode source"] == position["Pcode accuracy"] + 1
+        assert rows[1][position["Pcode"]] == "NPL-B"
+        assert rows[1][position["Pcode source"]] == "HDX"
