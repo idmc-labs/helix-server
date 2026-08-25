@@ -8,6 +8,7 @@ from django.core.management.base import CommandError
 from openpyxl import Workbook, load_workbook
 
 from apps.contrib.commons import DATE_ACCURACY
+from apps.contrib.management.base.reader import read_rows
 from apps.entry.management.commands.import_figures import Command as ImportFiguresCommand
 from apps.entry.management.commands.import_figures import FigureRoleAndDatesSerializer
 from apps.entry.models import Figure
@@ -709,3 +710,89 @@ class TestImportFiguresCommand(HelixTestCase):
         other.refresh_from_db()
         self.assertEqual(self.figure.role, Figure.ROLE.RECOMMENDED.value)
         self.assertEqual(other.role, Figure.ROLE.RECOMMENDED.value)
+
+    # ----- rows are validated and saved one at a time -----
+
+    # A serializer deep-copies every declared field on construction, so holding one per row made a
+    # large sheet cost gigabytes. Rows are saved as they are read instead, and the transaction — not
+    # a deferred second pass — is what keeps the run all-or-nothing.
+
+    def test_a_failing_run_prints_no_changelog_for_the_rows_it_saved(self):
+        # Earlier rows are written before the bad row is reached, and then rolled back. Printing
+        # their changelog lines would claim changes the database never kept.
+        other = self._figure()
+        path = write_sheet(
+            ["id", "role"],
+            [
+                {"id": self.figure.id, "role": "TRIANGULATION"},
+                {"id": other.id, "role": "TRIANGULATION"},
+                {"id": 9999999, "role": "TRIANGULATION"},
+            ],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        output = out.getvalue()
+        self.assertNotIn("ROW_UPDATED", output)
+        self.assertIn("nothing committed", output)
+
+    def test_every_invalid_row_is_reported_not_just_the_first(self):
+        # Validation keeps going after a row fails, so the operator gets the whole list in one run.
+        path = write_sheet(
+            ["id", "role"],
+            [
+                {"id": 9999998, "role": "TRIANGULATION"},
+                {"id": self.figure.id, "role": "NOT_A_ROLE"},
+                {"id": 9999999, "role": "TRIANGULATION"},
+            ],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        output = out.getvalue()
+        self.assertIn("3 error(s)", output)
+        self.assertIn("Row 2: id: no Figure found with id 9999998", output)
+        self.assertIn("Row 3: role:", output)
+        self.assertIn("Row 4: id: no Figure found with id 9999999", output)
+
+    def test_no_row_is_saved_once_a_row_has_failed(self):
+        # The run will roll back, so writing later rows only to discard them is wasted work.
+        other = self._figure()
+        path = write_sheet(
+            ["id", "role"],
+            [
+                {"id": 9999999, "role": "TRIANGULATION"},
+                {"id": self.figure.id, "role": "TRIANGULATION"},
+                {"id": other.id, "role": "TRIANGULATION"},
+            ],
+        )
+        calls = {"n": 0}
+        real_save = FigureRoleAndDatesSerializer.save
+
+        def counting_save(self, **kwargs):
+            calls["n"] += 1
+            return real_save(self, **kwargs)
+
+        with mock.patch.object(FigureRoleAndDatesSerializer, "save", counting_save):
+            with self.assertRaises(CommandError):
+                call_command("import_figures", path, stdout=StringIO())
+
+        self.assertEqual(calls["n"], 0)
+
+    def test_the_reader_yields_rows_rather_than_building_a_list(self):
+        # The whole point of the change: a sheet is never materialised in full.
+        path = write_sheet(["id", "role"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
+        rows = read_rows(path, data_sheet="Data", allowed_columns=ImportFiguresCommand().import_columns())
+
+        self.assertFalse(isinstance(rows, list))
+        self.assertIs(iter(rows), iter(rows))  # an iterator, consumed once
+        self.assertEqual([row["role"] for row in rows], ["TRIANGULATION"])
+
+    def test_a_bad_header_fails_before_any_row_is_read(self):
+        # Header checks stay eager despite the lazy row iteration, so a malformed sheet is rejected
+        # up front rather than part-way through the run.
+        path = write_sheet(["id", "role", "not_a_column"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
+        with self.assertRaises(CommandError):
+            read_rows(path, data_sheet="Data", allowed_columns=ImportFiguresCommand().import_columns())

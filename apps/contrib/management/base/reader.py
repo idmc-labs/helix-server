@@ -12,12 +12,17 @@ def read_rows(
     *,
     data_sheet: str,
     allowed_columns: typing.Iterable[str],
-) -> typing.List[typing.Dict]:
+) -> typing.Iterator[typing.Dict]:
     """
-    Read the data sheet into a list of {header: value} dicts.
+    Read the data sheet as an iterator of {header: value} dicts.
 
     The header row must contain only columns in `allowed_columns` (any other column is an error).
     Fully blank rows are skipped.
+
+    Rows are yielded one at a time rather than returned as a list: a sheet can carry hundreds of
+    thousands of rows, and holding them all costs memory the importer has no use for. The header
+    checks run before the first row is yielded, so a malformed header still fails the command
+    before any row is touched.
     """
     from openpyxl import load_workbook
 
@@ -63,7 +68,13 @@ def read_rows(
     if unknown:
         raise CommandError(f"Unknown column(s): {DISPLAY_SEP.join(unknown)}. Allowed columns: {', '.join(sorted(allowed))}")
 
-    rows = []
+    return _iter_data_rows(headers, rows_iter)
+
+
+def _iter_data_rows(headers: typing.List[str], rows_iter) -> typing.Iterator[typing.Dict]:
+    """Yield one dict per non-blank data row. Split from the header checks so those stay eager."""
+    from openpyxl.utils import get_column_letter
+
     for row_number, values in enumerate(rows_iter, start=2):
         if all(is_empty(value) for value in values):
             continue  # skip fully blank rows
@@ -79,5 +90,4 @@ def read_rows(
                 f"Row {row_number} has value(s) in column(s) {DISPLAY_SEP.join(beyond)}, which the "
                 "header row does not name. Add a header or clear the column."
             )
-        rows.append({header: value for header, value in zip(headers, values)})
-    return rows
+        yield {header: value for header, value in zip(headers, values)}

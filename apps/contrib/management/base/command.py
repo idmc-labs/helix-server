@@ -537,11 +537,11 @@ class BaseImportCommand(BaseCommand):
             return text[: cls.CHANGELOG_VALUE_CHARS] + "..."
         return text
 
-    def print_row_change(self, row_number: int, instance, before: typing.Dict, after: typing.Dict) -> bool:
+    def row_change_line(self, row_number: int, instance, before: typing.Dict, after: typing.Dict) -> typing.Optional[str]:
         """
-        Report the fields whose stored value moved, as one tab-separated line. Rows are updated in
-        place and nothing else records what they held before, so this is the only account of it.
-        Returns whether anything moved.
+        The changelog line for a row whose stored values moved, or None when nothing moved. Rows are
+        updated in place and nothing else records what they held before, so this is the only account
+        of it.
         """
         moved = []
         for name in before:
@@ -555,16 +555,11 @@ class BaseImportCommand(BaseCommand):
             else:
                 moved.append(f"{name}={was}->{now}")
         if not moved:
-            return False
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"ROW_UPDATED\t{self.model.__name__.lower()}={instance.pk}\trow={row_number}\t" + "\t".join(moved)
-            )
-        )
-        return True
+            return None
+        return f"ROW_UPDATED\t{self.model.__name__.lower()}={instance.pk}\trow={row_number}\t" + "\t".join(moved)
 
     @transaction.atomic
-    def run_import(self, rows: typing.List[typing.Dict], request, dry_run: bool):
+    def run_import(self, rows: typing.Iterable[typing.Dict], request, dry_run: bool):
         created, updated, unchanged = self.apply_rows(rows, request)
 
         # Reported after the work, because Django refuses any further query in an atomic block
@@ -577,18 +572,38 @@ class BaseImportCommand(BaseCommand):
         if unchanged:
             self.stdout.write(self.style.NOTICE(f"{unchanged} of the updated rows had no effective change."))
 
-    def apply_rows(self, rows: typing.List[typing.Dict], request) -> typing.Tuple[int, int, int]:
-        """Validate every row, then persist. Returns (created, updated, unchanged)."""
+    def apply_rows(self, rows: typing.Iterable[typing.Dict], request) -> typing.Tuple[int, int, int]:
+        """
+        Validate and persist row by row. Returns (created, updated, unchanged).
+
+        One row is resolved, validated and saved before the next is read, and nothing about it is
+        retained afterwards. A serializer is an expensive object — it deep-copies every declared
+        field on construction — so keeping one per row made a large sheet cost gigabytes and fail
+        on memory before it wrote anything.
+
+        Saving as we go does not weaken the all-or-nothing guarantee: `run_import` holds a
+        transaction around this, so a validation error raised at the end discards every write.
+        Once a row has failed, later rows are still validated but no longer saved, since the run
+        is already going to roll back and the writes would be thrown away.
+
+        What this does change: a row is validated against a database in which earlier rows are
+        already written, where before every row saw the pristine state. Rows must target distinct
+        model rows, so no row can see its own target altered — but a serializer that validates
+        against the rest of the table (a uniqueness check, say) would now see the earlier writes.
+        No importer does that today.
+        """
         errors: typing.List[typing.Tuple[int, str, str]] = []
-        prepared: typing.List[typing.Tuple] = []
         # Row number each targeted row was first seen on. Two rows aimed at one row would each
         # validate against its unmodified state and then both save, silently losing the earlier.
         # Keyed by the resolved primary key rather than the cell, so a sheet writing the same id
         # as a number on one row and as text on another is still one target.
         pk_rows: typing.Dict[typing.Any, int] = {}
         ignored_cells: typing.List[typing.Tuple[int, str]] = []
+        # Changelog lines are held back rather than written as they happen: a run that fails at its
+        # last row commits nothing, and lines already printed would claim changes that never landed.
+        changelog: typing.List[str] = []
+        created = updated = unchanged = 0
 
-        # First pass: resolve + validate every row, collecting all errors (all-or-nothing).
         for index, raw_row in enumerate(rows, start=2):  # row 1 is the header
             row = self.prepare_row(raw_row, request)
             serializer, is_update, row_errors, ignored = row.serializer, row.is_update, row.errors, row.ignored_cells
@@ -606,10 +621,28 @@ class BaseImportCommand(BaseCommand):
             if row_errors:
                 for field, message in row_errors.items():
                     errors.append((index, field, message))
+                continue
+
+            for cell in ignored:
+                ignored_cells.append((index, cell))
+
+            if errors:
+                # The run will roll back, so writing this row buys nothing. Keep reading, though:
+                # the operator is owed every error in the sheet, not just the first.
+                continue
+
+            fields = self.changelog_fields(serializer) if is_update else []
+            before = self._snapshot(serializer.instance, fields) if is_update else {}
+            instance = serializer.save()
+            if is_update:
+                updated += 1
+                line = self.row_change_line(index, instance, before, self._snapshot(instance, fields))
+                if line is None:
+                    unchanged += 1
+                else:
+                    changelog.append(line)
             else:
-                prepared.append((serializer, is_update, index))
-                for cell in ignored:
-                    ignored_cells.append((index, cell))
+                created += 1
 
         if errors:
             self.stdout.write(self.style.ERROR(f"Import failed: {len(errors)} error(s); nothing committed."))
@@ -617,20 +650,8 @@ class BaseImportCommand(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"Row {row_number}: {field}: {message}"))
             raise CommandError("Import aborted due to validation errors.")
 
-        # Second pass: persist. Duplicates are already rejected, so no row's snapshot can be
-        # disturbed by another row's save.
-        created = updated = unchanged = 0
-        for serializer, is_update, row_number in prepared:
-            fields = self.changelog_fields(serializer) if is_update else []
-            before = self._snapshot(serializer.instance, fields) if is_update else {}
-            instance = serializer.save()
-            if is_update:
-                updated += 1
-                if not self.print_row_change(row_number, instance, before, self._snapshot(instance, fields)):
-                    unchanged += 1
-            else:
-                created += 1
-
+        for line in changelog:
+            self.stdout.write(self.style.SUCCESS(line))
         self.print_ignored_cells(ignored_cells)
         return created, updated, unchanged
 
