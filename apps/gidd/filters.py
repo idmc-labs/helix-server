@@ -205,7 +205,6 @@ class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
         return queryset.filter(figure_category=value)
 
 
-
 class GiddDisplacementFilter(ReleaseMetadataFilter):
     cause = django_filters.CharFilter(method="filter_cause")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
@@ -313,8 +312,6 @@ class GiddCountryDisplacementFilter(ReleaseMetadataFilter):
 
 # Gidd filtets to api type map
 GIDD_TRACKING_FILTERS = {
-    DisasterFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_GRAPHQL,
-    ConflictFilter: ExternalApiDump.ExternalApiType.GIDD_CONFLICT_GRAPHQL,
     PublicFigureAnalysisFilter: ExternalApiDump.ExternalApiType.GIDD_PFA_GRAPHQL,
     DisasterStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL,
     ConflictStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL,

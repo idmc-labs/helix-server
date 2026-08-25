@@ -20,7 +20,6 @@ from utils.graphene.types import CustomDjangoListObjectType
 
 from .enums import GiddStatusLogEnum
 from .filters import (
-    ConflictFilter,
     ConflictStatisticsFilter,
     DisasterFilter,
     DisasterStatisticsFilter,
@@ -32,8 +31,6 @@ from .filters import (
     ReleaseMetadataFilter,
 )
 from .models import (
-    Conflict,
-    Disaster,
     GiddDisplacement,
     GiddEventDisplacement,
     PublicFigureAnalysis,
@@ -137,96 +134,6 @@ class GiddCombinedStatisticsType(graphene.ObjectType):
     total_displacements_rounded = graphene.Int()
     internal_displacement_countries = graphene.Int()
     total_displacement_countries = graphene.Int()
-
-
-class GiddConflictType(RelationBatchedDjangoObjectType):
-    country_id = graphene.ID(required=True)
-
-    class Meta:
-        model = Conflict
-        fields = (
-            "id",
-            "iso3",
-            "country_name",
-            "year",
-            "new_displacement",
-            "total_displacement",
-            "new_displacement_rounded",
-            "total_displacement_rounded",
-        )
-
-    @staticmethod
-    def resolve_country_id(root, info, **kwargs):
-        return root.country_id
-
-
-class GiddConflictListType(CustomDjangoListObjectType):
-    class Meta:
-        model = Conflict
-        filterset_class = ConflictFilter
-
-
-class GiddDisasterType(RelationBatchedDjangoObjectType):
-    country_id = graphene.ID(required=True)
-    event_id = graphene.ID()
-    hazard_category_id = graphene.ID()
-    hazard_sub_category_id = graphene.ID()
-    hazard_type_id = graphene.ID()
-    hazard_sub_type_id = graphene.ID()
-
-    class Meta:
-        model = Disaster
-        fields = (
-            "id",
-            "year",
-            "start_date",
-            "start_date_accuracy",
-            "end_date",
-            "end_date_accuracy",
-            "new_displacement",
-            "total_displacement",
-            "new_displacement_rounded",
-            "total_displacement_rounded",
-            "event_name",
-            "iso3",
-            "country_name",
-            "hazard_category_name",
-            "hazard_sub_category_name",
-            "hazard_type_name",
-            "hazard_sub_type_name",
-            "event_codes",
-            "event_codes_type",
-        )
-
-    @staticmethod
-    def resolve_country_id(root, info, **kwargs):
-        return root.country_id
-
-    @staticmethod
-    def resolve_event_id(root, info, **kwargs):
-        return root.event_raw_id
-
-    @staticmethod
-    def resolve_hazard_category_id(root, info, **kwargs):
-        return root.hazard_category_id
-
-    @staticmethod
-    def resolve_hazard_sub_category_id(root, info, **kwargs):
-        return root.hazard_sub_category_id
-
-    @staticmethod
-    def resolve_hazard_type_id(root, info, **kwargs):
-        return root.hazard_type_id
-
-    @staticmethod
-    def resolve_hazard_sub_type_id(root, info, **kwargs):
-        return root.hazard_sub_type_id
-
-
-class GiddDisasterListType(CustomDjangoListObjectType):
-    class Meta:
-        model = Disaster
-        filterset_class = DisasterFilter
 
 
 class GiddStatusLogType(RelationBatchedDjangoObjectType):
@@ -467,16 +374,6 @@ class GiddCountryDisplacementType(graphene.ObjectType):
 
 
 class Query(graphene.ObjectType):
-    gidd_public_conflicts = DjangoPaginatedListObjectField(
-        GiddConflictListType,
-        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
-        client_id=graphene.String(required=True),
-    )
-    gidd_public_disasters = DjangoPaginatedListObjectField(
-        GiddDisasterListType,
-        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
-        client_id=graphene.String(required=True),
-    )
     gidd_public_conflict_statistics = graphene.Field(
         GiddConflictStatisticsType,
         **get_filtering_args_from_filterset(ConflictStatisticsFilter, GiddConflictStatisticsType),
@@ -1036,9 +933,7 @@ class Query(graphene.ObjectType):
                 disaster_nd=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
                 disaster_idp=Coalesce(models.Sum("total_displacement", filter=disaster_filter), 0),
             )
-            .filter(
-                Q(conflict_nd__gt=0) | Q(conflict_idp__gt=0) | Q(disaster_nd__gt=0) | Q(disaster_idp__gt=0)
-            )
+            .filter(Q(conflict_nd__gt=0) | Q(conflict_idp__gt=0) | Q(disaster_nd__gt=0) | Q(disaster_idp__gt=0))
             .order_by("iso3")
         )
 
