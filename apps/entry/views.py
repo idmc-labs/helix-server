@@ -25,6 +25,7 @@ from apps.common.utils import (
     extract_event_code_data,
     extract_location_data,
 )
+from apps.crisis.models import Crisis
 from apps.entry.models import ExternalApiDump, Figure
 from apps.entry.serializers import FigureReadOnlySerializer
 from apps.gidd.views import client_id
@@ -169,8 +170,17 @@ def get_idu_data(filters=None):
             event_end_date=F("event__end_date"),
             disaster_category_name=F("disaster_category__name"),
             disaster_sub_category_name=F("disaster_sub_category__name"),
-            disaster_type_name=F("disaster_sub_type__type__name"),
-            disaster_sub_type_name=F("disaster_sub_type__name"),
+            # type/subtype are cause-dependent: violence typology for conflict, hazard typology for disaster
+            type_name=Case(
+                When(figure_cause=Crisis.CRISIS_TYPE.CONFLICT, then=F("violence__name")),
+                default=F("disaster_sub_type__type__name"),
+                output_field=CharField(),
+            ),
+            subtype_name=Case(
+                When(figure_cause=Crisis.CRISIS_TYPE.CONFLICT, then=F("violence_sub_type__name")),
+                default=F("disaster_sub_type__name"),
+                output_field=CharField(),
+            ),
             figure_term_label=Case(
                 When(term=0, then=Lower(Value(Figure.FIGURE_TERMS.EVACUATED.label))),
                 When(term=1, then=Lower(Value(Figure.FIGURE_TERMS.DISPLACED.label))),
