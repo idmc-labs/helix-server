@@ -298,6 +298,16 @@ class GiddEventDisplacementListType(CustomDjangoListObjectType):
 class GiddReleaseMetadataType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReleaseMetadata
+        # giddPublicReleaseMetaData is whitelisted and WhiteListMiddleware checks only the root
+        # node, so everything this type reaches is readable unauthenticated -- `modified_by` led to
+        # UserType, and from there to username, last_login and createdEntry. `fields` is pinned
+        # rather than excluded so a column added to the model stays invisible until named here.
+        # TODO(frontend): read this for the maximum allowed year; no client consumes it yet.
+        fields = (
+            "id",
+            "release_year",
+            "pre_release_year",
+        )
 
 
 class GiddPublicCountryRegionType(graphene.ObjectType):
