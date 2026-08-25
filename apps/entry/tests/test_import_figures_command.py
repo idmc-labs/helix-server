@@ -5,8 +5,6 @@ from unittest import mock
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.db import connection
-from django.test.utils import CaptureQueriesContext
 from openpyxl import Workbook, load_workbook
 
 from apps.contrib.commons import DATE_ACCURACY
@@ -860,59 +858,6 @@ class TestImportFiguresCommand(HelixTestCase):
                 call_command("import_figures", path, stdout=out)
 
         self.assertIn("Row 5: id: no Figure found with id 9999999", out.getvalue())
-
-    # ----- writes are batched -----
-
-    def test_a_batch_writes_one_update_statement_for_many_rows(self):
-        figures = [self._figure() for _ in range(5)]
-        path = write_sheet(["id", "role"], [{"id": figure.id, "role": "TRIANGULATION"} for figure in figures])
-
-        with CaptureQueriesContext(connection) as captured:
-            call_command("import_figures", path, stdout=StringIO())
-
-        updates = [q["sql"] for q in captured.captured_queries if 'UPDATE "entry_figure"' in q["sql"]]
-        self.assertEqual(len(updates), 1, f"expected one batched UPDATE, got {len(updates)}")
-        for figure in figures:
-            figure.refresh_from_db()
-            self.assertEqual(figure.role, Figure.ROLE.TRIANGULATION.value)
-
-    def test_a_batched_write_still_advances_modified_at(self):
-        # bulk_update does not run Model.save, so auto_now would stop firing unless stamped.
-        before = Figure.objects.values_list("modified_at", flat=True).get(pk=self.figure.pk)
-        path = write_sheet(["id", "role"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
-        call_command("import_figures", path, stdout=StringIO())
-
-        self.figure.refresh_from_db()
-        self.assertGreater(self.figure.modified_at, before)
-
-    def test_the_serializers_update_still_runs_when_the_write_is_deferred(self):
-        # Deferring the write must not skip update(); serializers override it to shape what is saved.
-        calls = {"n": 0}
-        real_update = FigureRoleAndDatesSerializer.update
-
-        def counting_update(self, instance, validated_data):
-            calls["n"] += 1
-            return real_update(self, instance, validated_data)
-
-        path = write_sheet(["id", "role"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
-        with mock.patch.object(FigureRoleAndDatesSerializer, "update", counting_update):
-            call_command("import_figures", path, stdout=StringIO())
-
-        self.assertEqual(calls["n"], 1)
-        self.figure.refresh_from_db()
-        self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
-
-    def test_a_deferred_save_writes_nothing_and_restores_the_instance(self):
-        command = ImportFiguresCommand()
-        with command._deferred_write(self.figure):
-            self.figure.role = Figure.ROLE.TRIANGULATION.value
-            self.figure.save()  # swallowed
-
-        self.assertNotIn("save", self.figure.__dict__)  # shadowing removed
-        self.figure.refresh_from_db()
-        self.assertEqual(self.figure.role, Figure.ROLE.RECOMMENDED.value)
-
-    # ----- serializer state does not leak between rows -----
 
     def test_a_reused_serializer_does_not_carry_the_previous_rows_errors(self):
         other = self._figure()

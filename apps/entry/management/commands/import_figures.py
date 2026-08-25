@@ -98,10 +98,6 @@ class Command(BaseImportCommand):
     update_serializer = FigureRoleAndDatesSerializer
     update_only = True
 
-    # Batched writes: Figure has no pre_save/post_save receivers, and its one auto_now column
-    # (`modified_at`) is stamped by the base command, so bulk_update leaves nothing out.
-    BULK_UPDATE_BATCH_SIZE = 1000
-
     # A sheet built from a figure export carries ids; one built from the system that supplied the
     # figures carries uuids, which hulk writes into Figure.uuid as well as its own row. Either
     # names a figure, so both are offered and a row supplies exactly one.

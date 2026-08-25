@@ -46,11 +46,6 @@ class Command(BaseImportCommand):
     update_serializer = FigureLocationPcodeSerializer
     update_only = True
 
-    # Batched writes: FigureLocation has no pre_save/post_save receivers and no auto_now columns, so
-    # bulk_update leaves nothing out. A location sheet runs to hundreds of thousands of rows, where a
-    # statement per row is most of the run.
-    BULK_UPDATE_BATCH_SIZE = 1000
-
     # pcode and pcode_source are free text, so neither needs a lookup.
     lookups = [
         EnumLookup("pcode_accuracy", FigureLocation.PCODE_ACCURACY),

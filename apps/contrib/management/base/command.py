@@ -1,6 +1,5 @@
 """The reusable bulk-import management command base class."""
 
-import contextlib
 import datetime
 import enum
 import typing
@@ -274,74 +273,6 @@ class BaseImportCommand(BaseCommand):
     #: row, which on a large sheet is most of the run; a chunk costs one query per match column.
     #: Bounded so the instances of a chunk are the only ones held at a time.
     RESOLVE_CHUNK_SIZE = 1000
-
-    #: When set, an update's UPDATE is held back and issued for a batch of this many rows through
-    #: ``bulk_update`` instead of one statement per row. Off by default: ``bulk_update`` sends no
-    #: ``pre_save``/``post_save`` signals, so an importer opts in only once its model is known to
-    #: have no receivers. ``auto_now`` columns are stamped here rather than by ``Model.save``.
-    BULK_UPDATE_BATCH_SIZE: typing.Optional[int] = None
-
-    @contextlib.contextmanager
-    def _deferred_write(self, instance):
-        """
-        Let ``serializer.save()`` run without issuing the row's UPDATE.
-
-        ``Model.save`` returns without a query when ``update_fields`` is empty, so shadowing the
-        instance's ``save`` with one that forces that turns the write into a no-op while everything
-        else still happens — the serializer's own ``update()`` override, the field assignment, any
-        ``save()`` the model itself defines. The UPDATE is issued later for a whole batch.
-
-        Only the row's own UPDATE is deferred. A many-to-many ``set()`` inside ``update()`` writes
-        as it always did, since it is not part of the row.
-        """
-        original = instance.save
-
-        def no_write(*args, **kwargs):
-            return original(update_fields=[])
-
-        instance.save = no_write
-        try:
-            yield
-        finally:
-            del instance.save
-
-    def _written_columns(self, serializer) -> typing.Set[str]:
-        """The model's own columns this row writes. Excludes m2m and the pk, which bulk_update rejects."""
-        from django.core.exceptions import FieldDoesNotExist
-
-        names = set()
-        for name in serializer.validated_data:
-            try:
-                field = self.model._meta.get_field(name)
-            except FieldDoesNotExist:
-                continue  # a serializer field with no column behind it
-            if field.many_to_many or field.primary_key or not field.concrete:
-                continue
-            names.add(field.name)
-        return names
-
-    def _stamp_auto_now(self, instance) -> typing.Set[str]:
-        """
-        Advance ``auto_now`` columns the way ``Field.pre_save`` would.
-
-        ``bulk_update`` does not run ``Model.save``, so without this a batched import would stop
-        touching ``modified_at``. ``auto_now_add`` is not stamped: it applies to inserts only.
-        """
-        from django.utils import timezone
-
-        stamped = set()
-        for field in self.model._meta.fields:
-            if getattr(field, "auto_now", False):
-                setattr(instance, field.attname, timezone.now())
-                stamped.add(field.name)
-        return stamped
-
-    def _flush_deferred(self, instances: typing.List, columns: typing.Set[str]) -> None:
-        """Issue one UPDATE per batch for the rows whose writes were held back."""
-        if instances and columns:
-            self.model.objects.bulk_update(instances, sorted(columns), batch_size=len(instances))
-        instances.clear()
-        columns.clear()
 
     def _match_field(self, field: str):
         """The model field a match column queries through. ``pk`` is a lookup, not a field name."""
@@ -748,9 +679,6 @@ class BaseImportCommand(BaseCommand):
         # Changelog lines are held back rather than written as they happen: a run that fails at its
         # last row commits nothing, and lines already printed would claim changes that never landed.
         changelog: typing.List[str] = []
-        # Rows whose UPDATE is held back for a batch, and the columns that batch has to write.
-        deferred: typing.List = []
-        deferred_columns: typing.Set[str] = set()
         created = updated = unchanged = 0
 
         for chunk_start, chunk in self._chunks(rows, self.RESOLVE_CHUNK_SIZE):
@@ -792,20 +720,9 @@ class BaseImportCommand(BaseCommand):
 
                 fields = self.changelog_fields(serializer) if is_update else []
                 before = self._snapshot(serializer.instance, fields) if is_update else {}
-                batching = bool(self.BULK_UPDATE_BATCH_SIZE) and is_update
-                if batching:
-                    columns = self._written_columns(serializer)
-                    with self._deferred_write(serializer.instance):
-                        instance = serializer.save()
-                    columns |= self._stamp_auto_now(instance)
-                    deferred.append(instance)
-                    deferred_columns |= columns
-                else:
-                    instance = serializer.save()
+                instance = serializer.save()
                 if is_update:
                     updated += 1
-                    # The after-snapshot reads the instance in memory, which already carries the new
-                    # values, so a held-back write still reports its change correctly.
                     line = self.row_change_line(index, instance, before, self._snapshot(instance, fields))
                     if line is None:
                         unchanged += 1
@@ -813,11 +730,6 @@ class BaseImportCommand(BaseCommand):
                         changelog.append(line)
                 else:
                     created += 1
-                if batching and len(deferred) >= self.BULK_UPDATE_BATCH_SIZE:
-                    self._flush_deferred(deferred, deferred_columns)
-
-            # Nothing of a chunk outlives it, so any held-back writes go out at its boundary.
-            self._flush_deferred(deferred, deferred_columns)
 
         if errors:
             self.stdout.write(self.style.ERROR(f"Import failed: {len(errors)} error(s); nothing committed."))
