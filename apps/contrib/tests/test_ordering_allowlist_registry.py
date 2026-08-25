@@ -304,7 +304,11 @@ EXPECTED = {
     ],
     "gidd.GiddDisplacement": [
         "cause",
+        "conflict_new_displacement",
+        "conflict_total_displacement",
         "country_name",
+        "disaster_new_displacement",
+        "disaster_total_displacement",
         "hazard_category_name",
         "hazard_sub_category_name",
         "hazard_sub_type_name",
