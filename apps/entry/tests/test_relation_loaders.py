@@ -312,11 +312,9 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
         # `GiddReleaseMetadataType` pins `Meta.fields`, which drops its `modified_by` resolver:
         # that FK is how an unauthenticated caller reached `UserType`.
         self.assertGreaterEqual(fk_count, 125, "auto-wired forward-FK resolvers regressed")
-        # Dropped to 81 when the gidd Conflict/Disaster/DisplacementData models (and their
-        # reverse-FK/M2M relations) were removed.
-        # 83, not develop's 87: the four `disasters` reverses go with the Disaster model. The
-        # four `legacy_disasters` stay, because DisasterLegacy is retained, and CountryType
-        # excludes the two new gidd_* reverses rather than exposing them unpaginated.
+        # The four `legacy_disasters` reverses count, because `DisasterLegacy` is retained; the
+        # two gidd_* reverses do not, because `CountryType` excludes them rather than exposing
+        # them unpaginated.
         self.assertGreaterEqual(list_count, 83, "auto-wired reverse-FK/M2M resolvers regressed")
 
         # Spot-check critical FigureType fields are loader-wired by name.
@@ -418,7 +416,6 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
                 ref_to_specs[ref].add(spec)
                 checked += 1
 
-        # Dropped to 81 when the gidd Conflict/Disaster/DisplacementData models were removed.
         self.assertGreaterEqual(checked, 83, "list-relation field walk shrank unexpectedly")
         collisions = {ref: specs for ref, specs in ref_to_specs.items() if len(specs) > 1}
         self.assertFalse(

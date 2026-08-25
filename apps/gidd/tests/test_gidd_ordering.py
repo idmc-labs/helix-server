@@ -37,12 +37,10 @@ PK_SQL = f'"{GiddDisplacement._meta.db_table}"."{GiddDisplacement._meta.pk.colum
 YEAR_SQL = f'"{GiddDisplacement._meta.db_table}"."year"'
 ISO3_SQL = f'"{GiddDisplacement._meta.db_table}"."iso3"'
 
-# Countries, not rows: `/gidd/conflicts/` aggregates `GiddDisplacement` to one row per
-# country x year, so a tie group has to be built out of distinct countries sharing a year.
+# `/gidd/conflicts/` aggregates `GiddDisplacement` to one row per country x year, so a tie group
+# has to be built out of distinct countries sharing a year.
 COUNTRY_COUNT = 12
 PAGE_SIZE = 4
-# Two disaggregated rows per country x year, so the published row count differs from the stored
-# one and an aggregate ordered by pk would visibly break the page.
 ROWS_PER_COUNTRY = 2
 FIRST_ROW_FIGURE = 1
 SECOND_ROW_FIGURE = 2
@@ -73,8 +71,7 @@ class GiddConflictListMixin:
         super().tearDown()
 
     def create_country(self, iso3, name):
-        # `iso2` is left unset: nothing on these lists reads it, and inventing one per country
-        # would only add a column the assertions never look at.
+        # `iso2` is left unset: nothing on these lists reads it.
         return CountryFactory.create(iso3=iso3, idmc_short_name=name)
 
     def create_displacement(self, country, year, new_displacement, violence_sub_type_name=None):
@@ -159,8 +156,8 @@ class TestGiddOrderingPagesTiesStably(GiddConflictListMixin, HelixAPITestCase):
 
     def setUp(self):
         super().setUp()
-        # `iso3` identifies the row: the conflict serializer exposes no `id`, and `year` is the
-        # tie generator, so it is the only per-row value a page can be read by.
+        # The conflict serializer exposes no `id`, and `year` is the tie generator, so `iso3` is
+        # what a page is read by.
         self.year_by_iso3 = {}
         for index in range(COUNTRY_COUNT):
             iso3 = f"T{index:02d}"

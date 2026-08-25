@@ -185,10 +185,8 @@ class DisasterSerializer(serializers.ModelSerializer):
 
 
 class DisplacementDataSerializer(serializers.Serializer):
-    # Served from GiddDisplacement aggregated to country x year (see DisplacementDataViewSet).
-    # A plain Serializer, so every field is declared explicitly and no backing model is needed --
-    # which also means Meta is ignored and DECLARATION ORDER IS THE RESPONSE KEY ORDER. That order
-    # is part of the contract these endpoints publish; it matches the retired model's Meta.fields.
+    # Field declaration order is the response key order, and that order is part of the contract
+    # these endpoints publish.
     iso3 = serializers.CharField(
         help_text="Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area."
     )

@@ -152,10 +152,8 @@ class GiddStatusLogFilter(django_filters.FilterSet):
 class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
     years = IDListFilter(method="filter_years")
-    # Enum-typed rather than CharFilter: both columns are EnumFields, i.e. integer columns, so a
-    # name reached the ORM as a string and `int("CONFLICT")` raised on an unauthenticated endpoint.
-    # GraphQL rejects an unknown member before the filterset runs, and the enum is the one these
-    # fields are already returned as.
+    # Both columns are EnumFields, i.e. integer columns: a raw name reaches the ORM as a string
+    # and `int("CONFLICT")` raises. An enum input also rejects unknown members before the ORM.
     figure_cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="figure_cause")
     figure_category = SimpleInputFilter(FigureCategoryTypeEnum, field_name="figure_category")
 
@@ -174,8 +172,8 @@ class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
 
 
 class GiddEventDisplacementFilter(ReleaseMetadataFilter):
-    # Enum-typed rather than a ChoiceFilter: django-filter drops a field that fails form validation
-    # from `cleaned_data`, so `filter_queryset` skipped it and an unknown cause returned every row.
+    # A ChoiceFilter is unsafe here: django-filter drops a field that fails form validation from
+    # `cleaned_data`, so an unknown cause is silently ignored and every row comes back.
     cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="cause")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
     start_year = django_filters.NumberFilter(method="filter_start_year")

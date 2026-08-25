@@ -238,9 +238,8 @@ class GiddReleaseMetadataType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReleaseMetadata
         # giddPublicReleaseMetaData is whitelisted and WhiteListMiddleware checks only the root
-        # node, so everything this type reaches is readable unauthenticated -- `modified_by` led to
-        # UserType, and from there to username, last_login and createdEntry. `fields` is pinned
-        # rather than excluded so a column added to the model stays invisible until named here.
+        # node, so anything this type reaches is readable unauthenticated -- `modified_by` would
+        # expose UserType. Pinned rather than excluded so a new model column stays invisible.
         # TODO(frontend): read this for the maximum allowed year; no client consumes it yet.
         fields = (
             "id",
@@ -345,17 +344,12 @@ class GiddCountryYearDisplacementType(graphene.ObjectType):
     disaster_total_displacement_rounded = graphene.Int()
 
 
-# Max rows per page for giddPublicCountryYearDisplacements (matches the page_size cap
-# of the other paginated GIDD list queries).
-# Rows per page when the client sends none. The maximum is the shared MAX_PAGE_SIZE, applied by
-# `get_page_size`, which refuses an over-large value rather than quietly serving fewer rows.
 GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE = 50
+# `get_page_size` rejects an over-large value rather than quietly serving fewer rows.
 GIDD_COUNTRY_YEAR_MAX_PAGE_SIZE = settings.GRAPHENE_DJANGO_EXTRAS["MAX_PAGE_SIZE"]
 
-# The columns giddPublicCountryYearDisplacements sorts on -- every one of them a column it also
-# returns. Each is in GiddDisplacement.ORDERING_ALLOWLIST too, which is what
-# test_ordering_allowlist_registry enumerates; the four aggregates are annotation aliases over
-# that model, and are named for the field they sum so a client's sort key is the column itself.
+# Kept in step with GiddDisplacement.ORDERING_ALLOWLIST, which the allowlist registry test
+# enumerates. Every key is a column this query also returns, so a client sorts by what it reads.
 GIDD_COUNTRY_YEAR_SORTABLE = frozenset(
     {
         "conflict_new_displacement",
@@ -533,8 +527,7 @@ class Query(graphene.ObjectType):
         end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
         filters = new_displacement_filters(start_year, end_year)
 
-        # IDP stock is read from a single year (the requested end_year, else the latest
-        # available year) and summed across countries/sub types -- never across years.
+        # IDP stock is point-in-time: taken from one year, never summed across years.
         conflict_stock_year = end_year
         conflict_total_displacement_qs = conflict_qs.filter(total_displacement__gt=0, year=conflict_stock_year)
         conflict_new_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters)
@@ -571,8 +564,7 @@ class Query(graphene.ObjectType):
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
-        # Per-category stock is the same single-year snapshot (conflict_stock_year),
-        # summed across violence sub types within that year -- never across years.
+        # IDP stock is point-in-time, so the per-category total stays inside the one year.
         violence_categories_qs = (
             conflict_qs.values("violence_sub_type", "violence_sub_type__id")
             .annotate(
@@ -671,14 +663,13 @@ class Query(graphene.ObjectType):
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL)
 
         disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
-        # Save year values before popping so the event count query can reuse them
+        # Copied before the pops below, which mutate kwargs.
         event_filter_data = dict(kwargs)
         start_year = kwargs.pop("start_year", None)
         end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
         filters = new_displacement_filters(start_year, end_year)
 
-        # IDP stock is read from a single year (the requested end_year, else the latest
-        # available year) and summed across countries/hazard types -- never across years.
+        # IDP stock is point-in-time: taken from one year, never summed across years.
         disaster_stock_year = end_year
         disaster_total_displacement_qs = disaster_qs.filter(total_displacement__gt=0, year=disaster_stock_year)
         disaster_new_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters)
@@ -715,8 +706,7 @@ class Query(graphene.ObjectType):
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
-        # Per-category stock is the same single-year snapshot (disaster_stock_year),
-        # summed across hazard types within that year -- never across years.
+        # IDP stock is point-in-time, so the per-category total stays inside the one year.
         categories_qs = (
             disaster_qs.values("hazard_type", "hazard_type__id")
             .annotate(
@@ -947,7 +937,7 @@ class Query(graphene.ObjectType):
 
         filters = new_displacement_filters(start_year, end_year)
 
-        # IDP stock is read from a single year (end_year, else latest available), never summed across years.
+        # IDP stock is point-in-time: taken from one year, never summed across years.
         disaster_base = DisasterStatisticsFilter(data=kwargs).qs
         disaster_total_displacement_qs = disaster_base.filter(total_displacement__gt=0, year=end_year)
         disaster_internal_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters)
@@ -966,14 +956,10 @@ class Query(graphene.ObjectType):
             disaster_internal_displacement_qs.order_by().values_list("iso3", flat=True).distinct()
         )
 
-        # A hazard filter narrows what it can narrow and leaves conflict whole: with
-        # hazardTypes set, the combined figure is every conflict row plus the matching disaster
-        # rows, so it stays a true total for the scope asked about rather than a disaster-only
-        # figure wearing a combined name.
-        #
-        # ConflictStatisticsFilter declares no hazard filter. django-filter would drop the
-        # undeclared keys anyway, but stripping them here keeps the two call sites' inputs
-        # explicit rather than relying on that.
+        # Hazard filters scope the disaster side only, so the combined figure stays every conflict
+        # row plus the matching disaster rows -- a true total for the scope asked about rather than
+        # a disaster-only figure under a combined name. ConflictStatisticsFilter would ignore these
+        # keys anyway; dropping them keeps both call sites' inputs explicit.
         conflict_kwargs = {
             key: value
             for key, value in kwargs.items()
@@ -1049,11 +1035,9 @@ class Query(graphene.ObjectType):
         if hazard_types:
             disaster_filter &= Q(hazard_type__in=hazard_types)
 
-        # new_displacement is a flow -> summed across the window per country.
-        # total_displacement is IDP stock (point-in-time) -> the requested end_year's value, or
-        # the (pre-)release year's snapshot when end_year is omitted, summed across sub types
-        # within that one year, never across years.
-        # `get`, not `pop`: the filterset above consumes end_year too.
+        # new_displacement is a flow, so it sums across the whole window. total_displacement is
+        # IDP stock (point-in-time), so it is confined to a single year: end_year, or the
+        # (pre-)release year when end_year is omitted.
         end_year = kwargs.get("end_year") or default_end_year(kwargs)
         conflict_stock_year = end_year
         disaster_stock_year = end_year
@@ -1108,10 +1092,8 @@ class Query(graphene.ObjectType):
         page_size = get_page_size(kwargs.pop("page_size", None) or GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE)
         ordering = kwargs.pop("ordering", None)
 
-        # NULLS LAST, and always total. The tiebreak is the grouping rather than the pk: this
-        # queryset is grouped, so ordering it by a column outside the GROUP BY would fold that
-        # column into the grouping and split every row. It is appended below, once the grouped
-        # queryset exists to derive it from.
+        # NULLS LAST throughout. The tiebreak is appended below instead, once the grouped queryset
+        # exists for `tiebreak_fields` to derive it from.
         order_by = []
         ordered_columns = set()
         for token in (ordering or "").replace(" ", "").split(","):
@@ -1151,8 +1133,6 @@ class Query(graphene.ObjectType):
             )
         )
 
-        # Derived from the grouped queryset rather than named here: the tiebreak follows the
-        # grouping, so changing what this groups by cannot leave the sort non-total.
         for tiebreak in tiebreak_fields(rows):
             if tiebreak not in ordered_columns:
                 order_by.append(models.F(tiebreak).asc())

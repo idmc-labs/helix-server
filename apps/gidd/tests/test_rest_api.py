@@ -290,10 +290,9 @@ class TestGiddDisasterRestApi(GiddRestApiMixin, HelixAPITestCase):
             hazard_sub_type=self.hazard_sub_type,
         )
 
-        # The dump publishes the STORED all_country_event_codes columns, frozen at generation time,
-        # not a live read of EventCode. The EventCode rows below deliberately carry DIFFERENT codes
-        # from the stored columns: if the endpoint ever went back to deriving them, this test fails,
-        # which is what pins the release-snapshot property.
+        # The dump publishes the stored `all_country_event_codes` columns, frozen at generation
+        # time. The `EventCode` rows below carry DIFFERENT codes from those columns, so an endpoint
+        # that derived them live would fail here -- that is the release-snapshot property.
         self.event = EventFactory.create(
             name="Afghanistan: Earthquake - Herat - June 2020",
             event_type=Crisis.CRISIS_TYPE.DISASTER,
