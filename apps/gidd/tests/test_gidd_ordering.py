@@ -19,9 +19,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
-from apps.gidd.models import Conflict, GiddDisplacement, GiddEventDisplacement, ReleaseMetadata
-from apps.gidd.views import ConflictViewSet, DisasterViewSet
 from apps.crisis.models import Crisis
+from apps.gidd.models import GiddDisplacement, GiddEventDisplacement, ReleaseMetadata
+from apps.gidd.views import ConflictViewSet, DisasterViewSet
 from helix.caches import external_api_cache
 from utils.factories import ClientFactory, CountryFactory
 from utils.tests import HelixAPITestCase
@@ -201,6 +201,7 @@ class TestGiddOrderingPagesTiesStably(GiddConflictListMixin, HelixAPITestCase):
         assert len(seen) == len(set(seen)), f"a row came back on more than one page: {seen}"
         assert set(seen) == set(self.year_by_iso3), f"paging skipped a row: {sorted(set(self.year_by_iso3) - set(seen))}"
         assert years == sorted(years), f"the requested sort did not hold across pages: {years}"
+        assert seen == self.expected_order, f"the tie group was not ordered by the group keys: {seen}"
 
 
 class GiddComputedFieldOrderingTest(GiddConflictListMixin, HelixAPITestCase):
@@ -246,4 +247,3 @@ class GiddComputedFieldOrderingTest(GiddConflictListMixin, HelixAPITestCase):
     def test_an_unknown_term_is_still_refused(self):
         with self.assertRaises(ValidationError):
             self.order_by_sql(ConflictViewSet, GiddDisplacement.objects.all(), "not_a_column")
-        assert seen == self.expected_order, f"the tie group was not ordered by the group keys: {seen}"

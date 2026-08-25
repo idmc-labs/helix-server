@@ -330,6 +330,13 @@ class TestIduReferencesDump(HelixAPITestCase):
         self.assertEqual(v_sub["name"], self.violence_sub_type.name)
         self.assertEqual(v_sub["type_id"], self.violence.id)
 
+        # `geographical_groups` is what a client resolves `geographical_group_id` against, so the
+        # group has to be in the list as well as referenced from the country.
+        self.assertIn(
+            {"id": self.geo_group.id, "name": self.geo_group.name},
+            data["geographical_groups"],
+        )
+
         country = next(c for c in data["countries"] if c["id"] == self.country.id)
         self.assertEqual(country["iso3"], self.country.iso3)
         self.assertEqual(country["idmc_short_name"], self.country.idmc_short_name)

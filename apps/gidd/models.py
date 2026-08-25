@@ -14,10 +14,6 @@ from apps.entry.models import Entry, Figure
 from utils.fields import UnbleachedTextField
 
 
-# Conflict and Disaster are no longer served from: every REST and GraphQL surface reads the
-# GiddEventDisplacement / GiddDisplacement pair. They are still GENERATED, derived from those
-# tables, and kept only so the two can be diffed against the shape they replace. Both go once
-# that agreement is established.
 class StatusLog(models.Model):
     # See GiddEventDisplacement.ORDERING_ALLOWLIST, though this list is authenticated and small.
     ORDERING_ALLOWLIST = frozenset(
@@ -676,8 +672,6 @@ class GiddEventDisplacement(models.Model):
             "year",
         }
     )
-
-    objects = CTEManager()
 
     event = models.ForeignKey("event.Event", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
     event_raw_id = models.IntegerField(null=True, blank=True)
