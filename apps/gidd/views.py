@@ -296,11 +296,6 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         # event x country x year). The dump's cross-country event codes come from the stored
         # all_country_event_codes columns, so this stays a plain streamable queryset.
         qs = GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.DISASTER).order_by("iso3", "year", "event_raw_id")
-        if self.action == "export":
-            # Only the xlsx export dereferences .country; the list serializer reads the
-            # denormalised iso3/country_name columns, so joining there just instantiates one
-            # throwaway Country per row.
-            qs = qs.select_related("country")
         return qs
 
     @staticmethod
@@ -338,8 +333,8 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         for disaster in qs.iterator(chunk_size=2000):
             ws.append(
                 [
-                    disaster.country.iso3,
-                    disaster.country.name,
+                    disaster.iso3,
+                    disaster.country_name,
                     disaster.year,
                     disaster.event_name,
                     disaster.start_date,

@@ -867,26 +867,33 @@ class GiddEventDisplacement(models.Model):
     )
 
     # Conflict fields (null for disaster rows)
-    violence = models.ForeignKey("event.Violence", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
+    # PROTECT, not SET_NULL: these ids are published (the six *Id fields on
+    # GiddEventDisplacementType, and the four hazard fields DisasterSerializer renders as pks), so a
+    # deletion in Helix would rewrite what an already-published release says. Nulling them is worse
+    # than refusing the delete, and gidd.Disaster already protects the hazard side today -- this
+    # keeps that true once the witness tables go, and extends it to the violence side, which was
+    # never protected. `event` stays SET_NULL: event_raw_id carries the published id instead.
+    # Still nullable -- a conflict row has no hazard typology and a disaster row no violence.
+    violence = models.ForeignKey("event.Violence", null=True, blank=True, related_name="+", on_delete=models.PROTECT)
     violence_name = models.CharField(max_length=256, blank=True, null=True)
     violence_sub_type = models.ForeignKey(
-        "event.ViolenceSubType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+        "event.ViolenceSubType", null=True, blank=True, related_name="+", on_delete=models.PROTECT
     )
     violence_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
 
     # Disaster fields (null for conflict rows)
     hazard_category = models.ForeignKey(
-        "event.DisasterCategory", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+        "event.DisasterCategory", null=True, blank=True, related_name="+", on_delete=models.PROTECT
     )
     hazard_category_name = models.CharField(max_length=256, blank=True, null=True)
     hazard_sub_category = models.ForeignKey(
-        "event.DisasterSubCategory", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+        "event.DisasterSubCategory", null=True, blank=True, related_name="+", on_delete=models.PROTECT
     )
     hazard_sub_category_name = models.CharField(max_length=256, blank=True, null=True)
-    hazard_type = models.ForeignKey("event.DisasterType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
+    hazard_type = models.ForeignKey("event.DisasterType", null=True, blank=True, related_name="+", on_delete=models.PROTECT)
     hazard_type_name = models.CharField(max_length=256, blank=True, null=True)
     hazard_sub_type = models.ForeignKey(
-        "event.DisasterSubType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+        "event.DisasterSubType", null=True, blank=True, related_name="+", on_delete=models.PROTECT
     )
     hazard_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
 
