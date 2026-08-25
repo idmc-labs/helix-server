@@ -8,8 +8,6 @@ from apps.entry.models import ExternalApiDump
 from utils.filters import IDListFilter, StringListFilter
 
 from .models import (
-    Conflict,
-    Disaster,
     GiddDisplacement,
     GiddEventDisplacement,
     PublicFigureAnalysis,
@@ -61,44 +59,6 @@ class ReleaseMetadataFilter(django_filters.FilterSet):
         )
         qs = self.filter_release_environment(qs, release_environment_name)
         return qs
-
-
-class ConflictFilter(ReleaseMetadataFilter):
-    class Meta:
-        model = Conflict
-        fields = {"id": ["exact"]}
-
-
-class DisasterFilter(ReleaseMetadataFilter):
-    hazard_types = IDListFilter(method="filter_hazard_types")
-    event_name = django_filters.CharFilter(method="filter_event_name")
-    start_year = django_filters.NumberFilter(method="filter_start_year")
-    end_year = django_filters.NumberFilter(method="filter_end_year")
-    countries_iso3 = StringListFilter(method="filter_countries_iso3")
-
-    class Meta:
-        model = Disaster
-        fields = {"id": ["exact"]}
-
-    def filter_event_name(self, queryset, name, value):
-        return queryset.filter(event_name__icontains=value)
-
-    def filter_hazard_types(self, queryset, name, value):
-        return queryset.filter(hazard_type__in=value)
-
-    def filter_start_year(self, queryset, name, value):
-        return queryset.filter(year__gte=value)
-
-    def filter_end_year(self, queryset, name, value):
-        return queryset.filter(year__lte=value)
-
-    def filter_countries_iso3(self, queryset, name, value):
-        return queryset.filter(iso3__in=value)
-
-    @property
-    def qs(self):
-        qs = super().qs
-        return qs.filter(new_displacement__gt=0)
 
 
 class ConflictStatisticsFilter(ReleaseMetadataFilter):
@@ -206,7 +166,9 @@ class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
 
 
 class GiddDisplacementFilter(ReleaseMetadataFilter):
-    cause = django_filters.CharFilter(method="filter_cause")
+    # Enum-typed rather than a ChoiceFilter: django-filter drops a field that fails form validation
+    # from `cleaned_data`, so `filter_queryset` skipped it and an unknown cause returned every row.
+    cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="cause")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
@@ -218,9 +180,6 @@ class GiddDisplacementFilter(ReleaseMetadataFilter):
     class Meta:
         model = GiddDisplacement
         fields = {}
-
-    def filter_cause(self, queryset, name, value):
-        return queryset.filter(cause=value)
 
     def filter_countries_iso3(self, queryset, name, value):
         return queryset.filter(iso3__in=value)
@@ -245,7 +204,9 @@ class GiddDisplacementFilter(ReleaseMetadataFilter):
 
 
 class GiddEventDisplacementFilter(ReleaseMetadataFilter):
-    cause = django_filters.CharFilter(method="filter_cause")
+    # Enum-typed rather than a ChoiceFilter: django-filter drops a field that fails form validation
+    # from `cleaned_data`, so `filter_queryset` skipped it and an unknown cause returned every row.
+    cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="cause")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
@@ -259,9 +220,6 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
     class Meta:
         model = GiddEventDisplacement
         fields = {}
-
-    def filter_cause(self, queryset, name, value):
-        return queryset.filter(cause=value)
 
     def filter_countries_iso3(self, queryset, name, value):
         return queryset.filter(iso3__in=value)
