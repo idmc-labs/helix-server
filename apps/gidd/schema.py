@@ -300,6 +300,7 @@ class GiddPublicCountryType(graphene.ObjectType):
     iso3 = graphene.String(required=True)
     idmc_short_name = graphene.String(required=True)
     region = graphene.Field(GiddPublicCountryRegionType)
+    centroid = graphene.List(graphene.Float)
 
 
 class GiddHazardType(graphene.ObjectType):
@@ -308,6 +309,16 @@ class GiddHazardType(graphene.ObjectType):
 
 
 class GiddHazardSubCategoryType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
+class GiddViolenceType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
+class GiddViolenceSubType(graphene.ObjectType):
     id = graphene.ID(required=True)
     name = graphene.String(required=True)
 
@@ -359,6 +370,21 @@ class GiddCountryDisplacementType(graphene.ObjectType):
     disaster_total_displacement_rounded = graphene.Int()
 
 
+class GiddCountryYearDisplacementType(graphene.ObjectType):
+    iso3 = graphene.String(required=True)
+    country_name = graphene.String(required=True)
+    country_id = graphene.ID(required=True)
+    year = graphene.Int(required=True)
+    conflict_new_displacement = graphene.Int()
+    conflict_new_displacement_rounded = graphene.Int()
+    conflict_total_displacement = graphene.Int()
+    conflict_total_displacement_rounded = graphene.Int()
+    disaster_new_displacement = graphene.Int()
+    disaster_new_displacement_rounded = graphene.Int()
+    disaster_total_displacement = graphene.Int()
+    disaster_total_displacement_rounded = graphene.Int()
+
+
 class Query(graphene.ObjectType):
     gidd_public_conflict_statistics = graphene.Field(
         GiddConflictStatisticsType,
@@ -392,6 +418,14 @@ class Query(graphene.ObjectType):
     )
     gidd_public_hazard_types = graphene.List(
         GiddHazardType,
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_violence_types = graphene.List(
+        GiddViolenceType,
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_violence_sub_types = graphene.List(
+        GiddViolenceSubType,
         client_id=graphene.String(required=True),
     )
     gidd_public_figure_analysis_list = DjangoPaginatedListObjectField(
@@ -431,6 +465,15 @@ class Query(graphene.ObjectType):
         **get_filtering_args_from_filterset(GiddCountryDisplacementFilter, GiddCountryDisplacementType),
         hazard_types=graphene.List(graphene.NonNull(graphene.ID)),
         violence_types=graphene.List(graphene.NonNull(graphene.ID)),
+        violence_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_country_year_displacements = graphene.Field(
+        graphene.List(graphene.NonNull(GiddCountryYearDisplacementType)),
+        **get_filtering_args_from_filterset(GiddCountryDisplacementFilter, GiddCountryYearDisplacementType),
+        hazard_types=graphene.List(graphene.NonNull(graphene.ID)),
+        violence_types=graphene.List(graphene.NonNull(graphene.ID)),
+        violence_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
         client_id=graphene.String(required=True),
     )
 
@@ -457,12 +500,13 @@ class Query(graphene.ObjectType):
                 id=country["id"],
                 iso3=country["iso3"],
                 idmc_short_name=country["idmc_short_name"],
+                centroid=country["centroid"],
                 region=GiddPublicCountryRegionType(
                     id=country["region__id"],
                     name=country["region__name"],
                 ),
             )
-            for country in Country.objects.values("id", "idmc_short_name", "iso3", "region__id", "region__name")
+            for country in Country.objects.values("id", "idmc_short_name", "iso3", "centroid", "region__id", "region__name")
         ]
 
     @staticmethod
@@ -726,6 +770,42 @@ class Query(graphene.ObjectType):
         ]
 
     @staticmethod
+    def resolve_gidd_public_violence_types(parent, info, **kwargs):
+        client_id = kwargs.pop("client_id")
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_VIOLENCE_TYPES_GRAPHQL)
+
+        return [
+            GiddViolenceType(
+                id=row["violence__id"],
+                name=row["violence_name"],
+            )
+            for row in GiddDisplacement.objects.filter(
+                cause=Crisis.CRISIS_TYPE.CONFLICT,
+                violence__isnull=False,
+            )
+            .values("violence__id", "violence_name")
+            .distinct("violence__id", "violence_name")
+        ]
+
+    @staticmethod
+    def resolve_gidd_public_violence_sub_types(parent, info, **kwargs):
+        client_id = kwargs.pop("client_id")
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_VIOLENCE_SUB_TYPES_GRAPHQL)
+
+        return [
+            GiddViolenceSubType(
+                id=row["violence_sub_type__id"],
+                name=row["violence_sub_type_name"],
+            )
+            for row in GiddDisplacement.objects.filter(
+                cause=Crisis.CRISIS_TYPE.CONFLICT,
+                violence_sub_type__isnull=False,
+            )
+            .values("violence_sub_type__id", "violence_sub_type_name")
+            .distinct("violence_sub_type__id", "violence_sub_type_name")
+        ]
+
+    @staticmethod
     def resolve_gidd_public_year(parent, info, **kwargs):
         # Track
         client_id = kwargs.pop("client_id")
@@ -900,12 +980,15 @@ class Query(graphene.ObjectType):
 
         hazard_types = kwargs.pop("hazard_types", None)
         violence_types = kwargs.pop("violence_types", None)
+        violence_sub_types = kwargs.pop("violence_sub_types", None)
 
         qs = GiddCountryDisplacementFilter(data=kwargs).qs
 
         conflict_filter = Q(cause=Crisis.CRISIS_TYPE.CONFLICT)
         if violence_types:
             conflict_filter &= Q(violence__in=violence_types)
+        if violence_sub_types:
+            conflict_filter &= Q(violence_sub_type__in=violence_sub_types)
 
         disaster_filter = Q(cause=Crisis.CRISIS_TYPE.DISASTER)
         if hazard_types:
@@ -928,6 +1011,57 @@ class Query(graphene.ObjectType):
                 iso3=row["iso3"],
                 country_name=row["country_name"],
                 country_id=row["country_id"],
+                conflict_new_displacement=row["conflict_nd"] or None,
+                conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_nd"]),
+                conflict_total_displacement=row["conflict_idp"] or None,
+                conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_idp"]),
+                disaster_new_displacement=row["disaster_nd"] or None,
+                disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_nd"]),
+                disaster_total_displacement=row["disaster_idp"] or None,
+                disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_idp"]),
+            )
+            for row in rows
+        ]
+
+    @staticmethod
+    def resolve_gidd_public_country_year_displacements(parent, info, **kwargs):
+        client_id = kwargs.pop("client_id")
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_COUNTRY_YEAR_DISPLACEMENT_GRAPHQL)
+
+        hazard_types = kwargs.pop("hazard_types", None)
+        violence_types = kwargs.pop("violence_types", None)
+        violence_sub_types = kwargs.pop("violence_sub_types", None)
+
+        qs = GiddCountryDisplacementFilter(data=kwargs).qs
+
+        conflict_filter = Q(cause=Crisis.CRISIS_TYPE.CONFLICT)
+        if violence_types:
+            conflict_filter &= Q(violence__in=violence_types)
+        if violence_sub_types:
+            conflict_filter &= Q(violence_sub_type__in=violence_sub_types)
+
+        disaster_filter = Q(cause=Crisis.CRISIS_TYPE.DISASTER)
+        if hazard_types:
+            disaster_filter &= Q(hazard_type__in=hazard_types)
+
+        rows = (
+            qs.values("iso3", "country_name", "country_id", "year")
+            .annotate(
+                conflict_nd=Coalesce(models.Sum("new_displacement", filter=conflict_filter), 0),
+                conflict_idp=Coalesce(models.Sum("total_displacement", filter=conflict_filter), 0),
+                disaster_nd=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
+                disaster_idp=Coalesce(models.Sum("total_displacement", filter=disaster_filter), 0),
+            )
+            .filter(Q(conflict_nd__gt=0) | Q(conflict_idp__gt=0) | Q(disaster_nd__gt=0) | Q(disaster_idp__gt=0))
+            .order_by("iso3", "year")
+        )
+
+        return [
+            GiddCountryYearDisplacementType(
+                iso3=row["iso3"],
+                country_name=row["country_name"],
+                country_id=row["country_id"],
+                year=row["year"],
                 conflict_new_displacement=row["conflict_nd"] or None,
                 conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_nd"]),
                 conflict_total_displacement=row["conflict_idp"] or None,
