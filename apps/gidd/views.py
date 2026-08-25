@@ -1153,7 +1153,10 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
     # ListOnlyViewSetMixin with pagination_class = None — an UNPAGINATED list over the whole
     # GiddFigure table, unrouted but one router.register away from shipping; drop the list
     # action instead of leaving the footgun.
-    queryset = GiddFigure.objects.all()
+    # Ordered, with the pk as the tiebreak: the exports stream this queryset whole, and an
+    # unordered scan hands back rows in whatever order the plan chose, so the same data published
+    # twice differs by thousands of moved rows.
+    queryset = GiddFigure.objects.all().order_by("iso3", "year", "id")
     filter_backends = (DjangoFilterBackend,)
     filterset_class = DisaggregationFilterSet
 
