@@ -78,6 +78,12 @@ def _get_location_accuracy_label(accuracy):
     return get_enum_label(FigureLocation.ACCURACY.get(accuracy))
 
 
+def _get_pcode_accuracy_label(accuracy):
+    if accuracy is None:
+        return None
+    return get_enum_label(FigureLocation.PCODE_ACCURACY.get(accuracy))
+
+
 def _get_location_type_label(type):
     if type is None:
         return None
@@ -91,11 +97,25 @@ def _get_event_code_label(key: str):
 
 
 def _get_location_accuracy_labels(location_accuracy: typing.List[typing.Tuple[int]]) -> str:
-    return string_join(EXTERNAL_ARRAY_SEPARATOR, [_get_location_accuracy_label(accuracy) for accuracy in location_accuracy])
+    return _join_keeping_gaps([_get_location_accuracy_label(accuracy) for accuracy in location_accuracy])
+
+
+def _join_keeping_gaps(values) -> str:
+    """Join with a slot for every element, so each value stays under its own location.
+
+    The location columns are positionally paired, and `string_join` drops `None`: one missing
+    p-code would shift every later value one position left, silently pairing it with the wrong
+    location.
+    """
+    return EXTERNAL_ARRAY_SEPARATOR.join("" if value is None else str(value) for value in values or [])
+
+
+def _get_pcode_accuracy_labels(pcode_accuracy) -> str:
+    return _join_keeping_gaps([_get_pcode_accuracy_label(accuracy) for accuracy in pcode_accuracy or []])
 
 
 def _get_location_type_labels(location_type: typing.List[typing.Tuple[int]]) -> str:
-    return string_join(EXTERNAL_ARRAY_SEPARATOR, [_get_location_type_label(type) for type in location_type])
+    return _join_keeping_gaps([_get_location_type_label(type) for type in location_type])
 
 
 def get_hyperlink(ws, url, text):
@@ -1234,6 +1254,9 @@ DISAGGREGATION_EXPORT_VALUES = (
     "locations_names",
     "locations_accuracy",
     "locations_type",
+    "locations_pcode",
+    "locations_pcode_accuracy",
+    "locations_pcode_source",
     "displacement_occurred",
     "event_main_trigger",
     "gidd_event__event_raw_id",
@@ -1577,6 +1600,9 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                             "Locations name": item["locations_names"],
                             "Locations accuracy": [_get_location_accuracy_label(x) for x in item["locations_accuracy"]],
                             "Locations type": [_get_location_type_label(x) for x in item["locations_type"]],
+                            "Pcode": item["locations_pcode"],
+                            "Pcode accuracy": [_get_pcode_accuracy_label(x) for x in item["locations_pcode_accuracy"]],
+                            "Pcode source": item["locations_pcode_source"],
                             "Displacement occurred": self._get_displacement_occurred(item["displacement_occurred"]),
                         }
                     ),
@@ -1635,6 +1661,9 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                 "Locations name",
                 "Locations accuracy",
                 "Locations type",
+                "Pcode",
+                "Pcode accuracy",
+                "Pcode source",
                 "Displacement occurred",
             ]
         )
@@ -2130,10 +2159,13 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                         item["gidd_event__event_codes_iso3"],
                         item["iso3"],
                     ),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item["locations_coordinates"]),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item["locations_names"]),
+                    _join_keeping_gaps(item["locations_coordinates"]),
+                    _join_keeping_gaps(item["locations_names"]),
                     _get_location_accuracy_labels(item["locations_accuracy"]),
                     _get_location_type_labels(item["locations_type"]),
+                    _join_keeping_gaps(item["locations_pcode"]),
+                    _get_pcode_accuracy_labels(item["locations_pcode_accuracy"]),
+                    _join_keeping_gaps(item["locations_pcode_source"]),
                     self._get_displacement_occurred(item["displacement_occurred"]),
                 ]
             )
