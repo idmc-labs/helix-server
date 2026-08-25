@@ -19,7 +19,7 @@ from utils.fields import UnbleachedTextField
 # tables, and kept only so the two can be diffed against the shape they replace. Both go once
 # that agreement is established.
 class StatusLog(models.Model):
-    # See Conflict, though this list is authenticated and small.
+    # See GiddEventDisplacement.ORDERING_ALLOWLIST, though this list is authenticated and small.
     ORDERING_ALLOWLIST = frozenset(
         {
             "completed_at",
@@ -174,7 +174,8 @@ class ReleaseMetadata(models.Model):
 
 
 class PublicFigureAnalysis(models.Model):
-    # See Conflict. `description` is a TextField, so it is the most expensive key here.
+    # See GiddEventDisplacement.ORDERING_ALLOWLIST. `description` is a TextField, so it is the
+    # most expensive key here.
     ORDERING_ALLOWLIST = frozenset(
         {
             "description",
@@ -650,9 +651,9 @@ class GiddEventDisplacement(models.Model):
     Disaster rows: hazard_type + hazard_sub_type set; violence fields null.
     """
 
-    # Every scalar column `giddPublicEvents` publishes, and nothing else: sorting by a column a
-    # caller cannot read back only widens what an unauthenticated request can make the database
-    # do. REST ordering is bounded separately, by the serializer's own fields.
+    # Every scalar column `giddPublicEvents` publishes, and nothing else: a sort key a caller
+    # cannot read back only widens what an unauthenticated request can make the database do.
+    # REST ordering is bounded separately, by the serializer's own fields.
     ORDERING_ALLOWLIST = frozenset(
         {
             "cause",
@@ -677,9 +678,8 @@ class GiddEventDisplacement(models.Model):
         }
     )
 
-    # CTEManager so the witness derivation can render a WITH clause: Disaster's event codes are
-    # aggregated across all of an event's countries, which is one CTE joined back on the event
-    # rather than a correlated subquery rescanning EventCode per output row.
+    objects = CTEManager()
+
     event = models.ForeignKey("event.Event", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
     event_raw_id = models.IntegerField(null=True, blank=True)
     event_name = models.CharField(verbose_name=_("Event name"), max_length=256)
@@ -694,16 +694,14 @@ class GiddEventDisplacement(models.Model):
     end_date = models.DateField(blank=True, null=True)
 
     event_codes = ArrayField(models.CharField(verbose_name=_("Event Codes"), max_length=256), default=list)
-    # REST-only fields — mirror the old Disaster table so the /gidd/disasters/ dump stays identical.
-    # Not exposed in GraphQL.
+    # Published by /gidd/disasters/ only; not exposed in GraphQL.
     start_date_accuracy = models.TextField(blank=True, null=True)
     end_date_accuracy = models.TextField(blank=True, null=True)
     event_codes_type = ArrayField(models.CharField(verbose_name=_("Event Code Types"), max_length=256), default=list)
-    # The retired Disaster table published an event's codes across ALL its countries -- its
-    # subquery compared EventCode.country to itself, so the country condition was a tautology, and
-    # /gidd/disasters/ still publishes that shape. Stored rather than re-derived per request: a
-    # released dump must not change because EventCode moved on, and reading a column keeps the
-    # export a streamable queryset. `event_codes` above stays country-correct, for GraphQL.
+    # /gidd/disasters/ publishes an event's codes across ALL its countries, not just this row's.
+    # Stored rather than derived per request: a released dump must not change because EventCode
+    # moved on, and reading a column keeps the export a streamable queryset. `event_codes` above
+    # stays country-correct, for GraphQL.
     all_country_event_codes = ArrayField(
         models.CharField(verbose_name=_("Event Codes (all countries)"), max_length=256), default=list
     )
@@ -716,13 +714,10 @@ class GiddEventDisplacement(models.Model):
     )
 
     # Conflict fields (null for disaster rows)
-    # PROTECT, not SET_NULL: these ids are published (the six *Id fields on
-    # GiddEventDisplacementType, and the four hazard fields DisasterSerializer renders as pks), so a
-    # deletion in Helix would rewrite what an already-published release says. Nulling them is worse
-    # than refusing the delete, and gidd.Disaster already protects the hazard side today -- this
-    # keeps that true once the witness tables go, and extends it to the violence side, which was
-    # never protected. `event` stays SET_NULL: event_raw_id carries the published id instead.
-    # Still nullable -- a conflict row has no hazard typology and a disaster row no violence.
+    # PROTECT, not SET_NULL: these ids are published (the typology *Id fields on
+    # GiddEventDisplacementType, and the hazard fields DisasterSerializer renders as pks), so a
+    # deletion in Helix would rewrite what an already-published release says. `event` stays
+    # SET_NULL because event_raw_id carries the published id instead.
     violence = models.ForeignKey("event.Violence", null=True, blank=True, related_name="+", on_delete=models.PROTECT)
     violence_name = models.CharField(max_length=256, blank=True, null=True)
     violence_sub_type = models.ForeignKey(

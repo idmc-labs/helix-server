@@ -23,10 +23,8 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
     class Meta:
         model = GiddDisplacement
         fields = {
-            # No `id` filter: this list is now an aggregate over GiddDisplacement with no pk of
-            # its own. The parameter filtered Conflict.id -- a surrogate key the table dropped and
-            # regenerated on every GIDD run, never exposed by the serializer, and a hard 500 until
-            # `iexact` was corrected to `exact`. Removing it is declared in the PR.
+            # No `id` filter: this list is an aggregate over GiddDisplacement rows and has no pk
+            # of its own.
             "iso3": ["iexact"],
         }
 

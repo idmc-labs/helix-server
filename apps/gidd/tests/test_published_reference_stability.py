@@ -109,6 +109,8 @@ class TestPublishedIdsSurviveHelixDeletes(TestCase):
         )
         report.delete()
         analysis.refresh_from_db()
+        # Generation assigns the report's id as the row's key, so what a caller references
+        # survives both a rebuild and the report being deleted.
         assert analysis.report_id is None
 
 

@@ -316,7 +316,6 @@ class TestIduReferencesDump(HelixAPITestCase):
         self.assertIn("geographical_groups", data)
         self.assertIn("countries", data)
 
-        # Verify disaster type/subtype shape and linkage
         d_type = next(d for d in data["disaster_types"] if d["id"] == self.disaster_type.id)
         self.assertEqual(d_type["name"], self.disaster_type.name)
 
@@ -324,7 +323,6 @@ class TestIduReferencesDump(HelixAPITestCase):
         self.assertEqual(d_sub["name"], self.disaster_sub_type.name)
         self.assertEqual(d_sub["type_id"], self.disaster_type.id)
 
-        # Verify violence type/subtype shape and linkage
         v_type = next(v for v in data["violence_types"] if v["id"] == self.violence.id)
         self.assertEqual(v_type["name"], self.violence.name)
 
@@ -332,7 +330,6 @@ class TestIduReferencesDump(HelixAPITestCase):
         self.assertEqual(v_sub["name"], self.violence_sub_type.name)
         self.assertEqual(v_sub["type_id"], self.violence.id)
 
-        # Verify country shape
         country = next(c for c in data["countries"] if c["id"] == self.country.id)
         self.assertEqual(country["iso3"], self.country.iso3)
         self.assertEqual(country["idmc_short_name"], self.country.idmc_short_name)

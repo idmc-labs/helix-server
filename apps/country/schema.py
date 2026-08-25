@@ -129,9 +129,9 @@ class CountryType(RelationBatchedDjangoObjectType):
         # organizations is unbounded fan-out (420 organizations on the widest country); read them
         # via organizationList(filters: {countries: [id]}), a strict membership test over the M2M
         # through table that reproduces the removed set exactly.
-        # The two gidd_* reverses are per-country row sets of the generated GIDD tables --
-        # every (year, cause, typology) and every (event, year). Plain lists, so they carry
-        # neither pagination nor an ordering bound; excluded for the same reason as figures.
+        # The two gidd_* reverses are unbounded per-country row sets of the generated GIDD
+        # tables -- every (year, cause, typology), and every (event, year). Unlike `figures`,
+        # they get no paginated replacement below, so they are dropped rather than exposed.
         exclude_fields = (
             "country_conflict",
             "country_disaster",

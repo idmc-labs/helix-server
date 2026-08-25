@@ -104,8 +104,6 @@ def update_public_figure_analysis():
     # NOTE:- There must be exaclty one country
     data = []
 
-    # A PFA total is one of GiddDisplacement's two figure sums. Cause selects the rows, category
-    # selects the column, so the four PFA aggregates are the 2x2 and no conditional sum is needed.
     sum_column_by_category = {
         Figure.FIGURE_CATEGORY_TYPES.IDPS: "total_displacement",
         Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT: "new_displacement",
@@ -130,23 +128,14 @@ def update_public_figure_analysis():
 
     # FIXME: add a cleanup function
 
-    # PFA reads the GIDD displacement table rather than re-aggregating entry_figure per report.
-    # The values are the same by construction: GiddDisplacement is grouped by country, year and
-    # cause over `figures_in_year_window`, restricted to RECOMMENDED figures and to conflict and
-    # disaster event types, which is what each PFA conditional sum selected. Its `year` values are
-    # `get_gidd_years()` -- the same distinct `gidd_report_year` set the per-report loop keyed on.
-    #
-    # Summing the unrounded columns and rounding the total once is required: the table stores a
-    # rounded value per typology row, and summing those rounds many times over and diverges.
+    # The unrounded columns are summed and the total rounded once: the table also stores a rounded
+    # value per typology row, and summing those rounds many times over and diverges.
     #
     # A country-year-cause with no figures in a category sums to NULL, not 0, and a missing group
     # is absent from the map -- PFA publishes `figures = None` for both, which callers rely on.
     #
-    # Depends on `update_new_gidd_tables` having run: the table is populated in the same
-    # transaction, earlier.
-    #
-    # The cause is the event's type, as it was before: a figure whose own `figure_cause` disagrees
-    # with its event's type is counted under the event's.
+    # `cause` is the event's type: a figure whose own `figure_cause` disagrees with its event's
+    # type is counted under the event's.
     # TODO: nothing validates `figure_cause` against `event.event_type` on write.
     totals_by_year_country_cause = {
         (row["year"], row["country_id"], row["cause"]): row
@@ -167,7 +156,6 @@ def update_public_figure_analysis():
         # PFA always have either conflict or disaster cause
         figure_cause = report.filter_figure_crisis_types[0]
 
-        # Each PFA report needs exactly ONE of the two sums, on the rows for its own cause
         sum_column = sum_column_by_category.get(figure_category)
 
         # There must be exactly one country if is_pfa_visible_in_gidd is enabled.
@@ -183,11 +171,9 @@ def update_public_figure_analysis():
 
         data.append(
             PublicFigureAnalysis(
-                # The report's id IS this row's key. There is exactly one analysis per
-                # PFA-visible report, so the key is stable across releases even though the table
-                # is emptied and rebuilt each time -- and a caller can reference a published
-                # analysis without the number changing under it. This is the only path that
-                # creates these rows, so every key is assigned here rather than by the sequence.
+                # The report's id IS this row's key -- one analysis per PFA-visible report, and
+                # this is the only path that creates them. The table is emptied and rebuilt every
+                # release, so a published analysis has to keep its number across the rebuild.
                 id=report.id,
                 iso3=iso3,
                 figure_cause=figure_cause,
@@ -700,8 +686,7 @@ def update_new_gidd_tables():
             _with_country_codes(disaster_base),
             dict(
                 _shared_columns(year),
-                # CASE-mapped, not F(): the raw-insert path bypasses the TextField str()
-                # coercion that rendered these labels, so a bare F() publishes the digits.
+                # CASE-mapped, not F(): a bare F() publishes the enum's digits, not its label.
                 start_date_accuracy=enum_label_case(
                     "event__start_date_accuracy", Event._meta.get_field("start_date_accuracy").enum
                 ),

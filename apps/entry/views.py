@@ -170,7 +170,6 @@ def get_idu_data(filters=None):
             event_end_date=F("event__end_date"),
             disaster_category_name=F("disaster_category__name"),
             disaster_sub_category_name=F("disaster_sub_category__name"),
-            # type/subtype are cause-dependent: violence typology for conflict, hazard typology for disaster
             type_name=Case(
                 When(figure_cause=Crisis.CRISIS_TYPE.CONFLICT, then=F("violence__name")),
                 default=F("disaster_sub_type__type__name"),
@@ -627,10 +626,9 @@ class ExternalEndpointBaseCachedViewMixin:
 
         return redirect(url)
 
-    # Whether this endpoint publishes a per-client variant. The IDU dumps are generated both with
-    # and without sources, and a client's `share_source` flag selects which it may read. An endpoint
-    # generated only one way must not key the lookup on that flag, or every client with
-    # `share_source` set gets a 404 for a dump that exists.
+    # The IDU dumps are generated both with and without sources, and a client's `share_source`
+    # flag selects which it may read. An endpoint generated only one way must not key the lookup on
+    # that flag, or every client with `share_source` set gets a 404 for a dump that exists.
     DUMP_VARIES_BY_CLIENT = True
 
     @client_id

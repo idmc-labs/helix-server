@@ -1947,8 +1947,8 @@ class TestCoreData(HelixGraphQLTestCase):
             }
             for i in r_data
         ]
-        # NOTE: Removing idps as it's not generated in GIDD right now. giddPublicEvents replaces the
-        # removed giddPublicDisasters; it is unordered, so compare order-independently.
+        # NOTE: Removing idps as it's not generated in GIDD right now. The field is unordered, so
+        # compare order-independently.
         expected = [{**row, "disaster_idps": None} for row in disaster_data]
         _key = lambda d: (d["iso3"], d["year"], str(d["id"]))  # noqa: E731
         assert sorted(expected, key=_key) == sorted(system_data, key=_key)

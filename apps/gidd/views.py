@@ -256,9 +256,7 @@ class ConflictViewSet(ListOnlyViewSetMixin):
             ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST,
             viewset=self,
         )
-        # Sourced from the new GiddDisplacement table: aggregate the disaggregated conflict rows
-        # back to one row per country x year (the old Conflict grain). Rounded figures are
-        # recomputed in the serializer from the summed raw values (Python banker's rounding).
+        # Rounded figures are not summable: the serializer recomputes them from these raw sums.
         return (
             GiddDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.CONFLICT)
             .values("iso3", "country_name", "year")
@@ -292,9 +290,8 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             api_type,
             viewset=self,
         )
-        # Sourced from GiddEventDisplacement (disaster rows share the old Disaster grain:
-        # event x country x year). The dump's cross-country event codes come from the stored
-        # all_country_event_codes columns, so this stays a plain streamable queryset.
+        # The cross-country event codes this dump publishes are read from stored columns rather
+        # than aggregated per request, which keeps this a plain streamable queryset.
         qs = GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.DISASTER).order_by("iso3", "year", "event_raw_id")
         return qs
 
@@ -588,10 +585,9 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             api_type,
             viewset=self,
         )
-        # Sourced from GiddDisplacement: one row per country x year with conflict/disaster
-        # columns via conditional sums (NULL when a cause is absent, matching the old table).
-        # Rounded figures are recomputed from the summed raw values (in the serializer for the
-        # list endpoint, and in `export()` for the exports).
+        # A cause with no rows sums to NULL, not 0, which is what this endpoint publishes.
+        # Rounded figures are not summable: the serializer recomputes them for the list endpoint,
+        # and `export()` derives them in SQL.
         return (
             GiddDisplacement.objects.values("iso3", "country_name", "year")
             .annotate(
@@ -1161,9 +1157,8 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     )
     def export(self, request):
         # Track export
-        # get_queryset() aggregates GiddDisplacement, so the rounded figures have to be derived
-        # rather than read from a column. Deriving them in SQL keeps this a queryset, which is what
-        # lets the sheet builders stream it with `.iterator()` instead of materialising every row.
+        # Rounded in SQL rather than in python: the sheet builders stream this with `.iterator()`,
+        # which needs it to stay a queryset.
         qs = (
             self.filter_queryset(self.get_queryset())
             .annotate(
@@ -1255,9 +1250,8 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
     # ListOnlyViewSetMixin with pagination_class = None — an UNPAGINATED list over the whole
     # GiddFigure table, unrouted but one router.register away from shipping; drop the list
     # action instead of leaving the footgun.
-    # Ordered, with the pk as the tiebreak: the exports stream this queryset whole, and an
-    # unordered scan hands back rows in whatever order the plan chose, so the same data published
-    # twice differs by thousands of moved rows.
+    # Ordered with the pk as tiebreak: the exports stream this queryset whole, and an unordered
+    # scan hands back rows in plan order, so the same data published twice differs by moved rows.
     queryset = GiddFigure.objects.all().order_by("iso3", "year", "id")
     filter_backends = (DjangoFilterBackend,)
     filterset_class = DisaggregationFilterSet

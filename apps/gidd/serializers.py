@@ -147,9 +147,7 @@ class DisasterSerializer(serializers.ModelSerializer):
         "the event likely ended. The values indicate the period around the date."
     )
 
-    # event_codes / event_codes_type reproduce the old cross-country behaviour from the
-    # Read from the stored all_country_* columns: the dump publishes an event's codes across all
-    # of its countries, frozen at generation time.
+    # An event's codes are published across every country it touched, not just this row's country.
     ORDERING_SOURCES = {
         "event_codes": "all_country_event_codes",
         "event_codes_type": "all_country_event_codes_type",
@@ -193,10 +191,8 @@ class DisasterSerializer(serializers.ModelSerializer):
 
 
 class DisplacementDataSerializer(serializers.Serializer):
-    # Served from GiddDisplacement aggregated to country x year (see DisplacementDataViewSet).
-    # A plain Serializer, so every field is declared explicitly and no backing model is needed --
-    # which also means Meta is ignored and DECLARATION ORDER IS THE RESPONSE KEY ORDER. That order
-    # is part of the contract these endpoints publish; it matches the retired model's Meta.fields.
+    # Field declaration order is the response key order, and that order is part of the contract
+    # these endpoints publish.
     iso3 = serializers.CharField(
         help_text="Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area."
     )
