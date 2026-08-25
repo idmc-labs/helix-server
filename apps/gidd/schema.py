@@ -227,6 +227,10 @@ class GiddDisasterListType(CustomDjangoListObjectType):
 class GiddStatusLogType(RelationBatchedDjangoObjectType):
     class Meta:
         model = StatusLog
+        # Pinned, not excluded, so a column added to StatusLog later does not join the payload on
+        # its own. `triggered_by` is listed deliberately: the admin client renders it, and this
+        # type is not whitelisted, so it never reaches an unauthenticated caller.
+        fields = ("id", "triggered_at", "completed_at", "status", "triggered_by")
 
     status = graphene.Field(GiddStatusLogEnum)
     status_display = EnumDescription(source="get_status_display")
