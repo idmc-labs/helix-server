@@ -33,7 +33,9 @@ from .models import (
     Conflict,
     Disaster,
     DisplacementData,
+    GiddDisplacement,
     GiddEvent,
+    GiddEventDisplacement,
     GiddFigure,
     IdpsSaddEstimate,
     PublicFigureAnalysis,
@@ -502,6 +504,11 @@ def bulk_insert_from_queryset(model, base_queryset, expressions, include_pk=Fals
     output follows the same-order annotation aliases."""
     now = timezone.now()
     fields = [field for field in model._meta.concrete_fields if include_pk or not field.primary_key]
+    # An unrecognised key would otherwise be dropped and the column silently take its default:
+    # an IntegrityError where the column is NOT NULL, a published table of NULLs where it is not.
+    unknown = set(expressions) - {field.attname for field in fields}
+    if unknown:
+        raise ValueError("{} has no column(s) {}".format(model.__name__, ", ".join(sorted(unknown))))
     aliases = {}
     for field in fields:
         expression = expressions.get(field.attname)
@@ -798,6 +805,231 @@ def update_gidd_event_and_gidd_figure_data():
         )
 
 
+def _event_code_sort_tuple():
+    """The tuple the old `ArrayAgg(Array(...), distinct=True)` sorted on.
+
+    Per-column ArrayAggs share this `ordering` so the code and type-label arrays stay aligned in
+    that order. The dedupe is dropped because PG rejects `array_agg(DISTINCT x ORDER BY y)`; no
+    duplicate (event, code, type, country) tuple exists in the data, though EventCode carries no
+    unique constraint to guarantee it.
+    """
+    return Array(
+        F("event_code"),
+        Cast(models.F("event_code_type"), models.CharField()),
+        F("country__iso3"),
+        output_field=ArrayField(models.CharField()),
+    )
+
+
+def _country_event_code_cte():
+    """Codes for one (event, country) -- what GiddEventDisplacement.event_codes carries.
+
+    Scoped to the row's own country, unlike `_all_country_event_code_cte`, which spans every
+    country of the event.
+    """
+    return With(
+        EventCode.objects.annotate(code_tuple=_event_code_sort_tuple())
+        .order_by()
+        .values("event", "country")
+        .annotate(
+            codes=ArrayAgg("event_code", ordering="code_tuple"),
+            type_labels=ArrayAgg(enum_label_case("event_code_type", EventCode.EVENT_CODE_TYPE), ordering="code_tuple"),
+        )
+        .values("event", "country", "codes", "type_labels"),
+        name="gidd_event_code_by_country",
+    )
+
+
+def _displacement_sums():
+    """The two figure sums every GIDD displacement row carries.
+
+    Left NULL when a category is absent -- a country-year with no conflict publishes NULL, not 0,
+    and the REST layer's conditional sums depend on that.
+    """
+    return dict(
+        new_displacement=Sum(
+            Case(
+                When(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT, then=F("total_figures")),
+                output_field=IntegerField(),
+            )
+        ),
+        total_displacement=Sum(
+            Case(
+                When(category=Figure.FIGURE_CATEGORY_TYPES.IDPS, then=F("total_figures")),
+                output_field=IntegerField(),
+            )
+        ),
+    )
+
+
+def update_new_gidd_tables():
+    """Populate GiddEventDisplacement, then derive GiddDisplacement from it.
+
+    Two INSERT..SELECTs per GIDD year plus one rollup: no row round-trips through the worker, and
+    the rollup is a plain GROUP BY over rows written earlier in the same transaction -- which is
+    why the two must not be split across transactions.
+    """
+    country_codes = _country_event_code_cte()
+
+    def _with_country_codes(base):
+        return country_codes.join(
+            base,
+            event_id=country_codes.col.event_id,
+            country_id=country_codes.col.country_id,
+            _join_type=LOUTER,
+        ).with_cte(country_codes)
+
+    def _shared_columns(year):
+        return dict(
+            event_id=F("event__id"),
+            event_raw_id=F("event__id"),
+            event_name=F("event__name"),
+            # A column, not an enum literal: the queryset is filtered on it, so it is provably
+            # this year's cause without relying on psycopg2 adapting an IntEnum member.
+            cause=F("event__event_type"),
+            year=Value(year, output_field=IntegerField()),
+            country_id=F("country"),
+            iso3=F("country__iso3"),
+            country_name=F("country__idmc_short_name"),
+            start_date=F("event__start_date"),
+            end_date=F("event__end_date"),
+            # The column is NOT NULL and a LEFT JOIN onto an event with no codes yields NULL; the
+            # raw-insert path never runs the aggregate's convert_value, so nothing else fills it.
+            event_codes=Coalesce(country_codes.col.codes, empty_char_array()),
+            new_displacement=F("new_displacement"),
+            total_displacement=F("total_displacement"),
+            new_displacement_rounded=rounded_figure_expr("new_displacement"),
+            total_displacement_rounded=rounded_figure_expr("total_displacement"),
+        )
+
+    for year in get_gidd_years():
+        conflict_figure_qs = figures_in_year_window(year, Crisis.CRISIS_TYPE.CONFLICT)
+        conflict_base = (
+            Figure.objects.filter(id__in=conflict_figure_qs.values("id"))
+            .order_by()
+            .values(
+                "event__id",
+                "event__event_type",
+                "event__name",
+                "event__start_date",
+                "event__end_date",
+                "event__violence",
+                "event__violence__name",
+                "event__violence_sub_type",
+                "event__violence_sub_type__name",
+                "country",
+                "country__iso3",
+                "country__idmc_short_name",
+            )
+            .annotate(**_displacement_sums())
+        )
+        bulk_insert_from_queryset(
+            GiddEventDisplacement,
+            _with_country_codes(conflict_base),
+            dict(
+                _shared_columns(year),
+                violence_id=F("event__violence"),
+                violence_name=F("event__violence__name"),
+                violence_sub_type_id=F("event__violence_sub_type"),
+                violence_sub_type_name=F("event__violence_sub_type__name"),
+            ),
+        )
+
+        disaster_figure_qs = figures_in_year_window(year, Crisis.CRISIS_TYPE.DISASTER)
+        disaster_base = (
+            Figure.objects.filter(id__in=disaster_figure_qs.values("id"))
+            .order_by()
+            .values(
+                "event__id",
+                "event__event_type",
+                "event__name",
+                "event__start_date",
+                "event__end_date",
+                "event__disaster_category",
+                "event__disaster_category__name",
+                "event__disaster_sub_category",
+                "event__disaster_sub_category__name",
+                "event__disaster_type",
+                "event__disaster_type__name",
+                "event__disaster_sub_type",
+                "event__disaster_sub_type__name",
+                "country",
+                "country__iso3",
+                "country__idmc_short_name",
+            )
+            .annotate(**_displacement_sums())
+        )
+        bulk_insert_from_queryset(
+            GiddEventDisplacement,
+            _with_country_codes(disaster_base),
+            dict(
+                _shared_columns(year),
+                hazard_category_id=F("event__disaster_category"),
+                hazard_category_name=F("event__disaster_category__name"),
+                hazard_sub_category_id=F("event__disaster_sub_category"),
+                hazard_sub_category_name=F("event__disaster_sub_category__name"),
+                hazard_type_id=F("event__disaster_type"),
+                hazard_type_name=F("event__disaster_type__name"),
+                hazard_sub_type_id=F("event__disaster_sub_type"),
+                hazard_sub_type_name=F("event__disaster_sub_type__name"),
+            ),
+        )
+
+    # One pass covers both causes: `cause` is a group key, conflict rows carry NULL in every hazard
+    # column and disaster rows NULL in both violence columns, and PG groups NULLs as equal.
+    # `nd`/`td`, not the field names -- annotate() refuses a name that collides with a model field.
+    rollup = (
+        GiddEventDisplacement.objects.order_by()
+        .values(
+            "year",
+            "cause",
+            "country_id",
+            "iso3",
+            "country_name",
+            "violence_id",
+            "violence_name",
+            "violence_sub_type_id",
+            "violence_sub_type_name",
+            "hazard_category_id",
+            "hazard_category_name",
+            "hazard_sub_category_id",
+            "hazard_sub_category_name",
+            "hazard_type_id",
+            "hazard_type_name",
+            "hazard_sub_type_id",
+            "hazard_sub_type_name",
+        )
+        .annotate(nd=Sum("new_displacement"), td=Sum("total_displacement"))
+    )
+    bulk_insert_from_queryset(
+        GiddDisplacement,
+        rollup,
+        dict(
+            year=F("year"),
+            cause=F("cause"),
+            country_id=F("country_id"),
+            iso3=F("iso3"),
+            country_name=F("country_name"),
+            violence_id=F("violence_id"),
+            violence_name=F("violence_name"),
+            violence_sub_type_id=F("violence_sub_type_id"),
+            violence_sub_type_name=F("violence_sub_type_name"),
+            hazard_category_id=F("hazard_category_id"),
+            hazard_category_name=F("hazard_category_name"),
+            hazard_sub_category_id=F("hazard_sub_category_id"),
+            hazard_sub_category_name=F("hazard_sub_category_name"),
+            hazard_type_id=F("hazard_type_id"),
+            hazard_type_name=F("hazard_type_name"),
+            hazard_sub_type_id=F("hazard_sub_type_id"),
+            hazard_sub_type_name=F("hazard_sub_type_name"),
+            new_displacement=F("nd"),
+            total_displacement=F("td"),
+            new_displacement_rounded=rounded_figure_expr("nd"),
+            total_displacement_rounded=rounded_figure_expr("td"),
+        ),
+    )
+
+
 # Hard ceiling for one generation run (currently ~12 min in production). The soft
 # limit raises inside the task so the run rolls back and marks itself FAILED; the
 # hard limit is the kill-switch backstop. The lock TTL must stay ABOVE the hard
@@ -825,6 +1057,8 @@ def _generate_gidd_data(log_id):
             GiddFigure.objects.all().delete()
             # -- Delete all the GiddEvent objects
             GiddEvent.objects.all().delete()
+            GiddEventDisplacement.objects.all().delete()
+            GiddDisplacement.objects.all().delete()
 
             # Create new data for GIDD
             update_conflict_and_disaster_data()
@@ -832,6 +1066,7 @@ def _generate_gidd_data(log_id):
             update_displacement_data()
             update_idps_sadd_estimates_country_names()
             update_gidd_event_and_gidd_figure_data()
+            update_new_gidd_tables()
             StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.SUCCESS, completed_at=timezone.now())
         logger.info("GIDD data updated.")
     except Exception as e:
