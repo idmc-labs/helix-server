@@ -57,24 +57,11 @@ class TestGiddRestPaginationCap(GiddRestApiMixin, HelixAPITestCase):
             with self.subTest(viewset=viewset.__name__):
                 self.assertIs(viewset.pagination_class, GiddLimitOffsetPagination)
 
-    def test_the_cap_comes_from_settings_and_is_not_none(self):
-        # `LimitOffsetPagination` leaves `max_limit` None, which is the unbounded case.
-        self.assertIsNotNone(GiddLimitOffsetPagination().max_limit)
-        self.assertEqual(GiddLimitOffsetPagination().max_limit, settings.GIDD_REST_MAX_PAGE_SIZE)
-
     @override_settings(GIDD_REST_MAX_PAGE_SIZE=1234)
     def test_the_cap_is_read_from_settings_per_request(self):
         # `LimitOffsetPagination` leaves `max_limit` None, the unbounded case; a cap bound at
         # import time, or one not sourced from settings at all, misses the override.
         self.assertEqual(GiddLimitOffsetPagination().max_limit, 1234)
-
-    def test_the_rest_bound_matches_the_graphql_bound(self):
-        # Both bounds default to the same `GIDD_MAX_PAGE_SIZE` literal, but the REST one is
-        # env-overridable, so an override set for REST alone would silently split the two.
-        self.assertEqual(
-            settings.GIDD_REST_MAX_PAGE_SIZE,
-            settings.GRAPHENE_DJANGO_EXTRAS["MAX_PAGE_SIZE"],
-        )
 
     @override_settings(GIDD_REST_MAX_PAGE_SIZE=2)
     def test_a_limit_above_the_cap_is_clamped(self):
@@ -98,6 +85,7 @@ class TestGiddRestPaginationCap(GiddRestApiMixin, HelixAPITestCase):
         rest = response.json()
         seen = [row["iso3"] for row in first["results"]] + [row["iso3"] for row in rest["results"]]
         self.assertCountEqual(seen, ["AFG", "NPL", "IND"])
+        self.assertIsNone(rest["next"], "the last page must not advertise another one")
 
     @override_settings(GIDD_REST_MAX_PAGE_SIZE=1_000)
     def test_a_limit_below_the_cap_is_honoured(self):

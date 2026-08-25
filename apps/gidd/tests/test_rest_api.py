@@ -323,8 +323,10 @@ class TestGiddDisasterRestApi(GiddRestApiMixin, HelixAPITestCase):
             hazard_sub_category_name="Geophysical",
             hazard_type_name="Earthquake",
             hazard_sub_type_name="Ground shaking",
-            event_codes=["GLIDE-1", "GLIDE-2"],
-            event_codes_type=["Glide Number", "Government Assigned Identifier"],
+            # The per-country columns hold different values from the all-country ones, so the
+            # assertion below can only pass if the serializer reads `all_country_event_codes*`.
+            event_codes=["PER-COUNTRY-1"],
+            event_codes_type=["Government Assigned Identifier"],
             all_country_event_codes=["GLIDE-1", "GLIDE-2"],
             all_country_event_codes_type=["Glide Number", "Government Assigned Identifier"],
             displacement_occurred=[Figure.DISPLACEMENT_OCCURRED.BEFORE.value],

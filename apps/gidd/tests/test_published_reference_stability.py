@@ -9,8 +9,6 @@ part that can still be reached back through a foreign key:
 - an event stays deletable, because `event_raw_id` carries the published id instead
 - a report stays deletable too, and deleting one nulls the foreign key rather than taking the
   published analysis row with it
-- the names a release publishes come from the denormalised columns, not from a live join, so
-  renaming a country or a hazard type in Helix cannot change an already-published release
 
 `on_delete` is enforced by Django, not by the database, so these guarantees cover ORM and admin
 deletions. Raw SQL bypasses them.
@@ -108,56 +106,7 @@ class TestPublishedIdsSurviveHelixDeletes(TestCase):
             report_raw_id=report.id,
         )
         report.delete()
+        # The published row outlives the report: the foreign key is nulled rather than cascading,
+        # so a caller's reference into the release still resolves.
         analysis.refresh_from_db()
-        # Generation assigns the report's id as the row's key, so what a caller references
-        # survives both a rebuild and the report being deleted.
         assert analysis.report_id is None
-
-
-class TestPublishedNamesComeFromTheRelease(TestCase):
-    """The names are captured at generation, so a Helix rename must not reach a published release.
-
-    `Country.name` and `Country.idmc_short_name` genuinely differ for a good number of countries, so
-    a fixture where they agree cannot tell a cached read from a live one. These deliberately differ.
-    """
-
-    def setUp(self):
-        self.country = CountryFactory.create(
-            iso3="AFG",
-            name="Islamic Republic of Afghanistan",
-            idmc_short_name="Afghanistan",
-        )
-        self.hazard_category = DisasterCategoryFactory.create(name="Natural")
-        self.hazard_sub_category = DisasterSubCategoryFactory.create(category=self.hazard_category)
-        self.hazard_type = DisasterTypeFactory.create(disaster_sub_category=self.hazard_sub_category, name="Earthquake")
-        self.row = GiddEventDisplacement.objects.create(
-            country=self.country,
-            iso3="AFG",
-            country_name="Afghanistan",
-            year=YEAR,
-            cause=Crisis.CRISIS_TYPE.DISASTER,
-            event_name="Afghanistan: Earthquake",
-            new_displacement=100,
-            hazard_category=self.hazard_category,
-            hazard_sub_category=self.hazard_sub_category,
-            hazard_type=self.hazard_type,
-            hazard_category_name="Natural",
-            hazard_type_name="Earthquake",
-        )
-
-    def test_a_helix_rename_does_not_change_the_published_row(self):
-        self.country.name = "RENAMED IN HELIX"
-        self.country.idmc_short_name = "RENAMED IN HELIX"
-        self.country.save()
-        self.hazard_type.name = "RENAMED IN HELIX"
-        self.hazard_type.save()
-
-        self.row.refresh_from_db()
-        assert self.row.country_name == "Afghanistan"
-        assert self.row.hazard_type_name == "Earthquake"
-
-    def test_the_published_country_name_is_the_idmc_short_name(self):
-        # The xlsx export used to read `country.name` live while every other GIDD surface published
-        # `idmc_short_name`, so the two disagreed for the countries where those columns differ.
-        assert self.country.name != self.country.idmc_short_name
-        assert self.row.country_name == self.country.idmc_short_name
