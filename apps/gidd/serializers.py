@@ -68,6 +68,13 @@ class ConflictSerializer(serializers.ModelSerializer):
         "Units are recorded as 'People'."
     )
 
+    # A method field has no `source`, so the ordering filter cannot derive one. Rounding is
+    # monotonic, so the raw column sorts identically and only refines ties.
+    ORDERING_SOURCES = {
+        "new_displacement_rounded": "new_displacement",
+        "total_displacement_rounded": "total_displacement",
+    }
+
     @extend_schema_field(OpenApiTypes.INT)
     def get_new_displacement_rounded(self, obj):
         return round_and_remove_zero(obj["new_displacement"])
@@ -141,8 +148,6 @@ class DisasterSerializer(serializers.ModelSerializer):
         "the event likely ended. The values indicate the period around the date."
     )
 
-    # event_codes / event_codes_type reproduce the old cross-country behaviour from the
-    # `_all_event_codes` annotation added by DisasterViewSet.get_queryset.
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_event_codes(self, obj):
         return extract_event_code_data_list(obj._all_event_codes)["code"]
@@ -239,6 +244,13 @@ class DisplacementDataSerializer(serializers.Serializer):
         "result of disasters as of the end of the reporting year. "
         "Units are recorded as 'People'."
     )
+
+    ORDERING_SOURCES = {
+        "conflict_new_displacement_rounded": "conflict_new_displacement",
+        "conflict_total_displacement_rounded": "conflict_total_displacement",
+        "disaster_new_displacement_rounded": "disaster_new_displacement",
+        "disaster_total_displacement_rounded": "disaster_total_displacement",
+    }
 
     @extend_schema_field(OpenApiTypes.INT)
     def get_conflict_new_displacement_rounded(self, obj):

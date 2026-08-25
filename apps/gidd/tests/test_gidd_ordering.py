@@ -11,11 +11,13 @@ The direction of the tiebreak follows the LEADING key, so a tie group reads the 
 as the sort that was asked for.
 """
 
+from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
-from apps.gidd.models import Conflict, ReleaseMetadata
-from apps.gidd.views import ConflictViewSet
+from apps.gidd.models import Conflict, GiddDisplacement, GiddEventDisplacement, ReleaseMetadata
+from apps.gidd.views import ConflictViewSet, DisasterViewSet
+from apps.crisis.models import Crisis
 from helix.caches import external_api_cache
 from utils.factories import ClientFactory, CountryFactory
 from utils.tests import HelixAPITestCase
@@ -146,3 +148,48 @@ class TestGiddOrderingPagesTiesStably(GiddConflictListMixin, HelixAPITestCase):
         assert len(seen) == len(set(seen)), f"a row came back on more than one page: {seen}"
         assert set(seen) == set(self.markers), f"paging skipped a row: {sorted(set(self.markers) - set(seen))}"
         assert years == sorted(years), f"the requested sort did not hold across pages: {years}"
+
+
+class GiddComputedFieldOrderingTest(GiddConflictListMixin, HelixAPITestCase):
+    """Sort keys whose serializer field is computed rather than stored.
+
+    `*_rounded` and `event_codes` are `SerializerMethodField`s, so DRF reports `source == "*"` and
+    the filter cannot derive an ORM path; an unresolved term is refused with a 400.
+    `ORDERING_SOURCES` names the column a term is computed from, for the rounded figures only:
+    rounding is monotonic, so the raw column gives the same order. `event_codes` carries no
+    mapping, so sorting by it is refused.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.factory = APIRequestFactory()
+        country = self.create_country("AFG", "Afghanistan")
+        for index, year in enumerate(DATA_YEARS):
+            self.create_displacement(country, year, index)
+
+    def order_by_sql(self, view_class, queryset, ordering):
+        request = self.factory.get("/", {"client_id": self.CLIENT_CODE, "ordering": ordering})
+        view = view_class()
+        view.action = "list"
+        view.args, view.kwargs = (), {}
+        view.request = Request(request)
+        return str(view.filter_queryset(queryset).query).split("ORDER BY")[-1].strip()
+
+    def test_a_rounded_term_sorts_on_the_column_it_is_computed_from(self):
+        for term, column in (
+            ("new_displacement_rounded", "new_displacement"),
+            ("total_displacement_rounded", "total_displacement"),
+        ):
+            with self.subTest(term=term):
+                sql = self.order_by_sql(ConflictViewSet, GiddDisplacement.objects.all(), term)
+                self.assertIn(column, sql)
+
+    def test_an_event_codes_term_is_refused(self):
+        for term in ("event_codes", "event_codes_type"):
+            with self.subTest(term=term):
+                with self.assertRaises(ValidationError):
+                    self.order_by_sql(DisasterViewSet, GiddEventDisplacement.objects.all(), term)
+
+    def test_an_unknown_term_is_still_refused(self):
+        with self.assertRaises(ValidationError):
+            self.order_by_sql(ConflictViewSet, GiddDisplacement.objects.all(), "not_a_column")

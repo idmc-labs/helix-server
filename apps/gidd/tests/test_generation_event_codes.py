@@ -3,7 +3,7 @@ from django.test import TestCase
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 from apps.event.models import EventCode
-from apps.gidd.models import Disaster, GiddEvent, StatusLog
+from apps.gidd.models import GiddEvent, GiddEventDisplacement, StatusLog
 from apps.gidd.tasks import update_gidd_data
 from apps.users.enums import USER_ROLE
 from utils.factories import (
@@ -76,7 +76,8 @@ class GiddDuplicateEventCodeTestCase(TestCase):
         status_log.refresh_from_db()
         assert status_log.status == StatusLog.Status.SUCCESS
 
-        disaster = Disaster.objects.get(event_id=self.event.id, country_id=self.country.id, year=2018)
+        # One row per (event, country, year) -- the grain the retired Disaster table had.
+        disaster = GiddEventDisplacement.objects.get(event_raw_id=self.event.id, country_id=self.country.id, year=2018)
         assert disaster.event_codes == ["GLIDE-DUP-1", "GLIDE-DUP-1"]
         # The two arrays are built by separate aggregates over one sort; a code must keep its label.
         assert len(disaster.event_codes) == len(disaster.event_codes_type)
