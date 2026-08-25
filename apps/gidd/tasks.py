@@ -29,8 +29,6 @@ from utils.common import redis_lock, round_and_remove_zero
 from utils.db import Array, rounded_figure_expr
 
 from .models import (
-    Conflict,
-    Disaster,
     GiddDisplacement,
     GiddEvent,
     GiddEventDisplacement,
@@ -667,7 +665,6 @@ def update_new_gidd_tables():
                 violence_name=F("event__violence__name"),
                 violence_sub_type_id=F("event__violence_sub_type"),
                 violence_sub_type_name=F("event__violence_sub_type__name"),
-                glide_numbers=empty_char_array(),
                 displacement_occurred=empty_int_array(),
             ),
         )
@@ -684,7 +681,6 @@ def update_new_gidd_tables():
                 "event__end_date",
                 "event__start_date_accuracy",
                 "event__end_date_accuracy",
-                "event__glide_numbers",
                 "event__disaster_category",
                 "event__disaster_category__name",
                 "event__disaster_sub_category",
@@ -712,7 +708,6 @@ def update_new_gidd_tables():
                 end_date_accuracy=enum_label_case(
                     "event__end_date_accuracy", Event._meta.get_field("end_date_accuracy").enum
                 ),
-                glide_numbers=Coalesce(F("event__glide_numbers"), empty_char_array()),
                 displacement_occurred=Coalesce(
                     ArrayAgg(
                         F("displacement_occurred"),
@@ -818,72 +813,6 @@ def _all_country_event_code_cte():
     )
 
 
-def update_witness_tables():
-    """Derive Conflict and Disaster from GiddEventDisplacement.
-
-    Nothing serves from these two any more; they exist so the pair that replaced them can be
-    diffed against the shape they replace, and they are deleted once that agreement holds. Deriving
-    them from the new tables rather than from Figure is what makes the comparison meaningful: if the
-    new tables are wrong, these are wrong the same way, and a cross-ref gate against a ref that
-    still builds them from Figure catches it.
-    """
-    # Conflict is country x year: roll the event grain up, discarding the typology split.
-    bulk_insert_from_queryset(
-        Conflict,
-        GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.CONFLICT)
-        .order_by()
-        .values("country_id", "iso3", "country_name", "year")
-        .annotate(nd=Sum("new_displacement"), td=Sum("total_displacement")),
-        dict(
-            country_id=F("country_id"),
-            iso3=F("iso3"),
-            country_name=F("country_name"),
-            year=F("year"),
-            new_displacement=F("nd"),
-            total_displacement=F("td"),
-            new_displacement_rounded=rounded_figure_expr("nd"),
-            total_displacement_rounded=rounded_figure_expr("td"),
-        ),
-    )
-
-    # Disaster shares the event grain exactly, so this is a column copy -- which makes a row-count
-    # difference an immediate signal rather than something to be aggregated away.
-    disaster_base = GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.DISASTER).order_by()
-    bulk_insert_from_queryset(
-        Disaster,
-        disaster_base,
-        dict(
-            event_id=F("event_id"),
-            event_raw_id=F("event_raw_id"),
-            event_name=F("event_name"),
-            year=F("year"),
-            country_id=F("country_id"),
-            iso3=F("iso3"),
-            country_name=F("country_name"),
-            start_date=F("start_date"),
-            start_date_accuracy=F("start_date_accuracy"),
-            end_date=F("end_date"),
-            end_date_accuracy=F("end_date_accuracy"),
-            hazard_category_id=F("hazard_category_id"),
-            hazard_category_name=F("hazard_category_name"),
-            hazard_sub_category_id=F("hazard_sub_category_id"),
-            hazard_sub_category_name=F("hazard_sub_category_name"),
-            hazard_type_id=F("hazard_type_id"),
-            hazard_type_name=F("hazard_type_name"),
-            hazard_sub_type_id=F("hazard_sub_type_id"),
-            hazard_sub_type_name=F("hazard_sub_type_name"),
-            new_displacement=F("new_displacement"),
-            new_displacement_rounded=F("new_displacement_rounded"),
-            total_displacement=F("total_displacement"),
-            total_displacement_rounded=F("total_displacement_rounded"),
-            glide_numbers=F("glide_numbers"),
-            displacement_occurred=F("displacement_occurred"),
-            event_codes=F("all_country_event_codes"),
-            event_codes_type=F("all_country_event_codes_type"),
-        ),
-    )
-
-
 @redis_lock(GIDD_GENERATION_LOCK_KEY, GIDD_GENERATION_LOCK_TTL)
 def _generate_gidd_data(log_id):
     try:
@@ -897,9 +826,6 @@ def _generate_gidd_data(log_id):
             GiddEvent.objects.all().delete()
             GiddEventDisplacement.objects.all().delete()
             GiddDisplacement.objects.all().delete()
-            # Witness tables, derived below from the new ones.
-            Conflict.objects.all().delete()
-            Disaster.objects.all().delete()
 
             # Create new data for GIDD
             update_idps_sadd_estimates_country_names()
@@ -907,7 +833,6 @@ def _generate_gidd_data(log_id):
             update_new_gidd_tables()
             # After update_new_gidd_tables: reads the GiddDisplacement rows it writes.
             update_public_figure_analysis()
-            update_witness_tables()
             StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.SUCCESS, completed_at=timezone.now())
         logger.info("GIDD data updated.")
     except Exception as e:

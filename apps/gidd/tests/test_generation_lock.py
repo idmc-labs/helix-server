@@ -21,7 +21,6 @@ from utils.tests import HelixTestCase
 # pipeline calls it last. It writes the tables whose delete-before-insert property is asserted.
 GENERATION_STEPS = [
     "apps.gidd.tasks.update_new_gidd_tables",
-    "apps.gidd.tasks.update_witness_tables",
     "apps.gidd.tasks.update_public_figure_analysis",
     "apps.gidd.tasks.update_idps_sadd_estimates_country_names",
     "apps.gidd.tasks.update_gidd_event_and_gidd_figure_data",
