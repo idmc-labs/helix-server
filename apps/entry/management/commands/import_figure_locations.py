@@ -6,23 +6,11 @@ from apps.entry.models import FigureLocation
 
 class FigureLocationPcodeSerializer(serializers.ModelSerializer):
     """
-    The narrow slice of a figure location this importer may edit: its p-code fields.
+    The p-code slice of a figure location, kept apart from the app's `FigureLocationSerializer`.
 
-    Deliberately not built on `FigureLocationSerializer`. That one is the app's own, nested in
-    `FigureSerializer.geo_locations`, and covers the whole model — 32 fields. A serializer is
-    constructed per sheet row and builds and binds a field object per field, which at a few
-    milliseconds a row is more than everything else a row does put together; a p-code sheet runs to
-    hundreds of thousands of rows.
-
-    Nothing is lost by narrowing to these fields. The wide serializer's own checks are decided by
-    fields absent here: `validate_lat`/`validate_lon` read the coordinates, its `update()` drops
-    `geocoder_metadata`, and its `validate()` derives `country` from `country_code` only when there
-    is no instance to read it from — which an update-only importer never hits. The column limits
-    (`pcode` 64, `pcode_source` 256) and the p-code accuracy choices come from the model.
-
-    Narrowing is also what keeps the sheet honest: the wide serializer exposed `lat`, `lon`,
-    `display_name` and `country_code` as importable columns, so a p-code sheet could silently move
-    a location.
+    That one covers the whole model, and one is built per sheet row. Narrowing also keeps a p-code
+    sheet from carrying `lat`, `lon` or `display_name` and moving a location by accident. None of
+    the wide serializer's checks read these fields, so nothing is lost.
     """
 
     class Meta:

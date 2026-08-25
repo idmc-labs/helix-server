@@ -30,11 +30,9 @@ class FigureRoleAndDatesSerializer(MetaInformationSerializerMixin, serializers.M
     What is also lost, and wanted: `end_date_accuracy` is no longer silently cleared for a stock
     category, and a figure keeps its review status when its dates are corrected.
 
-    What had to be carried over rather than dropped: the checks that are themselves decided by
-    these six fields. A date the app would refuse must not be written here, or the row fails
-    validation on every later edit — the very trap this class exists to avoid. Those checks are
-    scoped to the rows that supply a date, so a sheet moving only the role leaves a figure's
-    stored dates unexamined.
+    Carried over rather than dropped: the checks decided by these six fields. A date the app would
+    refuse must not be written here, or the row fails validation on every later edit. Those checks
+    are scoped to rows that supply a date.
     """
 
     class Meta:
@@ -52,12 +50,9 @@ class FigureRoleAndDatesSerializer(MetaInformationSerializerMixin, serializers.M
         attrs = super().validate(attrs)
         errors = OrderedDict()
 
-        # The two dates are one group: every rule below is decided by the pair, so supplying
-        # either puts both under review, and the one left out is read from the row as stored.
-        # A row that supplies neither leaves the pair untouched, and whether it satisfies today's
-        # rules is not this import's question — checking it would refuse to move the role of a
-        # figure whose stored dates predate those rules. Membership, not truthiness: the
-        # clear-token supplies an explicit None, which is the edit these rules most need to see.
+        # One group: each rule below is decided by the pair, so either date puts both under
+        # review. A row supplying neither must not be refused over dates it never touched.
+        # Membership, not truthiness — the clear-token supplies None, the edit most worth checking.
         if "start_date" in attrs or "end_date" in attrs:
             start_date = attrs.get("start_date", getattr(self.instance, "start_date", None))
             end_date = attrs.get("end_date", getattr(self.instance, "end_date", None))
@@ -66,17 +61,13 @@ class FigureRoleAndDatesSerializer(MetaInformationSerializerMixin, serializers.M
             if start_date and end_date and start_date > end_date:
                 errors["start_date"] = f"{start_date} is after end_date {end_date}"
 
-            # A date the app itself would refuse must not be written here either: the row would
-            # then fail validation on every later edit, which is the trap this serializer exists
-            # to avoid.
+            # A date the app would refuse must not be written here: it would break every later edit.
             errors.update(is_date_within_future_bound(start_date, "start_date"))
             errors.update(is_date_within_future_bound(end_date, "end_date"))
 
             if category in Figure.flow_list():
-                # FigureSerializer._validate_category compares a flow figure's end_date against
-                # today without a null guard, so clearing it leaves a row that raises TypeError on
-                # every later save. Its year_difference also goes null, dropping it out of flow
-                # reporting.
+                # FigureSerializer._validate_category compares end_date to today with no null
+                # guard, so a cleared one raises TypeError on every later save.
                 if end_date is None:
                     errors["end_date"] = "A flow figure must keep an end date; clearing it would make the figure uneditable"
                 elif end_date > timezone.now().date():

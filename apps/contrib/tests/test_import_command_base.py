@@ -1,10 +1,8 @@
 """
 Coverage for the parts of `BaseImportCommand` no shipped importer exercises.
 
-`CodeLookup` and list-valued columns are framework features, but the only importer that used them
-narrowed its editable surface, which would leave both untested. The importer below exists purely to
-drive them: it is defined here rather than registered as a management command, and `handle()` is
-called directly, which is the same entry point `call_command` reaches.
+`CodeLookup` and list-valued columns would otherwise be untested. The importer below exists only to
+drive them, unregistered and called through `handle()` — the entry point `call_command` reaches.
 """
 
 import tempfile
@@ -38,7 +36,7 @@ def write_sheet(headers, rows, sheet_name="Data"):
 
 
 class WideLocationSerializer(serializers.ModelSerializer):
-    """A code column and a list column, which is all these tests need."""
+    """A code column and a list column."""
 
     class Meta:
         model = FigureLocation
@@ -58,7 +56,7 @@ class WideLocationImportCommand(BaseImportCommand):
 
 class TestImportCommandBase(HelixTestCase):
     def run_import(self, path):
-        """Drive the unregistered command through its real entry point, capturing its output."""
+        """Drive the unregistered command through its real entry point."""
         command = WideLocationImportCommand()
         command.stdout = OutputWrapper(StringIO())
         command.stderr = OutputWrapper(StringIO())

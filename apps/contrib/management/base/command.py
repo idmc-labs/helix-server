@@ -131,14 +131,7 @@ class BaseImportCommand(BaseCommand):
     _fields_cache: typing.Optional[typing.Dict] = None
 
     def _serializer_fields(self, serializer_cls) -> typing.Dict:
-        """
-        The field map of a serializer class, built once and kept.
-
-        Reading a cell asks what type its column is, and answering that used to construct a whole
-        serializer — twice per cell, since both the date narrowing and the list splitting ask. On a
-        wide serializer that is milliseconds per cell and dwarfs everything else the row does. The
-        map only describes the columns, so it is the same for every row.
-        """
+        """Cached: the map describes the columns, not the row, and building one is expensive."""
         if self._fields_cache is None:
             self._fields_cache = {}
         if serializer_cls not in self._fields_cache:
@@ -284,9 +277,7 @@ class BaseImportCommand(BaseCommand):
                 return ""
         return None
 
-    #: Sheet rows whose match keys are resolved together. Resolving row by row costs one query per
-    #: row, which on a large sheet is most of the run; a chunk costs one query per match column.
-    #: Bounded so the instances of a chunk are the only ones held at a time.
+    #: Rows whose match keys are resolved in one query. Bounded so only a chunk is held at a time.
     RESOLVE_CHUNK_SIZE = 1000
 
     def _match_field(self, field: str):
@@ -309,14 +300,9 @@ class BaseImportCommand(BaseCommand):
 
     def resolve_chunk(self, chunk: typing.List[typing.Dict]) -> typing.Dict:
         """
-        Resolve the match keys of a whole chunk, one query per match column.
+        Resolve a chunk's match keys together: {column: {key: [instances]}}, one query per column.
 
-        Returns {column: {coerced key: [instances]}}. Every match is kept, not just the first two,
-        so an ambiguous key stays visible as more than one — a match field is not necessarily
-        unique, since ``Figure.uuid`` carries whatever uuid an external import supplied.
-
-        A key that will not coerce is left out and reported when its own row is prepared, so one
-        bad cell cannot cost the chunk its query.
+        Every match is kept, not just the first two, because a match field need not be unique.
         """
         resolved: typing.Dict[str, typing.Dict] = {}
         for column, field in self.match_columns:
@@ -329,7 +315,7 @@ class BaseImportCommand(BaseCommand):
                 try:
                     keys.add(model_field.to_python(raw))
                 except (DjangoValidationError, ValueError, TypeError):
-                    continue
+                    continue  # reported against its own row, so one bad cell keeps the chunk
             if not keys:
                 continue
             matches: typing.Dict[typing.Any, typing.List] = {}
@@ -342,16 +328,13 @@ class BaseImportCommand(BaseCommand):
         """
         Find the single row `key` names. Returns (instance, error_message); exactly one is set.
 
-        With `resolved` from `resolve_chunk` the answer is already in memory; without it the row is
-        queried on its own, which keeps the method usable for a single row.
+        Falls back to its own query when `resolved` is absent, so a lone row still works.
         """
         model_field = self._match_field(field)
         try:
             coerced = model_field.to_python(key)
         except (DjangoValidationError, ValueError, TypeError):
-            # A key column takes raw sheet text: a malformed uuid or a non-numeric id fails here.
-            # Without this the framework's promise — every row checked, every error named with its
-            # row — is replaced by a traceback that does not say which of thousands of rows is bad.
+            # Caught so a bad cell becomes one row's error, not a traceback naming no row at all.
             return None, f"{key!r} is not a valid {column}"
 
         if resolved is not None and column in resolved:
@@ -412,8 +395,7 @@ class BaseImportCommand(BaseCommand):
             if error:
                 row_errors[column] = error
             elif self.max_id is not None and instance.pk > self.max_id:
-                # Excluded before validation: the row is not this run's to write, so whether it
-                # would have passed is not a question worth answering or reporting on.
+                # Excluded before validation: not this run's row, so its validity is moot.
                 return PreparedRow(None, True, {}, [], skipped=True)
             else:
                 # The resolved pk, not the cell: a key written as text or as a float would
@@ -673,21 +655,12 @@ class BaseImportCommand(BaseCommand):
         """
         Validate and persist row by row. Returns (created, updated, unchanged).
 
-        One row is resolved, validated and saved before the next is read, and nothing about it is
-        retained afterwards. A serializer is an expensive object — it deep-copies every declared
-        field on construction — so keeping one per row made a large sheet cost gigabytes and fail
-        on memory before it wrote anything.
+        Nothing is retained between rows: a serializer per row is what a large sheet cannot afford.
+        Saving as we go is still all-or-nothing because `run_import` wraps this in a transaction.
 
-        Saving as we go does not weaken the all-or-nothing guarantee: `run_import` holds a
-        transaction around this, so a validation error raised at the end discards every write.
-        Once a row has failed, later rows are still validated but no longer saved, since the run
-        is already going to roll back and the writes would be thrown away.
-
-        What this does change: a row is validated against a database in which earlier rows are
-        already written, where before every row saw the pristine state. Rows must target distinct
-        model rows, so no row can see its own target altered — but a serializer that validates
-        against the rest of the table (a uniqueness check, say) would now see the earlier writes.
-        No importer does that today.
+        Caveat: a row is validated against a database holding the earlier rows' writes. Rows target
+        distinct model rows, so none sees its own target move — but a serializer validating against
+        the rest of the table would see them. None does today.
         """
         errors: typing.List[typing.Tuple[int, str, str]] = []
         # Row number each targeted row was first seen on. Two rows aimed at one row would each
@@ -696,11 +669,9 @@ class BaseImportCommand(BaseCommand):
         # as a number on one row and as text on another is still one target.
         pk_rows: typing.Dict[typing.Any, int] = {}
         ignored_cells: typing.List[typing.Tuple[int, str]] = []
-        # Changelog lines are held back rather than written as they happen: a run that fails at its
-        # last row commits nothing, and lines already printed would claim changes that never landed.
+        # Held back: a run that fails at its last row commits nothing, so printed lines would lie.
         changelog: typing.List[str] = []
-        # Rows --max-id excluded. Reported rather than dropped quietly: a sheet that asked for a
-        # row and did not get it must say so, or "no failure" only means "no failure reported".
+        # Reported, never dropped quietly: otherwise "no failure" only means "no failure reported".
         skipped: typing.List[int] = []
         created = updated = unchanged = 0
 
@@ -740,9 +711,7 @@ class BaseImportCommand(BaseCommand):
                     ignored_cells.append((index, cell))
 
                 if errors:
-                    # The run will roll back, so writing this row buys nothing. Keep reading, though:
-                    # the operator is owed every error in the sheet, not just the first.
-                    continue
+                    continue  # bound for rollback; keep validating so every error is reported
 
                 fields = self.changelog_fields(serializer) if is_update else []
                 before = self._snapshot(serializer.instance, fields) if is_update else {}
@@ -770,7 +739,7 @@ class BaseImportCommand(BaseCommand):
         return created, updated, unchanged
 
     def print_skipped_rows(self, skipped: typing.List[int]):
-        """Name every row --max-id excluded, so the sheet's unmet asks are on the record."""
+        """Name every excluded row: a sheet's unmet asks belong on the record."""
         if not skipped:
             return
         self.stdout.write(

@@ -293,10 +293,8 @@ class TestImportFiguresCommand(HelixTestCase):
 
     # ----- the date rules are scoped to rows that supply a date -----
 
-    # A role correction is the whole reason this importer exists, and the figures needing one are
-    # the oldest — the ones whose stored dates predate today's rules. Checking those dates on a row
-    # that does not touch them would refuse the correction, and since the import is all-or-nothing,
-    # one such figure would stop every other row in the sheet.
+    # The figures needing a role correction are the oldest, whose stored dates predate today's
+    # rules. Checking those dates would refuse the correction, and take the whole sheet with it.
 
     def test_a_role_only_row_is_accepted_on_a_flow_figure_with_no_stored_end_date(self):
         figure = self._figure(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)
@@ -331,9 +329,8 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertEqual(self.figure.start_date, date(2020, 9, 1))
 
     def test_an_accuracy_only_row_is_accepted_on_a_figure_whose_stored_dates_are_inverted(self):
-        # An accuracy is not a date and no rule reads one, so an accuracy cannot make any of the
-        # date rules newly true. Folding the accuracies into the group would refuse this row over
-        # dates it never touches.
+        # No rule reads an accuracy, so folding it into the group would refuse a row over dates
+        # it never touches.
         Figure.objects.filter(pk=self.figure.pk).update(start_date=date(2020, 9, 1), end_date=date(2020, 6, 30))
 
         path = write_sheet(["id", "end_date_accuracy"], [{"id": self.figure.id, "end_date_accuracy": "MONTH"}])
@@ -713,13 +710,11 @@ class TestImportFiguresCommand(HelixTestCase):
 
     # ----- rows are validated and saved one at a time -----
 
-    # A serializer deep-copies every declared field on construction, so holding one per row made a
-    # large sheet cost gigabytes. Rows are saved as they are read instead, and the transaction — not
-    # a deferred second pass — is what keeps the run all-or-nothing.
+    # A serializer per row is what a large sheet cannot afford. The transaction, not a deferred
+    # second pass, is what keeps the run all-or-nothing.
 
     def test_a_failing_run_prints_no_changelog_for_the_rows_it_saved(self):
-        # Earlier rows are written before the bad row is reached, and then rolled back. Printing
-        # their changelog lines would claim changes the database never kept.
+        # Earlier rows are written then rolled back; their lines would claim changes never kept.
         other = self._figure()
         path = write_sheet(
             ["id", "role"],
@@ -791,8 +786,7 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertEqual([row["role"] for row in rows], ["TRIANGULATION"])
 
     def test_a_bad_header_fails_before_any_row_is_read(self):
-        # Header checks stay eager despite the lazy row iteration, so a malformed sheet is rejected
-        # up front rather than part-way through the run.
+        # Eager despite the lazy rows, so a malformed sheet fails up front, not part-way through.
         path = write_sheet(["id", "role", "not_a_column"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
         with self.assertRaises(CommandError):
             read_rows(path, data_sheet="Data", allowed_columns=ImportFiguresCommand().import_columns())
@@ -800,8 +794,7 @@ class TestImportFiguresCommand(HelixTestCase):
     # ----- match keys are resolved a chunk at a time -----
 
     def test_a_chunk_resolves_all_its_rows_in_one_query(self):
-        # The point of chunked resolution: cost is per chunk, not per row. Resolving row by row was
-        # most of the run on a large sheet.
+        # The point of chunked resolution: cost is per chunk, not per row.
         figures = [self._figure() for _ in range(5)]
         chunk = [{"id": figure.id, "role": "TRIANGULATION"} for figure in figures]
         command = ImportFiguresCommand()
@@ -825,8 +818,7 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertIn(by_uuid.uuid, resolved["uuid"])
 
     def test_chunked_resolution_still_finds_an_ambiguous_key(self):
-        # Every match is kept, not just the first, so a non-unique uuid is still caught. Figure.uuid
-        # carries whatever uuid an external import supplied and is not unique.
+        # Every match is kept, not just the first, so a non-unique uuid is still caught.
         shared = self.figure.uuid
         twin = self._figure()
         Figure.objects.filter(pk=twin.pk).update(uuid=shared)
@@ -835,8 +827,7 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertEqual(len(resolved["uuid"][shared]), 2)
 
     def test_a_malformed_key_does_not_cost_its_chunk_the_query(self):
-        # One unparseable cell must not stop the rest of the chunk resolving; it becomes that row's
-        # own error when the row is prepared.
+        # One unparseable cell becomes its own row's error, not the chunk's problem.
         figure = self._figure()
         chunk = [{"id": "not-a-number"}, {"id": figure.id}]
 
@@ -878,8 +869,7 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertNotIn("Row 3", output)
 
     def test_a_reused_serializer_does_not_carry_the_previous_rows_validated_data(self):
-        # Row 2 supplies role, row 3 supplies only start_date. Leaked validated data would write
-        # row 2's role onto row 3's figure.
+        # Leaked validated data would write row 2's role onto row 3's figure.
         other = self._figure()
         path = write_sheet(
             ["id", "role", "start_date"],
@@ -948,8 +938,7 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
 
     def test_a_skipped_row_is_not_validated(self):
-        # The row is not this run's to write, so whether it would have passed is moot — an invalid
-        # cell above the bound must not fail the import.
+        # Not this run's row, so its validity is moot; it must not fail the import.
         high = self._figure()
         path = write_sheet(["id", "role"], [{"id": high.id, "role": "NOT_A_ROLE"}])
         out = StringIO()
