@@ -135,8 +135,9 @@ class FigureLocation(UUIDAbstractModel, models.Model):
             ADM5: _("ADM5"),
         }
 
-    # default unique behaviour is removed
-    uuid = models.UUIDField(verbose_name="UUID", blank=True, default=uuid4)
+    # Not unique: one uuid may name many locations, and does — indexed so a lookup by it is not a
+    # scan of the whole table.
+    uuid = models.UUIDField(verbose_name="UUID", blank=True, default=uuid4, db_index=True)
     # external API fields
     wikipedia = models.TextField(verbose_name=_("Wikipedia"), blank=True, null=True)
     rank = models.IntegerField(verbose_name=_("Rank"), blank=True, null=True)
@@ -435,7 +436,10 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
 
     objects = CTEManager()
 
-    uuid = models.UUIDField(verbose_name="UUID", blank=True, default=uuid4)
+    # Not unique: an import carries the uuid its source system supplied, and two figures may share
+    # one. Indexed because it is a lookup key all the same — the bulk importer names a figure by it,
+    # and without an index each row costs a scan of the whole table.
+    uuid = models.UUIDField(verbose_name="UUID", blank=True, default=uuid4, db_index=True)
     entry = models.ForeignKey("Entry", verbose_name=_("Entry"), related_name="figures", on_delete=models.CASCADE)
     # to keep track of the old sub facts
     was_subfact = models.BooleanField(default=False)
