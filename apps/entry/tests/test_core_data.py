@@ -1752,13 +1752,16 @@ class TestCoreData(HelixGraphQLTestCase):
             query DisplacementData($clientId: String!){
                 giddPublicCountryYearDisplacements(
                     clientId: $clientId,
+                    pageSize: 100,
                 ){
-                    conflictNewDisplacement
-                    conflictTotalDisplacement
-                    disasterNewDisplacement
-                    disasterTotalDisplacement
-                    iso3
-                    year
+                    results {
+                        conflictNewDisplacement
+                        conflictTotalDisplacement
+                        disasterNewDisplacement
+                        disasterTotalDisplacement
+                        iso3
+                        year
+                    }
                 }
                 giddPublicConflictStatistics(
                     clientId: $clientId,
@@ -1781,7 +1784,7 @@ class TestCoreData(HelixGraphQLTestCase):
             }
         """
         response = self.query_json(query, variables={"clientId": self.gidd_client.code})
-        r_data = response["data"]["giddPublicCountryYearDisplacements"]
+        r_data = response["data"]["giddPublicCountryYearDisplacements"]["results"]
         system_data = [
             {
                 "iso3": i["iso3"],
@@ -1911,7 +1914,7 @@ class TestCoreData(HelixGraphQLTestCase):
         query = """
             query DisasterData($clientId: String!){
                 giddPublicEvents(
-                    filters: {cause: "disaster"},
+                    filters: {cause: DISASTER},
                     clientId: $clientId,
                     pageSize: 10000,
                 ){
