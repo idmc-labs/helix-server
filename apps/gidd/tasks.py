@@ -374,8 +374,23 @@ def update_gidd_event_and_gidd_figure_data():
                 coordinates=ArrayAgg(locations_coordinates, ordering=locations_order, filter=locations_filter),
                 accuracies=ArrayAgg("geo_locations__accuracy", ordering=locations_order, filter=locations_filter),
                 types=ArrayAgg("geo_locations__identifier", ordering=locations_order, filter=locations_filter),
+                pcodes=ArrayAgg("geo_locations__pcode", ordering=locations_order, filter=locations_filter),
+                pcode_accuracies=ArrayAgg(
+                    "geo_locations__pcode_accuracy", ordering=locations_order, filter=locations_filter
+                ),
+                pcode_sources=ArrayAgg("geo_locations__pcode_source", ordering=locations_order, filter=locations_filter),
             )
-            .values("id", "ids", "names", "coordinates", "accuracies", "types"),
+            .values(
+                "id",
+                "ids",
+                "names",
+                "coordinates",
+                "accuracies",
+                "types",
+                "pcodes",
+                "pcode_accuracies",
+                "pcode_sources",
+            ),
             name="gidd_figure_locations_agg",
         )
 
@@ -498,6 +513,9 @@ def update_gidd_event_and_gidd_figure_data():
                 locations_coordinates=Coalesce(locations_cte.col.coordinates, empty_char_array()),
                 locations_accuracy=Coalesce(locations_cte.col.accuracies, empty_int_array()),
                 locations_type=Coalesce(locations_cte.col.types, empty_int_array()),
+                locations_pcode=Coalesce(locations_cte.col.pcodes, empty_char_array()),
+                locations_pcode_accuracy=Coalesce(locations_cte.col.pcode_accuracies, empty_int_array()),
+                locations_pcode_source=Coalesce(locations_cte.col.pcode_sources, empty_char_array()),
                 # violence_id / violence_sub_type_id stay NULL: the previous
                 # pipeline fetched them but never wrote them (only the *_name
                 # copies below).

@@ -78,6 +78,12 @@ def _get_location_accuracy_label(accuracy):
     return get_enum_label(FigureLocation.ACCURACY.get(accuracy))
 
 
+def _get_pcode_accuracy_label(accuracy):
+    if accuracy is None:
+        return None
+    return get_enum_label(FigureLocation.PCODE_ACCURACY.get(accuracy))
+
+
 def _get_location_type_label(type):
     if type is None:
         return None
@@ -1230,6 +1236,9 @@ DISAGGREGATION_EXPORT_VALUES = (
     "locations_names",
     "locations_accuracy",
     "locations_type",
+    "locations_pcode",
+    "locations_pcode_accuracy",
+    "locations_pcode_source",
     "displacement_occurred",
     "event_main_trigger",
     "gidd_event__event_raw_id",
@@ -1567,6 +1576,9 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                             "Locations name": item["locations_names"],
                             "Locations accuracy": [_get_location_accuracy_label(x) for x in item["locations_accuracy"]],
                             "Locations type": [_get_location_type_label(x) for x in item["locations_type"]],
+                            "Pcode": item["locations_pcode"],
+                            "Pcode accuracy": [_get_pcode_accuracy_label(x) for x in item["locations_pcode_accuracy"]],
+                            "Pcode source": item["locations_pcode_source"],
                             "Displacement occurred": self._get_displacement_occurred(item["displacement_occurred"]),
                         }
                     ),
@@ -1625,6 +1637,9 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                 "Locations name",
                 "Locations accuracy",
                 "Locations type",
+                "Pcode",
+                "Pcode accuracy",
+                "Pcode source",
                 "Displacement occurred",
             ]
         )

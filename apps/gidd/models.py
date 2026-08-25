@@ -505,6 +505,21 @@ class GiddFigure(MetaInformationAbstractModel):
         ),
         default=list,
     )
+    locations_pcode = ArrayField(
+        models.CharField(verbose_name=_("Location P-Code"), max_length=64, null=True),
+        default=list,
+    )
+    locations_pcode_accuracy = ArrayField(
+        models.IntegerField(
+            verbose_name=_("Location P-Code Accuracy"),
+            null=True,
+        ),
+        default=list,
+    )
+    locations_pcode_source = ArrayField(
+        models.CharField(verbose_name=_("Location P-Code Source"), max_length=256, null=True),
+        default=list,
+    )
     displacement_occurred = enum.EnumField(
         enum=Figure.DISPLACEMENT_OCCURRED, verbose_name=_("Displacement Occurred"), blank=True, null=True
     )
