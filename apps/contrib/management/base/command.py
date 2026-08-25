@@ -1,5 +1,6 @@
 """The reusable bulk-import management command base class."""
 
+import contextlib
 import datetime
 import enum
 import typing
@@ -112,10 +113,26 @@ class BaseImportCommand(BaseCommand):
     def lookup_map(self) -> typing.Dict[str, BaseLookup]:
         return {lookup.field: lookup for lookup in self.lookups}
 
-    @staticmethod
-    def _writable_fields(serializer_cls) -> typing.List[str]:
-        serializer = serializer_cls()
-        return [name for name, field in serializer.fields.items() if not field.read_only]
+    #: Field map per serializer class, built once per invocation.
+    _fields_cache: typing.Optional[typing.Dict] = None
+
+    def _serializer_fields(self, serializer_cls) -> typing.Dict:
+        """
+        The field map of a serializer class, built once and kept.
+
+        Reading a cell asks what type its column is, and answering that used to construct a whole
+        serializer — twice per cell, since both the date narrowing and the list splitting ask. On a
+        wide serializer that is milliseconds per cell and dwarfs everything else the row does. The
+        map only describes the columns, so it is the same for every row.
+        """
+        if self._fields_cache is None:
+            self._fields_cache = {}
+        if serializer_cls not in self._fields_cache:
+            self._fields_cache[serializer_cls] = serializer_cls().fields
+        return self._fields_cache[serializer_cls]
+
+    def _writable_fields(self, serializer_cls) -> typing.List[str]:
+        return [name for name, field in self._serializer_fields(serializer_cls).items() if not field.read_only]
 
     def import_columns(self) -> typing.List[str]:
         """
@@ -164,10 +181,10 @@ class BaseImportCommand(BaseCommand):
     }
 
     def _scalar_field(self, column: str):
-        update_fields = self.update_serializer().fields
+        update_fields = self._serializer_fields(self.update_serializer)
         if self.update_only:
             return update_fields.get(column)
-        create_fields = self.create_serializer().fields
+        create_fields = self._serializer_fields(self.create_serializer)
         return create_fields.get(column) or update_fields.get(column)
 
     def _child_field(self, column: str):
@@ -253,32 +270,160 @@ class BaseImportCommand(BaseCommand):
                 return ""
         return None
 
-    def resolve_row(self, column: str, field: str, key):
+    #: Sheet rows whose match keys are resolved together. Resolving row by row costs one query per
+    #: row, which on a large sheet is most of the run; a chunk costs one query per match column.
+    #: Bounded so the instances of a chunk are the only ones held at a time.
+    RESOLVE_CHUNK_SIZE = 1000
+
+    #: When set, an update's UPDATE is held back and issued for a batch of this many rows through
+    #: ``bulk_update`` instead of one statement per row. Off by default: ``bulk_update`` sends no
+    #: ``pre_save``/``post_save`` signals, so an importer opts in only once its model is known to
+    #: have no receivers. ``auto_now`` columns are stamped here rather than by ``Model.save``.
+    BULK_UPDATE_BATCH_SIZE: typing.Optional[int] = None
+
+    @contextlib.contextmanager
+    def _deferred_write(self, instance):
+        """
+        Let ``serializer.save()`` run without issuing the row's UPDATE.
+
+        ``Model.save`` returns without a query when ``update_fields`` is empty, so shadowing the
+        instance's ``save`` with one that forces that turns the write into a no-op while everything
+        else still happens — the serializer's own ``update()`` override, the field assignment, any
+        ``save()`` the model itself defines. The UPDATE is issued later for a whole batch.
+
+        Only the row's own UPDATE is deferred. A many-to-many ``set()`` inside ``update()`` writes
+        as it always did, since it is not part of the row.
+        """
+        original = instance.save
+
+        def no_write(*args, **kwargs):
+            return original(update_fields=[])
+
+        instance.save = no_write
+        try:
+            yield
+        finally:
+            del instance.save
+
+    def _written_columns(self, serializer) -> typing.Set[str]:
+        """The model's own columns this row writes. Excludes m2m and the pk, which bulk_update rejects."""
+        from django.core.exceptions import FieldDoesNotExist
+
+        names = set()
+        for name in serializer.validated_data:
+            try:
+                field = self.model._meta.get_field(name)
+            except FieldDoesNotExist:
+                continue  # a serializer field with no column behind it
+            if field.many_to_many or field.primary_key or not field.concrete:
+                continue
+            names.add(field.name)
+        return names
+
+    def _stamp_auto_now(self, instance) -> typing.Set[str]:
+        """
+        Advance ``auto_now`` columns the way ``Field.pre_save`` would.
+
+        ``bulk_update`` does not run ``Model.save``, so without this a batched import would stop
+        touching ``modified_at``. ``auto_now_add`` is not stamped: it applies to inserts only.
+        """
+        from django.utils import timezone
+
+        stamped = set()
+        for field in self.model._meta.fields:
+            if getattr(field, "auto_now", False):
+                setattr(instance, field.attname, timezone.now())
+                stamped.add(field.name)
+        return stamped
+
+    def _flush_deferred(self, instances: typing.List, columns: typing.Set[str]) -> None:
+        """Issue one UPDATE per batch for the rows whose writes were held back."""
+        if instances and columns:
+            self.model.objects.bulk_update(instances, sorted(columns), batch_size=len(instances))
+        instances.clear()
+        columns.clear()
+
+    def _match_field(self, field: str):
+        """The model field a match column queries through. ``pk`` is a lookup, not a field name."""
+        return self.model._meta.pk if field == "pk" else self.model._meta.get_field(field)
+
+    @staticmethod
+    def _chunks(rows: typing.Iterable[typing.Dict], size: int):
+        """Yield (sheet row number of the first row, chunk), so a row keeps its number in the sheet."""
+        chunk: typing.List[typing.Dict] = []
+        start = 2  # row 1 is the header
+        for raw_row in rows:
+            chunk.append(raw_row)
+            if len(chunk) == size:
+                yield start, chunk
+                start += len(chunk)
+                chunk = []
+        if chunk:
+            yield start, chunk
+
+    def resolve_chunk(self, chunk: typing.List[typing.Dict]) -> typing.Dict:
+        """
+        Resolve the match keys of a whole chunk, one query per match column.
+
+        Returns {column: {coerced key: [instances]}}. Every match is kept, not just the first two,
+        so an ambiguous key stays visible as more than one — a match field is not necessarily
+        unique, since ``Figure.uuid`` carries whatever uuid an external import supplied.
+
+        A key that will not coerce is left out and reported when its own row is prepared, so one
+        bad cell cannot cost the chunk its query.
+        """
+        resolved: typing.Dict[str, typing.Dict] = {}
+        for column, field in self.match_columns:
+            model_field = self._match_field(field)
+            keys = set()
+            for raw_row in chunk:
+                raw = raw_row.get(column)
+                if is_empty(raw):
+                    continue
+                try:
+                    keys.add(model_field.to_python(raw))
+                except (DjangoValidationError, ValueError, TypeError):
+                    continue
+            if not keys:
+                continue
+            matches: typing.Dict[typing.Any, typing.List] = {}
+            for instance in self.model.objects.filter(**{f"{field}__in": list(keys)}):
+                matches.setdefault(getattr(instance, field) if field != "pk" else instance.pk, []).append(instance)
+            resolved[column] = matches
+        return resolved
+
+    def resolve_row(self, column: str, field: str, key, resolved: typing.Optional[typing.Dict] = None):
         """
         Find the single row `key` names. Returns (instance, error_message); exactly one is set.
 
-        Two rows are fetched rather than one because a match field is not necessarily unique —
-        ``Figure.uuid`` carries whatever uuid an external import supplied and lost its unique
-        constraint in 2021. An ambiguous key names both candidates instead of picking one.
+        With `resolved` from `resolve_chunk` the answer is already in memory; without it the row is
+        queried on its own, which keeps the method usable for a single row.
         """
+        model_field = self._match_field(field)
         try:
-            queryset = self.model.objects.filter(**{field: key})
-            matches = list(queryset[:2])
+            coerced = model_field.to_python(key)
         except (DjangoValidationError, ValueError, TypeError):
-            # A key column takes raw sheet text, and a field converts it on the way into the query:
-            # a malformed uuid or a non-numeric id raises here. Without this the framework's
-            # promise — every row checked, every error named with its row — is replaced by a
-            # traceback that does not say which of thousands of rows is bad.
+            # A key column takes raw sheet text: a malformed uuid or a non-numeric id fails here.
+            # Without this the framework's promise — every row checked, every error named with its
+            # row — is replaced by a traceback that does not say which of thousands of rows is bad.
             return None, f"{key!r} is not a valid {column}"
+
+        if resolved is not None and column in resolved:
+            matches = resolved[column].get(coerced, [])
+            ambiguous_ids = [instance.pk for instance in matches]
+        else:
+            queryset = self.model.objects.filter(**{field: coerced})
+            matches = list(queryset[:2])
+            ambiguous_ids = list(queryset.values_list("pk", flat=True)) if len(matches) > 1 else []
+
         if not matches:
             return None, f"no {self.model.__name__} found with {column} {key}"
         if len(matches) > 1:
-            # Only reached on an ambiguous key, so naming every candidate is worth one more query.
-            ids = ", ".join(str(pk) for pk in queryset.values_list("pk", flat=True))
+            ids = ", ".join(str(pk) for pk in ambiguous_ids)
             return None, (f"{column} {key} matches more than one {self.model.__name__} ({ids}); cannot tell which to edit")
         return matches[0], None
 
-    def prepare_row(self, raw_row: typing.Dict, request):
+    def prepare_row(self, raw_row: typing.Dict, request, resolved: typing.Optional[typing.Dict] = None):
         """Resolve a raw row and build its serializer. Returns a PreparedRow."""
         row_errors: typing.Dict[str, str] = {}
         data: typing.Dict = {}
@@ -317,7 +462,7 @@ class BaseImportCommand(BaseCommand):
         elif is_update:
             column, field = supplied[0]
             key = raw_row.get(column)
-            instance, error = self.resolve_row(column, field, key)
+            instance, error = self.resolve_row(column, field, key, resolved)
             if error:
                 row_errors[column] = error
             else:
@@ -436,6 +581,7 @@ class BaseImportCommand(BaseCommand):
     def handle(self, *args, **options):
         for lookup in self.lookups:
             lookup.reset()  # caches are per-invocation; never reuse across runs
+        self._fields_cache = None
 
         if options.get("make_template"):
             out_path = options["make_template"]
@@ -602,47 +748,76 @@ class BaseImportCommand(BaseCommand):
         # Changelog lines are held back rather than written as they happen: a run that fails at its
         # last row commits nothing, and lines already printed would claim changes that never landed.
         changelog: typing.List[str] = []
+        # Rows whose UPDATE is held back for a batch, and the columns that batch has to write.
+        deferred: typing.List = []
+        deferred_columns: typing.Set[str] = set()
         created = updated = unchanged = 0
 
-        for index, raw_row in enumerate(rows, start=2):  # row 1 is the header
-            row = self.prepare_row(raw_row, request)
-            serializer, is_update, row_errors, ignored = row.serializer, row.is_update, row.errors, row.ignored_cells
+        for chunk_start, chunk in self._chunks(rows, self.RESOLVE_CHUNK_SIZE):
+            # One query per match column for the whole chunk, rather than one per row.
+            resolved = self.resolve_chunk(chunk)
+            for offset, raw_row in enumerate(chunk):
+                index = chunk_start + offset
+                row = self.prepare_row(raw_row, request, resolved)
+                serializer, is_update, row_errors, ignored = (
+                    row.serializer,
+                    row.is_update,
+                    row.errors,
+                    row.ignored_cells,
+                )
 
-            if is_update and serializer is not None:
-                pk = serializer.instance.pk
-                first_seen = pk_rows.get(pk)
-                if first_seen is not None:
-                    row_errors[self.match_column_names[0]] = (
-                        f"{self.model.__name__} {pk} also appears on row {first_seen}; each row must target a distinct row"
-                    )
+                if is_update and serializer is not None:
+                    pk = serializer.instance.pk
+                    first_seen = pk_rows.get(pk)
+                    if first_seen is not None:
+                        row_errors[self.match_column_names[0]] = (
+                            f"{self.model.__name__} {pk} also appears on row {first_seen}; "
+                            "each row must target a distinct row"
+                        )
+                    else:
+                        pk_rows[pk] = index
+
+                if row_errors:
+                    for field, message in row_errors.items():
+                        errors.append((index, field, message))
+                    continue
+
+                for cell in ignored:
+                    ignored_cells.append((index, cell))
+
+                if errors:
+                    # The run will roll back, so writing this row buys nothing. Keep reading, though:
+                    # the operator is owed every error in the sheet, not just the first.
+                    continue
+
+                fields = self.changelog_fields(serializer) if is_update else []
+                before = self._snapshot(serializer.instance, fields) if is_update else {}
+                batching = bool(self.BULK_UPDATE_BATCH_SIZE) and is_update
+                if batching:
+                    columns = self._written_columns(serializer)
+                    with self._deferred_write(serializer.instance):
+                        instance = serializer.save()
+                    columns |= self._stamp_auto_now(instance)
+                    deferred.append(instance)
+                    deferred_columns |= columns
                 else:
-                    pk_rows[pk] = index
-
-            if row_errors:
-                for field, message in row_errors.items():
-                    errors.append((index, field, message))
-                continue
-
-            for cell in ignored:
-                ignored_cells.append((index, cell))
-
-            if errors:
-                # The run will roll back, so writing this row buys nothing. Keep reading, though:
-                # the operator is owed every error in the sheet, not just the first.
-                continue
-
-            fields = self.changelog_fields(serializer) if is_update else []
-            before = self._snapshot(serializer.instance, fields) if is_update else {}
-            instance = serializer.save()
-            if is_update:
-                updated += 1
-                line = self.row_change_line(index, instance, before, self._snapshot(instance, fields))
-                if line is None:
-                    unchanged += 1
+                    instance = serializer.save()
+                if is_update:
+                    updated += 1
+                    # The after-snapshot reads the instance in memory, which already carries the new
+                    # values, so a held-back write still reports its change correctly.
+                    line = self.row_change_line(index, instance, before, self._snapshot(instance, fields))
+                    if line is None:
+                        unchanged += 1
+                    else:
+                        changelog.append(line)
                 else:
-                    changelog.append(line)
-            else:
-                created += 1
+                    created += 1
+                if batching and len(deferred) >= self.BULK_UPDATE_BATCH_SIZE:
+                    self._flush_deferred(deferred, deferred_columns)
+
+            # Nothing of a chunk outlives it, so any held-back writes go out at its boundary.
+            self._flush_deferred(deferred, deferred_columns)
 
         if errors:
             self.stdout.write(self.style.ERROR(f"Import failed: {len(errors)} error(s); nothing committed."))

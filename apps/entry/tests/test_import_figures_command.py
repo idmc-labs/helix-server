@@ -5,6 +5,8 @@ from unittest import mock
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from openpyxl import Workbook, load_workbook
 
 from apps.contrib.commons import DATE_ACCURACY
@@ -796,3 +798,155 @@ class TestImportFiguresCommand(HelixTestCase):
         path = write_sheet(["id", "role", "not_a_column"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
         with self.assertRaises(CommandError):
             read_rows(path, data_sheet="Data", allowed_columns=ImportFiguresCommand().import_columns())
+
+    # ----- match keys are resolved a chunk at a time -----
+
+    def test_a_chunk_resolves_all_its_rows_in_one_query(self):
+        # The point of chunked resolution: cost is per chunk, not per row. Resolving row by row was
+        # most of the run on a large sheet.
+        figures = [self._figure() for _ in range(5)]
+        chunk = [{"id": figure.id, "role": "TRIANGULATION"} for figure in figures]
+        command = ImportFiguresCommand()
+
+        with self.assertNumQueries(1):
+            resolved = command.resolve_chunk(chunk)
+
+        self.assertEqual(sorted(resolved["id"]), sorted(figure.id for figure in figures))
+
+    def test_a_chunk_costs_one_query_per_match_column_in_use(self):
+        # A column no row fills is not queried at all.
+        by_id, by_uuid = self._figure(), self._figure()
+        chunk = [
+            {"id": by_id.id, "role": "TRIANGULATION"},
+            {"uuid": str(by_uuid.uuid), "role": "TRIANGULATION"},
+        ]
+        with self.assertNumQueries(2):
+            resolved = ImportFiguresCommand().resolve_chunk(chunk)
+
+        self.assertIn(by_id.id, resolved["id"])
+        self.assertIn(by_uuid.uuid, resolved["uuid"])
+
+    def test_chunked_resolution_still_finds_an_ambiguous_key(self):
+        # Every match is kept, not just the first, so a non-unique uuid is still caught. Figure.uuid
+        # carries whatever uuid an external import supplied and is not unique.
+        shared = self.figure.uuid
+        twin = self._figure()
+        Figure.objects.filter(pk=twin.pk).update(uuid=shared)
+
+        resolved = ImportFiguresCommand().resolve_chunk([{"uuid": str(shared)}])
+        self.assertEqual(len(resolved["uuid"][shared]), 2)
+
+    def test_a_malformed_key_does_not_cost_its_chunk_the_query(self):
+        # One unparseable cell must not stop the rest of the chunk resolving; it becomes that row's
+        # own error when the row is prepared.
+        figure = self._figure()
+        chunk = [{"id": "not-a-number"}, {"id": figure.id}]
+
+        with self.assertNumQueries(1):
+            resolved = ImportFiguresCommand().resolve_chunk(chunk)
+
+        self.assertIn(figure.id, resolved["id"])
+
+    def test_rows_keep_their_sheet_numbers_across_chunk_boundaries(self):
+        # Row numbers come from the chunk offset now, so a small chunk size must not renumber them.
+        figures = [self._figure() for _ in range(3)]
+        rows = [{"id": figure.id, "role": "TRIANGULATION"} for figure in figures]
+        rows.append({"id": 9999999, "role": "TRIANGULATION"})  # row 5
+        path = write_sheet(["id", "role"], rows)
+
+        out = StringIO()
+        with mock.patch.object(ImportFiguresCommand, "RESOLVE_CHUNK_SIZE", 2):
+            with self.assertRaises(CommandError):
+                call_command("import_figures", path, stdout=out)
+
+        self.assertIn("Row 5: id: no Figure found with id 9999999", out.getvalue())
+
+    # ----- writes are batched -----
+
+    def test_a_batch_writes_one_update_statement_for_many_rows(self):
+        figures = [self._figure() for _ in range(5)]
+        path = write_sheet(["id", "role"], [{"id": figure.id, "role": "TRIANGULATION"} for figure in figures])
+
+        with CaptureQueriesContext(connection) as captured:
+            call_command("import_figures", path, stdout=StringIO())
+
+        updates = [q["sql"] for q in captured.captured_queries if 'UPDATE "entry_figure"' in q["sql"]]
+        self.assertEqual(len(updates), 1, f"expected one batched UPDATE, got {len(updates)}")
+        for figure in figures:
+            figure.refresh_from_db()
+            self.assertEqual(figure.role, Figure.ROLE.TRIANGULATION.value)
+
+    def test_a_batched_write_still_advances_modified_at(self):
+        # bulk_update does not run Model.save, so auto_now would stop firing unless stamped.
+        before = Figure.objects.values_list("modified_at", flat=True).get(pk=self.figure.pk)
+        path = write_sheet(["id", "role"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
+        call_command("import_figures", path, stdout=StringIO())
+
+        self.figure.refresh_from_db()
+        self.assertGreater(self.figure.modified_at, before)
+
+    def test_the_serializers_update_still_runs_when_the_write_is_deferred(self):
+        # Deferring the write must not skip update(); serializers override it to shape what is saved.
+        calls = {"n": 0}
+        real_update = FigureRoleAndDatesSerializer.update
+
+        def counting_update(self, instance, validated_data):
+            calls["n"] += 1
+            return real_update(self, instance, validated_data)
+
+        path = write_sheet(["id", "role"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
+        with mock.patch.object(FigureRoleAndDatesSerializer, "update", counting_update):
+            call_command("import_figures", path, stdout=StringIO())
+
+        self.assertEqual(calls["n"], 1)
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
+
+    def test_a_deferred_save_writes_nothing_and_restores_the_instance(self):
+        command = ImportFiguresCommand()
+        with command._deferred_write(self.figure):
+            self.figure.role = Figure.ROLE.TRIANGULATION.value
+            self.figure.save()  # swallowed
+
+        self.assertNotIn("save", self.figure.__dict__)  # shadowing removed
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.RECOMMENDED.value)
+
+    # ----- serializer state does not leak between rows -----
+
+    def test_a_reused_serializer_does_not_carry_the_previous_rows_errors(self):
+        other = self._figure()
+        path = write_sheet(
+            ["id", "role"],
+            [
+                {"id": self.figure.id, "role": "NOT_A_ROLE"},  # row 2 fails
+                {"id": other.id, "role": "TRIANGULATION"},  # row 3 is fine
+            ],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        output = out.getvalue()
+        self.assertIn("1 error(s)", output)
+        self.assertIn("Row 2: role:", output)
+        self.assertNotIn("Row 3", output)
+
+    def test_a_reused_serializer_does_not_carry_the_previous_rows_validated_data(self):
+        # Row 2 supplies role, row 3 supplies only start_date. Leaked validated data would write
+        # row 2's role onto row 3's figure.
+        other = self._figure()
+        path = write_sheet(
+            ["id", "role", "start_date"],
+            [
+                {"id": self.figure.id, "role": "TRIANGULATION"},
+                {"id": other.id, "start_date": date(2020, 6, 5)},
+            ],
+        )
+        call_command("import_figures", path, stdout=StringIO())
+
+        self.figure.refresh_from_db()
+        other.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
+        self.assertEqual(other.role, Figure.ROLE.RECOMMENDED.value)  # untouched by row 2
+        self.assertEqual(other.start_date, date(2020, 6, 5))
