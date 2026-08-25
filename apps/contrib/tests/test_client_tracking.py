@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 
 from rest_framework import status
@@ -8,12 +9,21 @@ from apps.contrib.tasks import (
     generate_idus_all_disaster_dump_file,
     generate_idus_all_dump_file,
     generate_idus_dump_file,
+    generate_idus_references_dump_file,
     save_and_delete_tracked_data_from_redis_to_db,
 )
 from apps.entry.models import ExternalApiDump
 from helix.caches import external_api_cache
 from utils.common import track_gidd
-from utils.factories import ClientFactory
+from utils.factories import (
+    ClientFactory,
+    CountryFactory,
+    DisasterSubTypeFactory,
+    DisasterTypeFactory,
+    GeographicalGroupFactory,
+    ViolenceFactory,
+    ViolenceSubTypeFactory,
+)
 from utils.tests import HelixAPITestCase
 
 # All IDU exports: each dataset (last-180-days, all, all/disaster) is served as
@@ -30,6 +40,8 @@ IDU_EXPORT_URLS = [
     "/external-api/idus/all/disaster-geojson/",
 ]
 
+IDU_REFERENCES_URL = "/external-api/idus/references/"
+
 GIDD_API_URLS = [
     "/external-api/gidd/countries/",
     "/external-api/gidd/conflicts/",
@@ -43,7 +55,7 @@ GIDD_API_URLS = [
     "/external-api/gidd/disaggregations/disaggregation-export/",
 ]
 
-EXTERNAL_API_URLS = [*IDU_EXPORT_URLS, *GIDD_API_URLS]
+EXTERNAL_API_URLS = [*IDU_EXPORT_URLS, IDU_REFERENCES_URL, *GIDD_API_URLS]
 
 
 class TestExternalClientTrack(HelixAPITestCase):
@@ -246,3 +258,83 @@ class TestTrackGiddWithMissingClientRow(HelixAPITestCase):
         with self.assertRaises(PermissionDenied) as caught:
             track_gidd(self.INACTIVE_CODE, ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST)
         self.assertEqual(str(caught.exception.detail), "Client is deactivated.")
+
+
+class TestIduReferencesDump(HelixAPITestCase):
+    def setUp(self):
+        super().setUp()
+        # share_source=True on purpose: the references dump is generated only with
+        # include_sources=False, so a view that keyed the lookup on this flag -- as the shared
+        # mixin does for the IDU dumps, which exist in both variants -- would 404 here.
+        self.client1 = ClientFactory.create(code="random-code-1", is_active=True, share_source=True)
+        # Named values throughout: the dump is a lookup table, so the ids have to come back
+        # attached to the right labels, not merely be present.
+        self.geo_group = GeographicalGroupFactory.create(name="South Asia")
+        self.disaster_type = DisasterTypeFactory.create(name="Earthquake")
+        self.disaster_sub_type = DisasterSubTypeFactory.create(type=self.disaster_type, name="Ground shaking")
+        self.violence = ViolenceFactory.create(name="Other situations of violence")
+        self.violence_sub_type = ViolenceSubTypeFactory.create(violence=self.violence, name="Crime related")
+        self.country = CountryFactory.create(
+            geographical_group=self.geo_group,
+            iso3="AFG",
+            idmc_short_name="Afghanistan",
+        )
+
+    def _endpoint(self):
+        return f"{IDU_REFERENCES_URL}?client_id={self.client1.code}"
+
+    def test_returns_404_when_not_generated(self):
+        self.assertEqual(ExternalApiDump.objects.count(), 0)
+        response = self.client.get(self._endpoint())
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_returns_redirect_after_generation(self):
+        generate_idus_references_dump_file()
+        response = self.client.get(self._endpoint())
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+
+    def test_returns_202_when_pending_without_file(self):
+        generate_idus_references_dump_file()
+        ExternalApiDump.objects.filter(
+            api_type=ExternalApiDump.ExternalApiType.IDU_REFERENCES,
+        ).update(status=ExternalApiDump.Status.PENDING, dump_file=None)
+        response = self.client.get(self._endpoint())
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+    def test_dump_content_structure(self):
+        generate_idus_references_dump_file()
+        dump = ExternalApiDump.objects.get(api_type=ExternalApiDump.ExternalApiType.IDU_REFERENCES)
+        self.assertEqual(dump.status, ExternalApiDump.Status.COMPLETED)
+
+        with dump.dump_file.open("r") as f:
+            data = json.load(f)
+
+        self.assertIn("disaster_types", data)
+        self.assertIn("disaster_sub_types", data)
+        self.assertIn("violence_types", data)
+        self.assertIn("violence_sub_types", data)
+        self.assertIn("geographical_groups", data)
+        self.assertIn("countries", data)
+
+        # Verify disaster type/subtype shape and linkage
+        d_type = next(d for d in data["disaster_types"] if d["id"] == self.disaster_type.id)
+        self.assertEqual(d_type["name"], self.disaster_type.name)
+
+        d_sub = next(d for d in data["disaster_sub_types"] if d["id"] == self.disaster_sub_type.id)
+        self.assertEqual(d_sub["name"], self.disaster_sub_type.name)
+        self.assertEqual(d_sub["type_id"], self.disaster_type.id)
+
+        # Verify violence type/subtype shape and linkage
+        v_type = next(v for v in data["violence_types"] if v["id"] == self.violence.id)
+        self.assertEqual(v_type["name"], self.violence.name)
+
+        v_sub = next(v for v in data["violence_sub_types"] if v["id"] == self.violence_sub_type.id)
+        self.assertEqual(v_sub["name"], self.violence_sub_type.name)
+        self.assertEqual(v_sub["type_id"], self.violence.id)
+
+        # Verify country shape
+        country = next(c for c in data["countries"] if c["id"] == self.country.id)
+        self.assertEqual(country["iso3"], self.country.iso3)
+        self.assertEqual(country["idmc_short_name"], self.country.idmc_short_name)
+        self.assertEqual(country["geographical_group_id"], self.geo_group.id)
+        self.assertIn("bbox", country)
