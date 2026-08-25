@@ -2,7 +2,6 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from apps.common.utils import extract_event_code_data_list
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
@@ -149,7 +148,8 @@ class DisasterSerializer(serializers.ModelSerializer):
     )
 
     # event_codes / event_codes_type reproduce the old cross-country behaviour from the
-    # `_all_event_codes` annotation added by DisasterViewSet.get_queryset.
+    # Read from the stored all_country_* columns: the dump publishes an event's codes across all
+    # of its countries, frozen at generation time.
     ORDERING_SOURCES = {
         "event_codes": "all_country_event_codes",
         "event_codes_type": "all_country_event_codes_type",
@@ -157,11 +157,11 @@ class DisasterSerializer(serializers.ModelSerializer):
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_event_codes(self, obj):
-        return extract_event_code_data_list(obj._all_event_codes)["code"]
+        return obj.all_country_event_codes
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_event_codes_type(self, obj):
-        return extract_event_code_data_list(obj._all_event_codes)["code_type"]
+        return obj.all_country_event_codes_type
 
     class Meta:
         model = GiddEventDisplacement

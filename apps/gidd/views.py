@@ -1,14 +1,10 @@
 import typing
 from datetime import datetime
 from pathlib import Path
-from types import SimpleNamespace
 
-from django.contrib.postgres.aggregates import ArrayAgg
-from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from django.db.models import Case, F, OuterRef, Q, Subquery, Sum, When
-from django.db.models.functions import Cast, Coalesce
+from django.db.models import Case, F, Q, Sum, When
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
@@ -26,7 +22,6 @@ from rest_framework.permissions import AllowAny
 from apps.common.utils import (
     EXTERNAL_ARRAY_SEPARATOR,
     EXTERNAL_FIELD_SEPARATOR,
-    extract_event_code_data_list,
     get_enum_label,
 )
 from apps.contrib.commons import DATE_ACCURACY
@@ -34,8 +29,8 @@ from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import ExternalApiDump, Figure, FigureLocation
 from apps.event.models import EventCode
-from utils.common import client_id, get_valid_xml_string, round_and_remove_zero, track_gidd
-from utils.db import Array, tiebreak_fields
+from utils.common import client_id, get_valid_xml_string, track_gidd
+from utils.db import rounded_figure_expr, tiebreak_fields
 from utils.graphene.ordering import leads_descending, strip_direction
 from utils.streaming import stream_json_object_with_array
 
@@ -275,33 +270,6 @@ class ConflictViewSet(ListOnlyViewSetMixin):
         )
 
 
-def _disaster_all_country_event_codes_subquery():
-    # Mirrors the OLD Disaster population exactly: aggregate an event's codes across ALL its
-    # countries (the old `country_id=F("country")` no-op made it non-country-specific). This is
-    # REST-dump-only; the GiddEventDisplacement.event_codes column itself stays country-correct
-    # for GraphQL.
-    return Coalesce(
-        Subquery(
-            EventCode.objects.filter(event_id=OuterRef("event"), country_id=F("country"))
-            .order_by()
-            .values("event")
-            .annotate(
-                code=ArrayAgg(
-                    Array(
-                        F("event_code"),
-                        Cast(F("event_code_type"), models.CharField()),
-                        F("country__iso3"),
-                        output_field=ArrayField(models.CharField()),
-                    ),
-                    distinct=True,
-                ),
-            )
-            .values("code")[:1],
-        ),
-        [],
-    )
-
-
 @extend_schema_view(
     list=extend_schema(
         description=Path("docs/disaster/main-description.md").read_text(),
@@ -325,13 +293,9 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             viewset=self,
         )
         # Sourced from GiddEventDisplacement (disaster rows share the old Disaster grain:
-        # event x country x year). `_all_event_codes` reproduces the old cross-country event
-        # codes for the REST dump; the serializer/export derive event_codes(_type) from it.
-        qs = (
-            GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.DISASTER)
-            .annotate(_all_event_codes=_disaster_all_country_event_codes_subquery())
-            .order_by("iso3", "year", "event_raw_id")
-        )
+        # event x country x year). The dump's cross-country event codes come from the stored
+        # all_country_event_codes columns, so this stays a plain streamable queryset.
+        qs = GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.DISASTER).order_by("iso3", "year", "event_raw_id")
         if self.action == "export":
             # Only the xlsx export dereferences .country; the list serializer reads the
             # denormalised iso3/country_name columns, so joining there just instantiates one
@@ -387,7 +351,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                     EXTERNAL_ARRAY_SEPARATOR.join(
                         [
                             f"{key}{EXTERNAL_FIELD_SEPARATOR}{value}"
-                            for key, value in zip(disaster.event_codes, disaster.event_codes_type)
+                            for key, value in zip(disaster.all_country_event_codes, disaster.all_country_event_codes_type)
                         ]
                     ),
                     disaster.event_raw_id,
@@ -594,21 +558,12 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         qs = self.filter_queryset(self.get_queryset())
         filename = "IDMC_GIDD_Disasters_Internal_Displacement_Data.xlsx"
 
-        def build():
-            rows = list(qs)
-            # Reproduce the old cross-country event codes for the dump (REST-only).
-            for row in rows:
-                codes = extract_event_code_data_list(row._all_event_codes)
-                row.event_codes = codes["code"]
-                row.event_codes_type = codes["code_type"]
-            return self._export(rows)
-
         return GiddExportCache.get_or_create(
             filename,
             request,
             [self.filterset_class],
             GiddExportCache.Key.DISASTER_EXPORT,
-            build,
+            lambda: self._export(qs),
             s3_parameters={
                 "ResponseContentDisposition": f"attachment; filename={filename}",
                 "ResponseContentType": "application/octet-stream",
@@ -668,13 +623,13 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         for item in qs.iterator(chunk_size=2000):
             ws.append(
                 [
-                    item.iso3,
-                    item.country_name,
-                    item.year,
-                    item.conflict_total_displacement_rounded,
-                    item.conflict_total_displacement,
-                    item.conflict_new_displacement_rounded,
-                    item.conflict_new_displacement,
+                    item["iso3"],
+                    item["country_name"],
+                    item["year"],
+                    item["conflict_total_displacement_rounded"],
+                    item["conflict_total_displacement"],
+                    item["conflict_new_displacement_rounded"],
+                    item["conflict_new_displacement"],
                 ]
             )
 
@@ -693,13 +648,13 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         for item in qs.iterator(chunk_size=2000):
             ws.append(
                 [
-                    item.iso3,
-                    item.country_name,
-                    item.year,
-                    item.disaster_new_displacement_rounded,
-                    item.disaster_new_displacement,
-                    item.disaster_total_displacement_rounded,
-                    item.disaster_total_displacement,
+                    item["iso3"],
+                    item["country_name"],
+                    item["year"],
+                    item["disaster_new_displacement_rounded"],
+                    item["disaster_new_displacement"],
+                    item["disaster_total_displacement_rounded"],
+                    item["disaster_total_displacement"],
                 ]
             )
 
@@ -722,17 +677,17 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         for item in qs.iterator(chunk_size=2000):
             ws.append(
                 [
-                    item.iso3,
-                    item.country_name,
-                    item.year,
-                    item.conflict_total_displacement_rounded,
-                    item.conflict_total_displacement,
-                    item.conflict_new_displacement_rounded,
-                    item.conflict_new_displacement,
-                    item.disaster_new_displacement_rounded,
-                    item.disaster_new_displacement,
-                    item.disaster_total_displacement_rounded,
-                    item.disaster_total_displacement,
+                    item["iso3"],
+                    item["country_name"],
+                    item["year"],
+                    item["conflict_total_displacement_rounded"],
+                    item["conflict_total_displacement"],
+                    item["conflict_new_displacement_rounded"],
+                    item["conflict_new_displacement"],
+                    item["disaster_new_displacement_rounded"],
+                    item["disaster_new_displacement"],
+                    item["disaster_total_displacement_rounded"],
+                    item["disaster_total_displacement"],
                 ]
             )
 
@@ -1211,29 +1166,19 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     )
     def export(self, request):
         # Track export
-        # get_queryset() yields aggregated dicts from GiddDisplacement; materialise them into
-        # lightweight row objects with rounded figures so the sheet builders — which use attribute
-        # access and the *_rounded fields — stay untouched and produce identical output.
-        rows = self.filter_queryset(self.get_queryset()).order_by(
-            "-year",
-            "iso3",
-        )
-        qs = [
-            SimpleNamespace(
-                iso3=row["iso3"],
-                country_name=row["country_name"],
-                year=row["year"],
-                conflict_new_displacement=row["conflict_new_displacement"],
-                conflict_total_displacement=row["conflict_total_displacement"],
-                disaster_new_displacement=row["disaster_new_displacement"],
-                disaster_total_displacement=row["disaster_total_displacement"],
-                conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_new_displacement"]),
-                conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_total_displacement"]),
-                disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_new_displacement"]),
-                disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_total_displacement"]),
+        # get_queryset() aggregates GiddDisplacement, so the rounded figures have to be derived
+        # rather than read from a column. Deriving them in SQL keeps this a queryset, which is what
+        # lets the sheet builders stream it with `.iterator()` instead of materialising every row.
+        qs = (
+            self.filter_queryset(self.get_queryset())
+            .annotate(
+                conflict_new_displacement_rounded=rounded_figure_expr("conflict_new_displacement"),
+                conflict_total_displacement_rounded=rounded_figure_expr("conflict_total_displacement"),
+                disaster_new_displacement_rounded=rounded_figure_expr("disaster_new_displacement"),
+                disaster_total_displacement_rounded=rounded_figure_expr("disaster_total_displacement"),
             )
-            for row in rows
-        ]
+            .order_by("-year", "iso3")
+        )
 
         request_cause = request.GET.get("cause")
 

@@ -290,17 +290,17 @@ class TestGiddDisasterRestApi(GiddRestApiMixin, HelixAPITestCase):
             hazard_sub_type=self.hazard_sub_type,
         )
 
-        # The endpoint does not read the stored event_codes columns: it re-derives them from
-        # EventCode, aggregated across ALL of the event's countries (the retired Disaster table
-        # published that shape, because its subquery compared EventCode.country to itself). So the
-        # codes have to exist as real rows for this assertion to mean anything.
+        # The dump publishes the STORED all_country_event_codes columns, frozen at generation time,
+        # not a live read of EventCode. The EventCode rows below deliberately carry DIFFERENT codes
+        # from the stored columns: if the endpoint ever went back to deriving them, this test fails,
+        # which is what pins the release-snapshot property.
         self.event = EventFactory.create(
             name="Afghanistan: Earthquake - Herat - June 2020",
             event_type=Crisis.CRISIS_TYPE.DISASTER,
         )
         for code, code_type in (
-            ("GLIDE-1", EventCode.EVENT_CODE_TYPE.GLIDE_NUMBER),
-            ("GLIDE-2", EventCode.EVENT_CODE_TYPE.GOV_ASSIGNED_IDENTIFIER),
+            ("LIVE-EDIT-1", EventCode.EVENT_CODE_TYPE.GLIDE_NUMBER),
+            ("LIVE-EDIT-2", EventCode.EVENT_CODE_TYPE.GOV_ASSIGNED_IDENTIFIER),
         ):
             EventCodeFactory.create(event=self.event, country=self.country_afg, event_code=code, event_code_type=code_type)
 
@@ -326,6 +326,8 @@ class TestGiddDisasterRestApi(GiddRestApiMixin, HelixAPITestCase):
             hazard_sub_type_name="Ground shaking",
             event_codes=["GLIDE-1", "GLIDE-2"],
             event_codes_type=["Glide Number", "Government Assigned Identifier"],
+            all_country_event_codes=["GLIDE-1", "GLIDE-2"],
+            all_country_event_codes_type=["Glide Number", "Government Assigned Identifier"],
             displacement_occurred=[Figure.DISPLACEMENT_OCCURRED.BEFORE.value],
             **self.hazard_kwargs,
         )

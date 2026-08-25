@@ -6,7 +6,6 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import connection, models, transaction
 from django.db.models import (
     Case,
-    ExpressionWrapper,
     F,
     Func,
     IntegerField,
@@ -15,7 +14,7 @@ from django.db.models import (
     Value,
     When,
 )
-from django.db.models.functions import Cast, Coalesce, Concat, Mod
+from django.db.models.functions import Cast, Coalesce, Concat
 from django.db.models.sql.constants import LOUTER
 from django.utils import timezone
 from django_cte import With
@@ -27,7 +26,7 @@ from apps.event.models import Crisis, Event, EventCode
 from apps.report.models import Report
 from helix.celery import app as celery_app
 from utils.common import redis_lock, round_and_remove_zero
-from utils.db import Array
+from utils.db import Array, rounded_figure_expr
 
 from .models import (
     Conflict,
@@ -77,35 +76,6 @@ def enum_label_case(field_name, enum_class):
     )
 
 
-def rounded_figure_expr(field_name):
-    """DB-side `round_and_remove_zero`: integer arithmetic keeps python's
-    round-half-even (PG round() breaks ties away from zero) —
-    `(n + d/2 - ((n/d + 1) % 2)) / d` floors ties to the even quotient.
-    Values here are non-negative sums."""
-
-    def half_even(divisor):
-        # PG SUM(bigint) yields NUMERIC, whose division does not truncate —
-        # cast back so `/` stays integer division.
-        n = Cast(F(field_name), models.BigIntegerField())
-        parity = Mod(n / Value(divisor) + Value(1), Value(2))
-        return ExpressionWrapper(
-            (n + Value(divisor // 2) - parity) / Value(divisor) * Value(divisor),
-            output_field=IntegerField(),
-        )
-
-    return Case(
-        When(
-            Q(**{field_name + "__isnull": True}) | Q(**{field_name: 0}),
-            then=Value(None, output_field=IntegerField()),
-        ),
-        When(**{field_name + "__lte": 100}, then=F(field_name)),
-        When(**{field_name + "__lte": 1000}, then=half_even(10)),
-        When(**{field_name + "__lt": 10000}, then=half_even(100)),
-        default=half_even(1000),
-        output_field=IntegerField(),
-    )
-
-
 def figures_in_year_window(year, event_type=None):
     """The per-year GIDD window: flow figures via the Jan1-Dec31 start/end
     rules, stock figures counted at Dec 31 (`filtered_idp_figures` exact).
@@ -136,19 +106,12 @@ def update_public_figure_analysis():
     # NOTE:- There must be exaclty one country
     data = []
 
-    def _get_aggregate_key(figure_category, figure_cause):
-        if figure_category == Figure.FIGURE_CATEGORY_TYPES.IDPS and figure_cause == Crisis.CRISIS_TYPE.CONFLICT:
-            return "total_stock_conflict"
-        elif figure_category == Figure.FIGURE_CATEGORY_TYPES.IDPS and figure_cause == Crisis.CRISIS_TYPE.DISASTER:
-            return "total_stock_disaster"
-        elif (
-            figure_category == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT and figure_cause == Crisis.CRISIS_TYPE.CONFLICT
-        ):
-            return "total_flow_conflict"
-        elif (
-            figure_category == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT and figure_cause == Crisis.CRISIS_TYPE.DISASTER
-        ):
-            return "total_flow_disaster"
+    # A PFA total is one of GiddDisplacement's two figure sums. Cause selects the rows, category
+    # selects the column, so the four PFA aggregates are the 2x2 and no conditional sum is needed.
+    sum_column_by_category = {
+        Figure.FIGURE_CATEGORY_TYPES.IDPS: "total_displacement",
+        Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT: "new_displacement",
+    }
 
     # FIXME: only update the gidd_published_date when the report is stale
     # FIXME: gidd_published_date update looks redundant
@@ -169,35 +132,33 @@ def update_public_figure_analysis():
 
     # FIXME: add a cleanup function
 
-    # The PFA values come from the GIDD report's own figure set, aggregated once
-    # per year grouped by country, rather than from each PFA report's own
-    # filterset. A PFA total is defined by year, country, cause and category, and
-    # the aggregate pins cause and category itself -- reading the cause off the
-    # event, so a figure whose own cause disagrees with its event's type is
-    # counted here and was not before. Any further filter on a PFA report is
-    # invalid data, which `check_is_pfa_visible_in_gidd` rejects.
-    # TODO: sum the already-generated GIDD tables instead of re-aggregating entry_figure.
-    # gidd_displacementdata already holds the per-country-per-year conflict/disaster stock and
-    # flow totals this loop recomputes, so PFA could read them and drop the per-report scan.
+    # PFA reads the GIDD displacement table rather than re-aggregating entry_figure per report.
+    # The values are the same by construction: GiddDisplacement is grouped by country, year and
+    # cause over `figures_in_year_window`, restricted to RECOMMENDED figures and to conflict and
+    # disaster event types, which is what each PFA conditional sum selected. Its `year` values are
+    # `get_gidd_years()` -- the same distinct `gidd_report_year` set the per-report loop keyed on.
+    #
+    # Summing the unrounded columns and rounding the total once is required: the table stores a
+    # rounded value per typology row, and summing those rounds many times over and diverges.
+    #
+    # A country-year-cause with no figures in a category sums to NULL, not 0, and a missing group
+    # is absent from the map -- PFA publishes `figures = None` for both, which callers rely on.
+    #
+    # Depends on `update_new_gidd_tables` having run: the table is populated in the same
+    # transaction, earlier.
+    #
+    # The cause is the event's type, as it was before: a figure whose own `figure_cause` disagrees
+    # with its event's type is counted under the event's.
     # TODO: nothing validates `figure_cause` against `event.event_type` on write.
-    pfa_aggregate_keys = (
-        "total_stock_conflict",
-        "total_stock_disaster",
-        "total_flow_conflict",
-        "total_flow_disaster",
-    )
-    totals_by_year_country = {}
-    gidd_reports = (
-        Report.objects.filter(is_gidd_report=True).order_by("gidd_report_year", "-id").distinct("gidd_report_year")
-    )
-    for gidd_report in gidd_reports:
-        aggregates = {
-            key: aggregate
-            for key, aggregate in gidd_report.TOTAL_FIGURE_DISAGGREGATIONS.items()
-            if key in pfa_aggregate_keys
-        }
-        for row in gidd_report.report_figures.values("country_id").order_by().annotate(**aggregates):
-            totals_by_year_country[(gidd_report.gidd_report_year, row["country_id"])] = row
+    totals_by_year_country_cause = {
+        (row["year"], row["country_id"], row["cause"]): row
+        for row in GiddDisplacement.objects.values("year", "country_id", "cause")
+        .order_by()
+        .annotate(
+            new_displacement=Sum("new_displacement"),
+            total_displacement=Sum("total_displacement"),
+        )
+    }
 
     # `prefetch_related` batches the one-country-per-report reads that were an
     # extra query per report.
@@ -208,8 +169,8 @@ def update_public_figure_analysis():
         # PFA always have either conflict or disaster cause
         figure_cause = report.filter_figure_crisis_types[0]
 
-        # Each PFA report needs exactly ONE of the four conditional sums
-        aggregate_key = _get_aggregate_key(figure_category, figure_cause)
+        # Each PFA report needs exactly ONE of the two sums, on the rows for its own cause
+        sum_column = sum_column_by_category.get(figure_category)
 
         # There must be exactly one country if is_pfa_visible_in_gidd is enabled.
         # This is validated in serializer
@@ -217,10 +178,10 @@ def update_public_figure_analysis():
         iso3 = country.iso3
 
         figures_total = None
-        if aggregate_key is not None:
-            year_country_totals = totals_by_year_country.get((report.filter_figure_end_before.year, country.id))
-            if year_country_totals is not None:
-                figures_total = year_country_totals[aggregate_key]
+        if sum_column is not None:
+            totals = totals_by_year_country_cause.get((report.filter_figure_end_before.year, country.id, figure_cause))
+            if totals is not None:
+                figures_total = totals[sum_column]
 
         data.append(
             PublicFigureAnalysis(
@@ -633,14 +594,16 @@ def update_new_gidd_tables():
     why the two must not be split across transactions.
     """
     country_codes = _country_event_code_cte()
+    all_codes = _all_country_event_code_cte()
 
     def _with_country_codes(base):
-        return country_codes.join(
+        base = country_codes.join(
             base,
             event_id=country_codes.col.event_id,
             country_id=country_codes.col.country_id,
             _join_type=LOUTER,
         ).with_cte(country_codes)
+        return all_codes.join(base, event_id=all_codes.col.event_id, _join_type=LOUTER).with_cte(all_codes)
 
     def _shared_columns(year):
         return dict(
@@ -660,6 +623,8 @@ def update_new_gidd_tables():
             # raw-insert path never runs the aggregate's convert_value, so nothing else fills it.
             event_codes=Coalesce(country_codes.col.codes, empty_char_array()),
             event_codes_type=Coalesce(country_codes.col.type_labels, empty_char_array()),
+            all_country_event_codes=Coalesce(all_codes.col.codes, empty_char_array()),
+            all_country_event_codes_type=Coalesce(all_codes.col.type_labels, empty_char_array()),
             new_displacement=F("new_displacement"),
             total_displacement=F("total_displacement"),
             new_displacement_rounded=rounded_figure_expr("new_displacement"),
@@ -877,9 +842,7 @@ def update_witness_tables():
 
     # Disaster shares the event grain exactly, so this is a column copy -- which makes a row-count
     # difference an immediate signal rather than something to be aggregated away.
-    all_codes = _all_country_event_code_cte()
     disaster_base = GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.DISASTER).order_by()
-    disaster_base = all_codes.join(disaster_base, event_id=all_codes.col.event_id, _join_type=LOUTER).with_cte(all_codes)
     bulk_insert_from_queryset(
         Disaster,
         disaster_base,
@@ -909,8 +872,8 @@ def update_witness_tables():
             total_displacement_rounded=F("total_displacement_rounded"),
             glide_numbers=F("glide_numbers"),
             displacement_occurred=F("displacement_occurred"),
-            event_codes=Coalesce(all_codes.col.codes, empty_char_array()),
-            event_codes_type=Coalesce(all_codes.col.type_labels, empty_char_array()),
+            event_codes=F("all_country_event_codes"),
+            event_codes_type=F("all_country_event_codes_type"),
         ),
     )
 
@@ -933,10 +896,11 @@ def _generate_gidd_data(log_id):
             Disaster.objects.all().delete()
 
             # Create new data for GIDD
-            update_public_figure_analysis()
             update_idps_sadd_estimates_country_names()
             update_gidd_event_and_gidd_figure_data()
             update_new_gidd_tables()
+            # After update_new_gidd_tables: reads the GiddDisplacement rows it writes.
+            update_public_figure_analysis()
             update_witness_tables()
             StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.SUCCESS, completed_at=timezone.now())
         logger.info("GIDD data updated.")
