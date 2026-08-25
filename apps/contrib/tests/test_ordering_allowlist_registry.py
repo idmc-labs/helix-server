@@ -26,8 +26,8 @@ from utils.graphene.pagination import GatedPageGraphqlPagination, nulls_last_ord
 
 # Measured, not guessed: see test_no_list_field_uses_an_unguarded_pagination_class.
 # Dropped by one when the gidd Conflict/Disaster models (and their Country reverse-relation list
-# fields) were removed.
-SEEN_FLOOR = 70
+# fields) were removed, and by one more when giddPublicDisplacements was.
+SEEN_FLOOR = 69
 DYNAMIC_FLOOR = 6
 
 EXPECTED = {

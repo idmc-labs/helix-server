@@ -1866,6 +1866,11 @@ class ExternalApiDump(models.Model):
             _("/external-api/gidd/disaggregations/disaggregated-export/"),
         )
 
+        # Dead: no query resolves to these any more. giddPublicConflicts, giddPublicDisasters and
+        # giddPublicDisplacements are gone from the schema. The members stay because they are
+        # `TextChoices` values already written into `api_type` columns by migrations, and rows
+        # tracked under them are still readable history; dropping them would cost a migration and
+        # orphan those rows for nothing.
         GIDD_CONFLICT_GRAPHQL = "gidd-conflict-graphql", _("query.giddPublicConflicts")
         GIDD_DISASTER_GRAPHQL = "gidd-disaster-graphql", _("query.giddPublicDisasters")
         GIDD_DISPLACEMENT_DATA_GRAPHQL = "gidd-displacement-data-graphql", _("query.giddPublicDisplacements")
@@ -1878,13 +1883,15 @@ class ExternalApiDump(models.Model):
         GIDD_COMBINED_STAT_GRAPHQL = "gidd-combined-stat-graphql", _("query.giddPublicCombinedStatistics")
         GIDD_RELEASE_META_DATA_GRAPHQL = "gidd-release-meta-data-graphql", _("query.giddPublicReleaseMetaData")
         GIDD_PUBLIC_COUNTRIES_GRAPHQL = "gidd-public-countries-graphql", _("query.giddPublicCountries")
-        # `giddPublicDisplacements` is not a schema field either; kept for the reason above.
+        # Dead: giddPublicDisplacements is gone from the schema. Kept for the same reason as the
+        # three above.
         GIDD_NEW_EVENTS_GRAPHQL = "gidd-new-events-graphql", _("query.giddPublicEvents")
         GIDD_COUNTRY_DISPLACEMENT_GRAPHQL = "gidd-country-displacement-graphql", _("query.giddPublicCountryDisplacements")
         GIDD_COUNTRY_YEAR_DISPLACEMENT_GRAPHQL = (
             "gidd-country-year-displacement-graphql",
             _("query.giddPublicCountryYearDisplacements"),
         )
+        # Dead: giddPublicViolenceTypes is gone from the schema. Kept for the same reason.
         GIDD_VIOLENCE_SUB_TYPES_GRAPHQL = "gidd-violence-sub-types-graphql", _("query.giddPublicViolenceSubTypes")
 
     class Status(models.IntegerChoices):

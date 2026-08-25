@@ -17,10 +17,11 @@ from helix import redis
 from utils.factories import CountryFactory, UserFactory
 from utils.tests import HelixTestCase
 
-# update_new_gidd_tables leads: it writes the tables the delete-before-insert property is
-# asserted on, so it is also the injection point below.
+# Listed first because it is the injection point below, NOT because it runs first -- the
+# pipeline calls it last. It writes the tables whose delete-before-insert property is asserted.
 GENERATION_STEPS = [
     "apps.gidd.tasks.update_new_gidd_tables",
+    "apps.gidd.tasks.update_witness_tables",
     "apps.gidd.tasks.update_public_figure_analysis",
     "apps.gidd.tasks.update_idps_sadd_estimates_country_names",
     "apps.gidd.tasks.update_gidd_event_and_gidd_figure_data",
