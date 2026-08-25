@@ -274,7 +274,9 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
 
         # Floors, not exact counts: legitimate additions must not fail, while a drop means a
         # type lost the auto-wiring base.
-        self.assertGreaterEqual(fk_count, 126, "auto-wired forward-FK resolvers regressed")
+        # `GiddReleaseMetadataType` pins `Meta.fields`, which drops its `modified_by` resolver:
+        # that FK is how an unauthenticated caller reached `UserType`.
+        self.assertGreaterEqual(fk_count, 125, "auto-wired forward-FK resolvers regressed")
         self.assertGreaterEqual(list_count, 87, "auto-wired reverse-FK/M2M resolvers regressed")
 
         # Spot-check critical FigureType fields are loader-wired by name.

@@ -2621,8 +2621,6 @@ type GiddReleaseMetadataType {
   id: ID!
   releaseYear: Int!
   preReleaseYear: Int!
-  modifiedBy: UserType!
-  modifiedAt: DateTime!
 }
 
 input GiddStatusLogFilterDataInputType {
