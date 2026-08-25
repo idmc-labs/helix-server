@@ -8,6 +8,7 @@ from django.core.management.base import CommandError
 from openpyxl import Workbook, load_workbook
 
 from apps.contrib.commons import DATE_ACCURACY
+from apps.contrib.management.base.reader import read_rows
 from apps.entry.management.commands.import_figures import Command as ImportFiguresCommand
 from apps.entry.management.commands.import_figures import FigureRoleAndDatesSerializer
 from apps.entry.models import Figure
@@ -292,10 +293,8 @@ class TestImportFiguresCommand(HelixTestCase):
 
     # ----- the date rules are scoped to rows that supply a date -----
 
-    # A role correction is the whole reason this importer exists, and the figures needing one are
-    # the oldest — the ones whose stored dates predate today's rules. Checking those dates on a row
-    # that does not touch them would refuse the correction, and since the import is all-or-nothing,
-    # one such figure would stop every other row in the sheet.
+    # The figures needing a role correction are the oldest, whose stored dates predate today's
+    # rules. Checking those dates would refuse the correction, and take the whole sheet with it.
 
     def test_a_role_only_row_is_accepted_on_a_flow_figure_with_no_stored_end_date(self):
         figure = self._figure(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)
@@ -330,9 +329,8 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertEqual(self.figure.start_date, date(2020, 9, 1))
 
     def test_an_accuracy_only_row_is_accepted_on_a_figure_whose_stored_dates_are_inverted(self):
-        # An accuracy is not a date and no rule reads one, so an accuracy cannot make any of the
-        # date rules newly true. Folding the accuracies into the group would refuse this row over
-        # dates it never touches.
+        # No rule reads an accuracy, so folding it into the group would refuse a row over dates
+        # it never touches.
         Figure.objects.filter(pk=self.figure.pk).update(start_date=date(2020, 9, 1), end_date=date(2020, 6, 30))
 
         path = write_sheet(["id", "end_date_accuracy"], [{"id": self.figure.id, "end_date_accuracy": "MONTH"}])
@@ -709,3 +707,254 @@ class TestImportFiguresCommand(HelixTestCase):
         other.refresh_from_db()
         self.assertEqual(self.figure.role, Figure.ROLE.RECOMMENDED.value)
         self.assertEqual(other.role, Figure.ROLE.RECOMMENDED.value)
+
+    # ----- rows are validated and saved one at a time -----
+
+    # A serializer per row is what a large sheet cannot afford. The transaction, not a deferred
+    # second pass, is what keeps the run all-or-nothing.
+
+    def test_a_failing_run_prints_no_changelog_for_the_rows_it_saved(self):
+        # Earlier rows are written then rolled back; their lines would claim changes never kept.
+        other = self._figure()
+        path = write_sheet(
+            ["id", "role"],
+            [
+                {"id": self.figure.id, "role": "TRIANGULATION"},
+                {"id": other.id, "role": "TRIANGULATION"},
+                {"id": 9999999, "role": "TRIANGULATION"},
+            ],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        output = out.getvalue()
+        self.assertNotIn("ROW_UPDATED", output)
+        self.assertIn("nothing committed", output)
+
+    def test_every_invalid_row_is_reported_not_just_the_first(self):
+        # Validation keeps going after a row fails, so the operator gets the whole list in one run.
+        path = write_sheet(
+            ["id", "role"],
+            [
+                {"id": 9999998, "role": "TRIANGULATION"},
+                {"id": self.figure.id, "role": "NOT_A_ROLE"},
+                {"id": 9999999, "role": "TRIANGULATION"},
+            ],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        output = out.getvalue()
+        self.assertIn("3 error(s)", output)
+        self.assertIn("Row 2: id: no Figure found with id 9999998", output)
+        self.assertIn("Row 3: role:", output)
+        self.assertIn("Row 4: id: no Figure found with id 9999999", output)
+
+    def test_no_row_is_saved_once_a_row_has_failed(self):
+        # The run will roll back, so writing later rows only to discard them is wasted work.
+        other = self._figure()
+        path = write_sheet(
+            ["id", "role"],
+            [
+                {"id": 9999999, "role": "TRIANGULATION"},
+                {"id": self.figure.id, "role": "TRIANGULATION"},
+                {"id": other.id, "role": "TRIANGULATION"},
+            ],
+        )
+        calls = {"n": 0}
+        real_save = FigureRoleAndDatesSerializer.save
+
+        def counting_save(self, **kwargs):
+            calls["n"] += 1
+            return real_save(self, **kwargs)
+
+        with mock.patch.object(FigureRoleAndDatesSerializer, "save", counting_save):
+            with self.assertRaises(CommandError):
+                call_command("import_figures", path, stdout=StringIO())
+
+        self.assertEqual(calls["n"], 0)
+
+    def test_the_reader_yields_rows_rather_than_building_a_list(self):
+        # The whole point of the change: a sheet is never materialised in full.
+        path = write_sheet(["id", "role"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
+        rows = read_rows(path, data_sheet="Data", allowed_columns=ImportFiguresCommand().import_columns())
+
+        self.assertFalse(isinstance(rows, list))
+        self.assertIs(iter(rows), iter(rows))  # an iterator, consumed once
+        self.assertEqual([row["role"] for row in rows], ["TRIANGULATION"])
+
+    def test_a_bad_header_fails_before_any_row_is_read(self):
+        # Eager despite the lazy rows, so a malformed sheet fails up front, not part-way through.
+        path = write_sheet(["id", "role", "not_a_column"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
+        with self.assertRaises(CommandError):
+            read_rows(path, data_sheet="Data", allowed_columns=ImportFiguresCommand().import_columns())
+
+    # ----- match keys are resolved a chunk at a time -----
+
+    def test_a_chunk_resolves_all_its_rows_in_one_query(self):
+        # The point of chunked resolution: cost is per chunk, not per row.
+        figures = [self._figure() for _ in range(5)]
+        chunk = [{"id": figure.id, "role": "TRIANGULATION"} for figure in figures]
+        command = ImportFiguresCommand()
+
+        with self.assertNumQueries(1):
+            resolved = command.resolve_chunk(chunk)
+
+        self.assertEqual(sorted(resolved["id"]), sorted(figure.id for figure in figures))
+
+    def test_a_chunk_costs_one_query_per_match_column_in_use(self):
+        # A column no row fills is not queried at all.
+        by_id, by_uuid = self._figure(), self._figure()
+        chunk = [
+            {"id": by_id.id, "role": "TRIANGULATION"},
+            {"uuid": str(by_uuid.uuid), "role": "TRIANGULATION"},
+        ]
+        with self.assertNumQueries(2):
+            resolved = ImportFiguresCommand().resolve_chunk(chunk)
+
+        self.assertIn(by_id.id, resolved["id"])
+        self.assertIn(by_uuid.uuid, resolved["uuid"])
+
+    def test_chunked_resolution_still_finds_an_ambiguous_key(self):
+        # Every match is kept, not just the first, so a non-unique uuid is still caught.
+        shared = self.figure.uuid
+        twin = self._figure()
+        Figure.objects.filter(pk=twin.pk).update(uuid=shared)
+
+        resolved = ImportFiguresCommand().resolve_chunk([{"uuid": str(shared)}])
+        self.assertEqual(len(resolved["uuid"][shared]), 2)
+
+    def test_a_malformed_key_does_not_cost_its_chunk_the_query(self):
+        # One unparseable cell becomes its own row's error, not the chunk's problem.
+        figure = self._figure()
+        chunk = [{"id": "not-a-number"}, {"id": figure.id}]
+
+        with self.assertNumQueries(1):
+            resolved = ImportFiguresCommand().resolve_chunk(chunk)
+
+        self.assertIn(figure.id, resolved["id"])
+
+    def test_rows_keep_their_sheet_numbers_across_chunk_boundaries(self):
+        # Row numbers come from the chunk offset now, so a small chunk size must not renumber them.
+        figures = [self._figure() for _ in range(3)]
+        rows = [{"id": figure.id, "role": "TRIANGULATION"} for figure in figures]
+        rows.append({"id": 9999999, "role": "TRIANGULATION"})  # row 5
+        path = write_sheet(["id", "role"], rows)
+
+        out = StringIO()
+        with mock.patch.object(ImportFiguresCommand, "RESOLVE_CHUNK_SIZE", 2):
+            with self.assertRaises(CommandError):
+                call_command("import_figures", path, stdout=out)
+
+        self.assertIn("Row 5: id: no Figure found with id 9999999", out.getvalue())
+
+    def test_a_reused_serializer_does_not_carry_the_previous_rows_errors(self):
+        other = self._figure()
+        path = write_sheet(
+            ["id", "role"],
+            [
+                {"id": self.figure.id, "role": "NOT_A_ROLE"},  # row 2 fails
+                {"id": other.id, "role": "TRIANGULATION"},  # row 3 is fine
+            ],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        output = out.getvalue()
+        self.assertIn("1 error(s)", output)
+        self.assertIn("Row 2: role:", output)
+        self.assertNotIn("Row 3", output)
+
+    def test_a_reused_serializer_does_not_carry_the_previous_rows_validated_data(self):
+        # Leaked validated data would write row 2's role onto row 3's figure.
+        other = self._figure()
+        path = write_sheet(
+            ["id", "role", "start_date"],
+            [
+                {"id": self.figure.id, "role": "TRIANGULATION"},
+                {"id": other.id, "start_date": date(2020, 6, 5)},
+            ],
+        )
+        call_command("import_figures", path, stdout=StringIO())
+
+        self.figure.refresh_from_db()
+        other.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
+        self.assertEqual(other.role, Figure.ROLE.RECOMMENDED.value)  # untouched by row 2
+        self.assertEqual(other.start_date, date(2020, 6, 5))
+
+    # ----- --max-id -----
+
+    def test_max_id_skips_rows_whose_target_is_above_the_bound(self):
+        low, high = self.figure, self._figure()
+        self.assertLess(low.id, high.id)
+        path = write_sheet(
+            ["id", "role"],
+            [{"id": low.id, "role": "TRIANGULATION"}, {"id": high.id, "role": "TRIANGULATION"}],
+        )
+        out = StringIO()
+        call_command("import_figures", path, max_id=low.id, stdout=out)
+
+        low.refresh_from_db()
+        high.refresh_from_db()
+        self.assertEqual(low.role, Figure.ROLE.TRIANGULATION.value)
+        self.assertEqual(high.role, Figure.ROLE.RECOMMENDED.value)  # excluded
+        self.assertIn("Created 0, updated 1.", out.getvalue())
+
+    def test_a_skipped_row_is_reported_by_its_row_number(self):
+        # Never silently dropped: the sheet asked for the row and did not get it.
+        low, high = self.figure, self._figure()
+        path = write_sheet(
+            ["id", "role"],
+            [{"id": low.id, "role": "TRIANGULATION"}, {"id": high.id, "role": "TRIANGULATION"}],
+        )
+        out = StringIO()
+        call_command("import_figures", path, max_id=low.id, stdout=out)
+
+        output = out.getvalue()
+        self.assertIn("1 row(s) were skipped", output)
+        self.assertIn(f"--max-id {low.id}", output)
+        self.assertIn("ROW_SKIPPED\trow=3", output)
+
+    def test_max_id_bounds_a_uuid_keyed_row_by_its_resolved_id(self):
+        # A uuid sheet has no id cell, so the bound has to come from the resolved primary key.
+        high = self._figure()
+        path = write_sheet(["uuid", "role"], [{"uuid": str(high.uuid), "role": "TRIANGULATION"}])
+        out = StringIO()
+        call_command("import_figures", path, max_id=high.id - 1, stdout=out)
+
+        high.refresh_from_db()
+        self.assertEqual(high.role, Figure.ROLE.RECOMMENDED.value)
+        self.assertIn("1 row(s) were skipped", out.getvalue())
+
+    def test_the_bound_is_inclusive(self):
+        path = write_sheet(["id", "role"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
+        call_command("import_figures", path, max_id=self.figure.id, stdout=StringIO())
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
+
+    def test_a_skipped_row_is_not_validated(self):
+        # Not this run's row, so its validity is moot; it must not fail the import.
+        high = self._figure()
+        path = write_sheet(["id", "role"], [{"id": high.id, "role": "NOT_A_ROLE"}])
+        out = StringIO()
+        call_command("import_figures", path, max_id=high.id - 1, stdout=out)
+
+        self.assertIn("1 row(s) were skipped", out.getvalue())
+        self.assertNotIn("Import failed", out.getvalue())
+
+    def test_without_the_flag_nothing_is_skipped(self):
+        low, high = self.figure, self._figure()
+        path = write_sheet(
+            ["id", "role"],
+            [{"id": low.id, "role": "TRIANGULATION"}, {"id": high.id, "role": "TRIANGULATION"}],
+        )
+        out = StringIO()
+        call_command("import_figures", path, stdout=out)
+
+        self.assertNotIn("ROW_SKIPPED", out.getvalue())
+        self.assertIn("Created 0, updated 2.", out.getvalue())

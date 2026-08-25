@@ -1,38 +1,40 @@
-from apps.contrib.management.base import (
-    BaseImportCommand,
-    CodeLookup,
-    EnumLookup,
-)
-from apps.country.models import Country
+from rest_framework import serializers
+
+from apps.contrib.management.base import BaseImportCommand, EnumLookup
 from apps.entry.models import FigureLocation
-from apps.entry.serializers import FigureLocationSerializer
+
+
+class FigureLocationPcodeSerializer(serializers.ModelSerializer):
+    """
+    The p-code slice of a figure location, kept apart from the app's `FigureLocationSerializer`.
+
+    That one covers the whole model, and one is built per sheet row. Narrowing also keeps a p-code
+    sheet from carrying `lat`, `lon` or `display_name` and moving a location by accident. None of
+    the wide serializer's checks read these fields, so nothing is lost.
+    """
+
+    class Meta:
+        model = FigureLocation
+        fields = [
+            "id",
+            "pcode",
+            "pcode_source",
+            "pcode_accuracy",
+        ]
 
 
 class Command(BaseImportCommand):
     help = (
-        "Bulk update existing figure locations from an .xlsx sheet. "
+        "Bulk update the p-codes of existing figure locations from an .xlsx sheet. "
         "Use --make-template to generate a blank template. "
         "This importer only updates existing rows (matched by id); it never creates."
     )
 
     model = FigureLocation
-    update_serializer = FigureLocationSerializer
+    update_serializer = FigureLocationPcodeSerializer
     update_only = True
 
-    # uuid identifies the location across systems (hulk matches entities on it), so it is not
-    # location data an operator edits. geocoder_metadata is dropped by the serializer's update(),
-    # which would make its column silently do nothing. moved is figure-workflow state.
-    EXTRA_EXCLUDED_FIELDS = frozenset({"uuid", "geocoder_metadata", "moved"})
-
-    # pcode_source is free text and bounding_box is a plain list of numbers, so neither needs a
-    # lookup; the enums and country_code resolve against a known set of values.
+    # pcode and pcode_source are free text, so neither needs a lookup.
     lookups = [
-        EnumLookup("accuracy", FigureLocation.ACCURACY),
-        EnumLookup("identifier", FigureLocation.IDENTIFIER),
-        EnumLookup("geocoder", FigureLocation.GEOCODER),
         EnumLookup("pcode_accuracy", FigureLocation.PCODE_ACCURACY),
-        # The column stores an iso2. Only this importer checks it: the serializer accepts any
-        # string of the right length, and the figure-level check that a location sits inside its
-        # figure's country runs on FigureSerializer, which a direct location update never enters.
-        CodeLookup("country_code", Country, "iso2"),
     ]

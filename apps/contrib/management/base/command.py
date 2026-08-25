@@ -29,6 +29,8 @@ class PreparedRow(typing.NamedTuple):
     errors: typing.Dict[str, str]
     #: Cells the operator filled that the serializer emptied.
     ignored_cells: typing.List[str]
+    #: Set when --max-id excluded the row; it is neither validated nor written.
+    skipped: bool = False
 
 
 class BaseImportCommand(BaseCommand):
@@ -99,6 +101,16 @@ class BaseImportCommand(BaseCommand):
         parser.add_argument("--user-email", type=str, help="Email of the user to attribute changes to.")
         parser.add_argument("--dry-run", action="store_true", help="Validate and save, then roll back.")
         parser.add_argument(
+            "--max-id",
+            dest="max_id",
+            type=int,
+            metavar="N",
+            help=(
+                "Skip rows whose target's id is greater than N. The id compared is the resolved "
+                "primary key, not the cell, so this works for a sheet keyed by uuid too."
+            ),
+        )
+        parser.add_argument(
             "--make-template",
             dest="make_template",
             type=str,
@@ -112,10 +124,22 @@ class BaseImportCommand(BaseCommand):
     def lookup_map(self) -> typing.Dict[str, BaseLookup]:
         return {lookup.field: lookup for lookup in self.lookups}
 
-    @staticmethod
-    def _writable_fields(serializer_cls) -> typing.List[str]:
-        serializer = serializer_cls()
-        return [name for name, field in serializer.fields.items() if not field.read_only]
+    #: Upper bound on the target id, from --max-id; None means no bound.
+    max_id: typing.Optional[int] = None
+
+    #: Field map per serializer class, built once per invocation.
+    _fields_cache: typing.Optional[typing.Dict] = None
+
+    def _serializer_fields(self, serializer_cls) -> typing.Dict:
+        """Cached: the map describes the columns, not the row, and building one is expensive."""
+        if self._fields_cache is None:
+            self._fields_cache = {}
+        if serializer_cls not in self._fields_cache:
+            self._fields_cache[serializer_cls] = serializer_cls().fields
+        return self._fields_cache[serializer_cls]
+
+    def _writable_fields(self, serializer_cls) -> typing.List[str]:
+        return [name for name, field in self._serializer_fields(serializer_cls).items() if not field.read_only]
 
     def import_columns(self) -> typing.List[str]:
         """
@@ -164,10 +188,10 @@ class BaseImportCommand(BaseCommand):
     }
 
     def _scalar_field(self, column: str):
-        update_fields = self.update_serializer().fields
+        update_fields = self._serializer_fields(self.update_serializer)
         if self.update_only:
             return update_fields.get(column)
-        create_fields = self.create_serializer().fields
+        create_fields = self._serializer_fields(self.create_serializer)
         return create_fields.get(column) or update_fields.get(column)
 
     def _child_field(self, column: str):
@@ -253,32 +277,82 @@ class BaseImportCommand(BaseCommand):
                 return ""
         return None
 
-    def resolve_row(self, column: str, field: str, key):
+    #: Rows whose match keys are resolved in one query. Bounded so only a chunk is held at a time.
+    RESOLVE_CHUNK_SIZE = 1000
+
+    def _match_field(self, field: str):
+        """The model field a match column queries through. ``pk`` is a lookup, not a field name."""
+        return self.model._meta.pk if field == "pk" else self.model._meta.get_field(field)
+
+    @staticmethod
+    def _chunks(rows: typing.Iterable[typing.Dict], size: int):
+        """Yield (sheet row number of the first row, chunk), so a row keeps its number in the sheet."""
+        chunk: typing.List[typing.Dict] = []
+        start = 2  # row 1 is the header
+        for raw_row in rows:
+            chunk.append(raw_row)
+            if len(chunk) == size:
+                yield start, chunk
+                start += len(chunk)
+                chunk = []
+        if chunk:
+            yield start, chunk
+
+    def resolve_chunk(self, chunk: typing.List[typing.Dict]) -> typing.Dict:
+        """
+        Resolve a chunk's match keys together: {column: {key: [instances]}}, one query per column.
+
+        Every match is kept, not just the first two, because a match field need not be unique.
+        """
+        resolved: typing.Dict[str, typing.Dict] = {}
+        for column, field in self.match_columns:
+            model_field = self._match_field(field)
+            keys = set()
+            for raw_row in chunk:
+                raw = raw_row.get(column)
+                if is_empty(raw):
+                    continue
+                try:
+                    keys.add(model_field.to_python(raw))
+                except (DjangoValidationError, ValueError, TypeError):
+                    continue  # reported against its own row, so one bad cell keeps the chunk
+            if not keys:
+                continue
+            matches: typing.Dict[typing.Any, typing.List] = {}
+            for instance in self.model.objects.filter(**{f"{field}__in": list(keys)}):
+                matches.setdefault(getattr(instance, field) if field != "pk" else instance.pk, []).append(instance)
+            resolved[column] = matches
+        return resolved
+
+    def resolve_row(self, column: str, field: str, key, resolved: typing.Optional[typing.Dict] = None):
         """
         Find the single row `key` names. Returns (instance, error_message); exactly one is set.
 
-        Two rows are fetched rather than one because a match field is not necessarily unique —
-        ``Figure.uuid`` carries whatever uuid an external import supplied and lost its unique
-        constraint in 2021. An ambiguous key names both candidates instead of picking one.
+        Falls back to its own query when `resolved` is absent, so a lone row still works.
         """
+        model_field = self._match_field(field)
         try:
-            queryset = self.model.objects.filter(**{field: key})
-            matches = list(queryset[:2])
+            coerced = model_field.to_python(key)
         except (DjangoValidationError, ValueError, TypeError):
-            # A key column takes raw sheet text, and a field converts it on the way into the query:
-            # a malformed uuid or a non-numeric id raises here. Without this the framework's
-            # promise — every row checked, every error named with its row — is replaced by a
-            # traceback that does not say which of thousands of rows is bad.
+            # Caught so a bad cell becomes one row's error, not a traceback naming no row at all.
             return None, f"{key!r} is not a valid {column}"
+
+        if resolved is not None and column in resolved:
+            matches = resolved[column].get(coerced, [])
+            ambiguous_ids = [instance.pk for instance in matches]
+        else:
+            queryset = self.model.objects.filter(**{field: coerced})
+            matches = list(queryset[:2])
+            ambiguous_ids = list(queryset.values_list("pk", flat=True)) if len(matches) > 1 else []
+
         if not matches:
             return None, f"no {self.model.__name__} found with {column} {key}"
         if len(matches) > 1:
-            # Only reached on an ambiguous key, so naming every candidate is worth one more query.
-            ids = ", ".join(str(pk) for pk in queryset.values_list("pk", flat=True))
+            ids = ", ".join(str(pk) for pk in ambiguous_ids)
             return None, (f"{column} {key} matches more than one {self.model.__name__} ({ids}); cannot tell which to edit")
         return matches[0], None
 
-    def prepare_row(self, raw_row: typing.Dict, request):
+    def prepare_row(self, raw_row: typing.Dict, request, resolved: typing.Optional[typing.Dict] = None):
         """Resolve a raw row and build its serializer. Returns a PreparedRow."""
         row_errors: typing.Dict[str, str] = {}
         data: typing.Dict = {}
@@ -317,9 +391,12 @@ class BaseImportCommand(BaseCommand):
         elif is_update:
             column, field = supplied[0]
             key = raw_row.get(column)
-            instance, error = self.resolve_row(column, field, key)
+            instance, error = self.resolve_row(column, field, key, resolved)
             if error:
                 row_errors[column] = error
+            elif self.max_id is not None and instance.pk > self.max_id:
+                # Excluded before validation: not this run's row, so its validity is moot.
+                return PreparedRow(None, True, {}, [], skipped=True)
             else:
                 # The resolved pk, not the cell: a key written as text or as a float would
                 # otherwise reach the serializer in whatever shape the sheet stored it.
@@ -436,6 +513,8 @@ class BaseImportCommand(BaseCommand):
     def handle(self, *args, **options):
         for lookup in self.lookups:
             lookup.reset()  # caches are per-invocation; never reuse across runs
+        self._fields_cache = None
+        self.max_id = options.get("max_id")
 
         if options.get("make_template"):
             out_path = options["make_template"]
@@ -537,11 +616,11 @@ class BaseImportCommand(BaseCommand):
             return text[: cls.CHANGELOG_VALUE_CHARS] + "..."
         return text
 
-    def print_row_change(self, row_number: int, instance, before: typing.Dict, after: typing.Dict) -> bool:
+    def row_change_line(self, row_number: int, instance, before: typing.Dict, after: typing.Dict) -> typing.Optional[str]:
         """
-        Report the fields whose stored value moved, as one tab-separated line. Rows are updated in
-        place and nothing else records what they held before, so this is the only account of it.
-        Returns whether anything moved.
+        The changelog line for a row whose stored values moved, or None when nothing moved. Rows are
+        updated in place and nothing else records what they held before, so this is the only account
+        of it.
         """
         moved = []
         for name in before:
@@ -555,16 +634,11 @@ class BaseImportCommand(BaseCommand):
             else:
                 moved.append(f"{name}={was}->{now}")
         if not moved:
-            return False
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"ROW_UPDATED\t{self.model.__name__.lower()}={instance.pk}\trow={row_number}\t" + "\t".join(moved)
-            )
-        )
-        return True
+            return None
+        return f"ROW_UPDATED\t{self.model.__name__.lower()}={instance.pk}\trow={row_number}\t" + "\t".join(moved)
 
     @transaction.atomic
-    def run_import(self, rows: typing.List[typing.Dict], request, dry_run: bool):
+    def run_import(self, rows: typing.Iterable[typing.Dict], request, dry_run: bool):
         created, updated, unchanged = self.apply_rows(rows, request)
 
         # Reported after the work, because Django refuses any further query in an atomic block
@@ -577,39 +651,80 @@ class BaseImportCommand(BaseCommand):
         if unchanged:
             self.stdout.write(self.style.NOTICE(f"{unchanged} of the updated rows had no effective change."))
 
-    def apply_rows(self, rows: typing.List[typing.Dict], request) -> typing.Tuple[int, int, int]:
-        """Validate every row, then persist. Returns (created, updated, unchanged)."""
+    def apply_rows(self, rows: typing.Iterable[typing.Dict], request) -> typing.Tuple[int, int, int]:
+        """
+        Validate and persist row by row. Returns (created, updated, unchanged).
+
+        Nothing is retained between rows: a serializer per row is what a large sheet cannot afford.
+        Saving as we go is still all-or-nothing because `run_import` wraps this in a transaction.
+
+        Caveat: a row is validated against a database holding the earlier rows' writes. Rows target
+        distinct model rows, so none sees its own target move — but a serializer validating against
+        the rest of the table would see them. None does today.
+        """
         errors: typing.List[typing.Tuple[int, str, str]] = []
-        prepared: typing.List[typing.Tuple] = []
         # Row number each targeted row was first seen on. Two rows aimed at one row would each
         # validate against its unmodified state and then both save, silently losing the earlier.
         # Keyed by the resolved primary key rather than the cell, so a sheet writing the same id
         # as a number on one row and as text on another is still one target.
         pk_rows: typing.Dict[typing.Any, int] = {}
         ignored_cells: typing.List[typing.Tuple[int, str]] = []
+        # Held back: a run that fails at its last row commits nothing, so printed lines would lie.
+        changelog: typing.List[str] = []
+        # Reported, never dropped quietly: otherwise "no failure" only means "no failure reported".
+        skipped: typing.List[int] = []
+        created = updated = unchanged = 0
 
-        # First pass: resolve + validate every row, collecting all errors (all-or-nothing).
-        for index, raw_row in enumerate(rows, start=2):  # row 1 is the header
-            row = self.prepare_row(raw_row, request)
-            serializer, is_update, row_errors, ignored = row.serializer, row.is_update, row.errors, row.ignored_cells
+        for chunk_start, chunk in self._chunks(rows, self.RESOLVE_CHUNK_SIZE):
+            # One query per match column for the whole chunk, rather than one per row.
+            resolved = self.resolve_chunk(chunk)
+            for offset, raw_row in enumerate(chunk):
+                index = chunk_start + offset
+                row = self.prepare_row(raw_row, request, resolved)
+                if row.skipped:
+                    skipped.append(index)
+                    continue
+                serializer, is_update, row_errors, ignored = (
+                    row.serializer,
+                    row.is_update,
+                    row.errors,
+                    row.ignored_cells,
+                )
 
-            if is_update and serializer is not None:
-                pk = serializer.instance.pk
-                first_seen = pk_rows.get(pk)
-                if first_seen is not None:
-                    row_errors[self.match_column_names[0]] = (
-                        f"{self.model.__name__} {pk} also appears on row {first_seen}; each row must target a distinct row"
-                    )
-                else:
-                    pk_rows[pk] = index
+                if is_update and serializer is not None:
+                    pk = serializer.instance.pk
+                    first_seen = pk_rows.get(pk)
+                    if first_seen is not None:
+                        row_errors[self.match_column_names[0]] = (
+                            f"{self.model.__name__} {pk} also appears on row {first_seen}; "
+                            "each row must target a distinct row"
+                        )
+                    else:
+                        pk_rows[pk] = index
 
-            if row_errors:
-                for field, message in row_errors.items():
-                    errors.append((index, field, message))
-            else:
-                prepared.append((serializer, is_update, index))
+                if row_errors:
+                    for field, message in row_errors.items():
+                        errors.append((index, field, message))
+                    continue
+
                 for cell in ignored:
                     ignored_cells.append((index, cell))
+
+                if errors:
+                    continue  # bound for rollback; keep validating so every error is reported
+
+                fields = self.changelog_fields(serializer) if is_update else []
+                before = self._snapshot(serializer.instance, fields) if is_update else {}
+                instance = serializer.save()
+                if is_update:
+                    updated += 1
+                    line = self.row_change_line(index, instance, before, self._snapshot(instance, fields))
+                    if line is None:
+                        unchanged += 1
+                    else:
+                        changelog.append(line)
+                else:
+                    created += 1
 
         if errors:
             self.stdout.write(self.style.ERROR(f"Import failed: {len(errors)} error(s); nothing committed."))
@@ -617,22 +732,24 @@ class BaseImportCommand(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"Row {row_number}: {field}: {message}"))
             raise CommandError("Import aborted due to validation errors.")
 
-        # Second pass: persist. Duplicates are already rejected, so no row's snapshot can be
-        # disturbed by another row's save.
-        created = updated = unchanged = 0
-        for serializer, is_update, row_number in prepared:
-            fields = self.changelog_fields(serializer) if is_update else []
-            before = self._snapshot(serializer.instance, fields) if is_update else {}
-            instance = serializer.save()
-            if is_update:
-                updated += 1
-                if not self.print_row_change(row_number, instance, before, self._snapshot(instance, fields)):
-                    unchanged += 1
-            else:
-                created += 1
-
+        for line in changelog:
+            self.stdout.write(self.style.SUCCESS(line))
+        self.print_skipped_rows(skipped)
         self.print_ignored_cells(ignored_cells)
         return created, updated, unchanged
+
+    def print_skipped_rows(self, skipped: typing.List[int]):
+        """Name every excluded row: a sheet's unmet asks belong on the record."""
+        if not skipped:
+            return
+        self.stdout.write(
+            self.style.WARNING(
+                f"{len(skipped)} row(s) were skipped: their target's id is greater than "
+                f"--max-id {self.max_id}. Nothing was read from or written to those rows."
+            )
+        )
+        for row_number in skipped:
+            self.stdout.write(self.style.WARNING(f"ROW_SKIPPED\trow={row_number}"))
 
     def print_ignored_cells(self, ignored_cells: typing.List[typing.Tuple[int, str]]):
         """
