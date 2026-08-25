@@ -904,8 +904,10 @@ class Query(graphene.ObjectType):
 
         hazard_types_qs = (
             event_qs.filter(hazard_type__isnull=False)
-            .values("hazard_type_id", "hazard_type__name")
-            .distinct("hazard_type_id", "hazard_type__name")
+            # hazard_type_name is denormalised onto the row, so the published name is the one the
+            # release captured rather than the live table's current value.
+            .values("hazard_type_id", "hazard_type_name")
+            .distinct("hazard_type_id", "hazard_type_name")
         )
         return GiddEventType(
             event_name=base.get("event_name"),
@@ -927,7 +929,7 @@ class Query(graphene.ObjectType):
             hazard_types=[
                 GiddHazardType(
                     id=hazard_type["hazard_type_id"],
-                    name=hazard_type["hazard_type__name"],
+                    name=hazard_type["hazard_type_name"],
                 )
                 for hazard_type in hazard_types_qs
             ],

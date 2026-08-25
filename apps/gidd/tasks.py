@@ -185,6 +185,12 @@ def update_public_figure_analysis():
 
         data.append(
             PublicFigureAnalysis(
+                # The report's id IS this row's key. There is exactly one analysis per
+                # PFA-visible report, so the key is stable across releases even though the table
+                # is emptied and rebuilt each time -- and a caller can reference a published
+                # analysis without the number changing under it. This is the only path that
+                # creates these rows, so every key is assigned here rather than by the sequence.
+                id=report.id,
                 iso3=iso3,
                 figure_cause=figure_cause,
                 figure_category=figure_category,
