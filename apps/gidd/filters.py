@@ -292,6 +292,25 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
         return queryset.filter(event_raw_id__in=value)
 
 
+class GiddCountryDisplacementFilter(ReleaseMetadataFilter):
+    countries_iso3 = StringListFilter(method="filter_countries_iso3")
+    start_year = django_filters.NumberFilter(method="filter_start_year")
+    end_year = django_filters.NumberFilter(method="filter_end_year")
+
+    class Meta:
+        model = GiddDisplacement
+        fields = {}
+
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(iso3__in=value)
+
+    def filter_start_year(self, queryset, name, value):
+        return queryset.filter(year__gte=value)
+
+    def filter_end_year(self, queryset, name, value):
+        return queryset.filter(year__lte=value)
+
+
 # Gidd filtets to api type map
 GIDD_TRACKING_FILTERS = {
     DisasterFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_GRAPHQL,
