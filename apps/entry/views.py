@@ -627,6 +627,12 @@ class ExternalEndpointBaseCachedViewMixin:
 
         return redirect(url)
 
+    # Whether this endpoint publishes a per-client variant. The IDU dumps are generated both with
+    # and without sources, and a client's `share_source` flag selects which it may read. An endpoint
+    # generated only one way must not key the lookup on that flag, or every client with
+    # `share_source` set gets a 404 for a dump that exists.
+    DUMP_VARIES_BY_CLIENT = True
+
     @client_id
     def get(self, request, data_format):
         # Check if request is comming from valid client
@@ -646,7 +652,7 @@ class ExternalEndpointBaseCachedViewMixin:
         try:
             api_dump = ExternalApiDump.objects.get(
                 api_type=self.ENDPOINT_TYPE,
-                include_sources=client.share_source,
+                include_sources=client.share_source if self.DUMP_VARIES_BY_CLIENT else False,
                 format=data_format,
             )
         except ExternalApiDump.DoesNotExist:
@@ -701,3 +707,15 @@ class IdusAllFlatCachedView(BaseIdusCachedView):
 
 class IdusAllDisasterCachedView(BaseIdusCachedView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER
+
+
+@extend_schema(exclude=True)
+class IduReferencesCachedView(ExternalEndpointBaseCachedViewMixin, ViewSet):
+    ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDU_REFERENCES
+    # One dump serves every client: the references carry no source information to withhold.
+    DUMP_VARIES_BY_CLIENT = False
+
+    @client_id
+    @action(detail=False, methods=["get"], url_path="export-json")
+    def export_json(self, request):
+        return super().get(request, data_format=ExternalApiDump.Format.JSON)

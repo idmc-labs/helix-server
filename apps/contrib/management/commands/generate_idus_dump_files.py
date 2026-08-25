@@ -3,6 +3,7 @@ import logging
 from django.core.management.base import BaseCommand
 
 from apps.contrib.tasks import (
+    generate_idu_options_dump_file,
     generate_idus_all_disaster_dump_file,
     generate_idus_all_dump_file,
     generate_idus_dump_file,
@@ -16,6 +17,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
+            generate_idu_options_dump_file()
             generate_idus_dump_file()
             generate_idus_all_dump_file()
             generate_idus_all_disaster_dump_file()
