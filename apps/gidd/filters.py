@@ -3,9 +3,11 @@ import typing
 import django_filters
 from rest_framework import serializers
 
+from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.models import Crisis
+from apps.entry.enums import FigureCategoryTypeEnum
 from apps.entry.models import ExternalApiDump
-from utils.filters import IDListFilter, StringListFilter
+from utils.filters import IDListFilter, SimpleInputFilter, StringListFilter
 
 from .models import (
     GiddDisplacement,
@@ -93,6 +95,8 @@ class ConflictStatisticsFilter(ReleaseMetadataFilter):
 
 
 class DisasterStatisticsFilter(ReleaseMetadataFilter):
+    hazard_categories = IDListFilter(method="filter_hazard_categories")
+    hazard_sub_categories = IDListFilter(method="filter_hazard_sub_categories")
     hazard_types = IDListFilter(method="filter_hazard_types")
     hazard_sub_types = IDListFilter(method="filter_hazard_sub_types")
     start_year = django_filters.NumberFilter(method="filter_start_year")
@@ -102,6 +106,12 @@ class DisasterStatisticsFilter(ReleaseMetadataFilter):
     class Meta:
         model = GiddDisplacement
         fields = ()
+
+    def filter_hazard_categories(self, queryset, name, value):
+        return queryset.filter(hazard_category__in=value)
+
+    def filter_hazard_sub_categories(self, queryset, name, value):
+        return queryset.filter(hazard_sub_category__in=value)
 
     def filter_hazard_types(self, queryset, name, value):
         return queryset.filter(hazard_type__in=value)
@@ -142,8 +152,12 @@ class GiddStatusLogFilter(django_filters.FilterSet):
 class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
     years = IDListFilter(method="filter_years")
-    figure_cause = django_filters.CharFilter(method="filter_figure_cause")
-    figure_category = django_filters.CharFilter(method="filter_figure_category")
+    # Enum-typed rather than CharFilter: both columns are EnumFields, i.e. integer columns, so a
+    # name reached the ORM as a string and `int("CONFLICT")` raised on an unauthenticated endpoint.
+    # GraphQL rejects an unknown member before the filterset runs, and the enum is the one these
+    # fields are already returned as.
+    figure_cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="figure_cause")
+    figure_category = SimpleInputFilter(FigureCategoryTypeEnum, field_name="figure_category")
 
     class Meta:
         model = PublicFigureAnalysis
@@ -158,12 +172,6 @@ class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
     def filter_years(self, queryset, name, value):
         return queryset.filter(year__in=value)
 
-    def filter_figure_cause(self, queryset, name, value):
-        return queryset.filter(figure_cause=value)
-
-    def filter_figure_category(self, queryset, name, value):
-        return queryset.filter(figure_category=value)
-
 
 class GiddDisplacementFilter(ReleaseMetadataFilter):
     # Enum-typed rather than a ChoiceFilter: django-filter drops a field that fails form validation
@@ -172,6 +180,8 @@ class GiddDisplacementFilter(ReleaseMetadataFilter):
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
+    hazard_categories = IDListFilter(method="filter_hazard_categories")
+    hazard_sub_categories = IDListFilter(method="filter_hazard_sub_categories")
     hazard_types = IDListFilter(method="filter_hazard_types")
     hazard_sub_types = IDListFilter(method="filter_hazard_sub_types")
     violence_types = IDListFilter(method="filter_violence_types")
@@ -189,6 +199,12 @@ class GiddDisplacementFilter(ReleaseMetadataFilter):
 
     def filter_end_year(self, queryset, name, value):
         return queryset.filter(year__lte=value)
+
+    def filter_hazard_categories(self, queryset, name, value):
+        return queryset.filter(hazard_category__in=value)
+
+    def filter_hazard_sub_categories(self, queryset, name, value):
+        return queryset.filter(hazard_sub_category__in=value)
 
     def filter_hazard_types(self, queryset, name, value):
         return queryset.filter(hazard_type__in=value)
@@ -210,6 +226,8 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
+    hazard_categories = IDListFilter(method="filter_hazard_categories")
+    hazard_sub_categories = IDListFilter(method="filter_hazard_sub_categories")
     hazard_types = IDListFilter(method="filter_hazard_types")
     hazard_sub_types = IDListFilter(method="filter_hazard_sub_types")
     violence_types = IDListFilter(method="filter_violence_types")
@@ -229,6 +247,12 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
 
     def filter_end_year(self, queryset, name, value):
         return queryset.filter(year__lte=value)
+
+    def filter_hazard_categories(self, queryset, name, value):
+        return queryset.filter(hazard_category__in=value)
+
+    def filter_hazard_sub_categories(self, queryset, name, value):
+        return queryset.filter(hazard_sub_category__in=value)
 
     def filter_hazard_types(self, queryset, name, value):
         return queryset.filter(hazard_type__in=value)

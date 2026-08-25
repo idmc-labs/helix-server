@@ -1,5 +1,6 @@
 # types.py
 import graphene
+from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Coalesce
@@ -15,7 +16,8 @@ from apps.entry.models import ExternalApiDump
 from utils.common import round_and_remove_zero, track_gidd
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
-from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.ordering import strip_direction
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount, get_page_size
 from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
@@ -415,21 +417,26 @@ class GiddCountryYearDisplacementType(graphene.ObjectType):
 
 # Max rows per page for giddPublicCountryYearDisplacements (matches the page_size cap
 # of the other paginated GIDD list queries).
-GIDD_COUNTRY_YEAR_PAGE_SIZE = 50
+# Rows per page when the client sends none. The maximum is the shared MAX_PAGE_SIZE, applied by
+# `get_page_size`, which refuses an over-large value rather than quietly serving fewer rows.
+GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE = 50
+GIDD_COUNTRY_YEAR_MAX_PAGE_SIZE = settings.GRAPHENE_DJANGO_EXTRAS["MAX_PAGE_SIZE"]
 
-# Sortable columns for giddPublicCountryYearDisplacements. Maps the (snake-cased) client
-# sort key to the underlying queryset field/annotation. This is the ordering allowlist for
-# this query -- a token outside it is rejected, mirroring the ORDERING_ALLOWLIST bound on
-# the model-backed paginated queries.
-GIDD_COUNTRY_YEAR_ORDERING_FIELDS = {
-    "iso3": "iso3",
-    "country_name": "country_name",
-    "year": "year",
-    "conflict_new_displacement": "conflict_nd",
-    "conflict_total_displacement": "conflict_idp",
-    "disaster_new_displacement": "disaster_nd",
-    "disaster_total_displacement": "disaster_idp",
-}
+# The columns giddPublicCountryYearDisplacements sorts on -- every one of them a column it also
+# returns. Each is in GiddDisplacement.ORDERING_ALLOWLIST too, which is what
+# test_ordering_allowlist_registry enumerates; the four aggregates are annotation aliases over
+# that model, and are named for the field they sum so a client's sort key is the column itself.
+GIDD_COUNTRY_YEAR_SORTABLE = frozenset(
+    {
+        "conflict_new_displacement",
+        "conflict_total_displacement",
+        "country_name",
+        "disaster_new_displacement",
+        "disaster_total_displacement",
+        "iso3",
+        "year",
+    }
+)
 
 
 class GiddCountryYearDisplacementListType(graphene.ObjectType):
@@ -529,7 +536,11 @@ class Query(graphene.ObjectType):
         violence_types=graphene.List(graphene.NonNull(graphene.ID)),
         violence_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
         page=graphene.Int(description="1-indexed page number (default 1)."),
-        page_size=graphene.Int(description=f"Rows per page (default and max {GIDD_COUNTRY_YEAR_PAGE_SIZE})."),
+        page_size=graphene.Int(
+            description=(
+                f"Rows per page (default {GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE}, max {GIDD_COUNTRY_YEAR_MAX_PAGE_SIZE})."
+            )
+        ),
         ordering=graphene.String(
             description=(
                 "Comma-separated sort keys, prefix with '-' for descending "
@@ -1140,16 +1151,21 @@ class Query(graphene.ObjectType):
         rows = (
             qs.values("iso3", "country_name", "country_id")
             .annotate(
-                conflict_nd=Coalesce(models.Sum("new_displacement", filter=conflict_filter), 0),
-                conflict_idp=Coalesce(
+                conflict_new_displacement=Coalesce(models.Sum("new_displacement", filter=conflict_filter), 0),
+                conflict_total_displacement=Coalesce(
                     models.Sum("total_displacement", filter=conflict_filter & Q(year=conflict_stock_year)), 0
                 ),
-                disaster_nd=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
-                disaster_idp=Coalesce(
+                disaster_new_displacement=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
+                disaster_total_displacement=Coalesce(
                     models.Sum("total_displacement", filter=disaster_filter & Q(year=disaster_stock_year)), 0
                 ),
             )
-            .filter(Q(conflict_nd__gt=0) | Q(conflict_idp__gt=0) | Q(disaster_nd__gt=0) | Q(disaster_idp__gt=0))
+            .filter(
+                Q(conflict_new_displacement__gt=0)
+                | Q(conflict_total_displacement__gt=0)
+                | Q(disaster_new_displacement__gt=0)
+                | Q(disaster_total_displacement__gt=0)
+            )
             .order_by("iso3")
         )
 
@@ -1158,14 +1174,14 @@ class Query(graphene.ObjectType):
                 iso3=row["iso3"],
                 country_name=row["country_name"],
                 country_id=row["country_id"],
-                conflict_new_displacement=row["conflict_nd"] or None,
-                conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_nd"]),
-                conflict_total_displacement=row["conflict_idp"] or None,
-                conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_idp"]),
-                disaster_new_displacement=row["disaster_nd"] or None,
-                disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_nd"]),
-                disaster_total_displacement=row["disaster_idp"] or None,
-                disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_idp"]),
+                conflict_new_displacement=row["conflict_new_displacement"] or None,
+                conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_new_displacement"]),
+                conflict_total_displacement=row["conflict_total_displacement"] or None,
+                conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_total_displacement"]),
+                disaster_new_displacement=row["disaster_new_displacement"] or None,
+                disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_new_displacement"]),
+                disaster_total_displacement=row["disaster_total_displacement"] or None,
+                disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_total_displacement"]),
             )
             for row in rows
         ]
@@ -1178,26 +1194,25 @@ class Query(graphene.ObjectType):
         hazard_types = kwargs.pop("hazard_types", None)
         violence_types = kwargs.pop("violence_types", None)
         violence_sub_types = kwargs.pop("violence_sub_types", None)
-        # Paginated (page/pageSize), capped at GIDD_COUNTRY_YEAR_PAGE_SIZE per page.
         page = max(1, kwargs.pop("page", None) or 1)
-        page_size = kwargs.pop("page_size", None) or GIDD_COUNTRY_YEAR_PAGE_SIZE
-        page_size = max(1, min(page_size, GIDD_COUNTRY_YEAR_PAGE_SIZE))
+        page_size = get_page_size(kwargs.pop("page_size", None) or GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE)
         ordering = kwargs.pop("ordering", None)
 
-        # Ordering bounded to GIDD_COUNTRY_YEAR_ORDERING_FIELDS; nulls last; with a stable
-        # (iso3, year) tiebreak appended so rows never drift between pages.
+        # NULLS LAST, and always total. The tiebreak is (iso3, year) rather than the pk: this
+        # queryset is grouped, so ordering it by a column outside the GROUP BY would fold that
+        # column into the grouping and split every row -- and (iso3, year) is already unique per
+        # group, so it makes the sort total on its own.
         order_by = []
         ordered_columns = set()
         for token in (ordering or "").replace(" ", "").split(","):
             if not token:
                 continue
             descending = token.startswith("-")
-            key = to_snake_case(token[1:] if descending else token)
-            column = GIDD_COUNTRY_YEAR_ORDERING_FIELDS.get(key)
-            if column is None:
+            key = to_snake_case(strip_direction(token))
+            if key not in GIDD_COUNTRY_YEAR_SORTABLE:
                 raise ValueError(f"Invalid ordering field: {key}")
-            ordered_columns.add(column)
-            order_by.append(models.F(column).desc(nulls_last=True) if descending else models.F(column).asc(nulls_last=True))
+            ordered_columns.add(key)
+            order_by.append(models.F(key).desc(nulls_last=True) if descending else models.F(key).asc(nulls_last=True))
         for tiebreak in ("iso3", "year"):
             if tiebreak not in ordered_columns:
                 order_by.append(models.F(tiebreak).asc())
@@ -1217,12 +1232,17 @@ class Query(graphene.ObjectType):
         rows = (
             qs.values("iso3", "country_name", "country_id", "year")
             .annotate(
-                conflict_nd=Coalesce(models.Sum("new_displacement", filter=conflict_filter), 0),
-                conflict_idp=Coalesce(models.Sum("total_displacement", filter=conflict_filter), 0),
-                disaster_nd=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
-                disaster_idp=Coalesce(models.Sum("total_displacement", filter=disaster_filter), 0),
+                conflict_new_displacement=Coalesce(models.Sum("new_displacement", filter=conflict_filter), 0),
+                conflict_total_displacement=Coalesce(models.Sum("total_displacement", filter=conflict_filter), 0),
+                disaster_new_displacement=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
+                disaster_total_displacement=Coalesce(models.Sum("total_displacement", filter=disaster_filter), 0),
             )
-            .filter(Q(conflict_nd__gt=0) | Q(conflict_idp__gt=0) | Q(disaster_nd__gt=0) | Q(disaster_idp__gt=0))
+            .filter(
+                Q(conflict_new_displacement__gt=0)
+                | Q(conflict_total_displacement__gt=0)
+                | Q(disaster_new_displacement__gt=0)
+                | Q(disaster_total_displacement__gt=0)
+            )
             .order_by(*order_by)
         )
 
@@ -1237,14 +1257,14 @@ class Query(graphene.ObjectType):
                     country_name=row["country_name"],
                     country_id=row["country_id"],
                     year=row["year"],
-                    conflict_new_displacement=row["conflict_nd"] or None,
-                    conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_nd"]),
-                    conflict_total_displacement=row["conflict_idp"] or None,
-                    conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_idp"]),
-                    disaster_new_displacement=row["disaster_nd"] or None,
-                    disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_nd"]),
-                    disaster_total_displacement=row["disaster_idp"] or None,
-                    disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_idp"]),
+                    conflict_new_displacement=row["conflict_new_displacement"] or None,
+                    conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_new_displacement"]),
+                    conflict_total_displacement=row["conflict_total_displacement"] or None,
+                    conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_total_displacement"]),
+                    disaster_new_displacement=row["disaster_new_displacement"] or None,
+                    disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_new_displacement"]),
+                    disaster_total_displacement=row["disaster_total_displacement"] or None,
+                    disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_total_displacement"]),
                 )
                 for row in rows[offset : offset + page_size]
             ],
