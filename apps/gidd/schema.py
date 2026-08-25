@@ -3,6 +3,7 @@ import graphene
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Coalesce
+from graphene.utils.str_converters import to_snake_case
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django_extras import DjangoObjectField
 
@@ -54,19 +55,15 @@ def default_end_year(kwargs):
 
 def custom_date_filters(start_year, end_year):
     filters = {
-        "idps_date_filters": {},
         "nd_date_filters": {},
     }
 
-    filters["idps_date_filters"].update({"total_displacement__gt": 0})
     filters["nd_date_filters"].update({"new_displacement__gt": 0})
 
     if start_year:
         filters["nd_date_filters"].update({"year__gte": start_year})
     if end_year:
         filters["nd_date_filters"].update({"year__lte": end_year})
-        filters["idps_date_filters"].update({"year__gte": end_year})
-        filters["idps_date_filters"].update({"year__lte": end_year})
     return filters
 
 
@@ -402,6 +399,32 @@ class GiddCountryYearDisplacementType(graphene.ObjectType):
     disaster_total_displacement_rounded = graphene.Int()
 
 
+# Max rows per page for giddPublicCountryYearDisplacements (matches the page_size cap
+# of the other paginated GIDD list queries).
+GIDD_COUNTRY_YEAR_PAGE_SIZE = 50
+
+# Sortable columns for giddPublicCountryYearDisplacements. Maps the (snake-cased) client
+# sort key to the underlying queryset field/annotation. This is the ordering allowlist for
+# this query -- a token outside it is rejected, mirroring the ORDERING_ALLOWLIST bound on
+# the model-backed paginated queries.
+GIDD_COUNTRY_YEAR_ORDERING_FIELDS = {
+    "iso3": "iso3",
+    "country_name": "country_name",
+    "year": "year",
+    "conflict_new_displacement": "conflict_nd",
+    "conflict_total_displacement": "conflict_idp",
+    "disaster_new_displacement": "disaster_nd",
+    "disaster_total_displacement": "disaster_idp",
+}
+
+
+class GiddCountryYearDisplacementListType(graphene.ObjectType):
+    results = graphene.List(graphene.NonNull(GiddCountryYearDisplacementType), required=True)
+    total_count = graphene.Int(required=True)
+    page = graphene.Int(required=True)
+    page_size = graphene.Int(required=True)
+
+
 class Query(graphene.ObjectType):
     gidd_public_conflict_statistics = graphene.Field(
         GiddConflictStatisticsType,
@@ -486,11 +509,21 @@ class Query(graphene.ObjectType):
         client_id=graphene.String(required=True),
     )
     gidd_public_country_year_displacements = graphene.Field(
-        graphene.List(graphene.NonNull(GiddCountryYearDisplacementType)),
+        GiddCountryYearDisplacementListType,
         **get_filtering_args_from_filterset(GiddCountryDisplacementFilter, GiddCountryYearDisplacementType),
         hazard_types=graphene.List(graphene.NonNull(graphene.ID)),
         violence_types=graphene.List(graphene.NonNull(graphene.ID)),
         violence_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
+        page=graphene.Int(description="1-indexed page number (default 1)."),
+        page_size=graphene.Int(description=f"Rows per page (default and max {GIDD_COUNTRY_YEAR_PAGE_SIZE})."),
+        ordering=graphene.String(
+            description=(
+                "Comma-separated sort keys, prefix with '-' for descending "
+                "(e.g. '-conflictTotalDisplacement,iso3'). Allowed: iso3, countryName, year, "
+                "conflictNewDisplacement, conflictTotalDisplacement, disasterNewDisplacement, "
+                "disasterTotalDisplacement. Defaults to iso3, year."
+            ),
+        ),
         client_id=graphene.String(required=True),
     )
 
@@ -554,7 +587,10 @@ class Query(graphene.ObjectType):
         end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
         filters = custom_date_filters(start_year, end_year)
 
-        conflict_total_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
+        # IDP stock is read from a single year (the requested end_year, else the latest
+        # available year) and summed across countries/sub types -- never across years.
+        conflict_stock_year = end_year
+        conflict_total_displacement_qs = conflict_qs.filter(total_displacement__gt=0, year=conflict_stock_year)
         conflict_new_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
 
         new_displacement_timeseries_by_year_qs = (
@@ -589,12 +625,8 @@ class Query(graphene.ObjectType):
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
-        # IDP stock (total_displacement) is a point-in-time, end-of-year figure,
-        # so the per-category total must come from a single year's snapshot, not
-        # a sum across years. Pin it to the latest year that has stock within the
-        # filtered range, grouped by violence sub type.
-        conflict_latest_stock_year = conflict_qs.filter(total_displacement__gt=0).aggregate(year=models.Max("year"))["year"]
-
+        # Per-category stock is the same single-year snapshot (conflict_stock_year),
+        # summed across violence sub types within that year -- never across years.
         violence_categories_qs = (
             conflict_qs.values("violence_sub_type", "violence_sub_type__id")
             .annotate(
@@ -602,7 +634,7 @@ class Query(graphene.ObjectType):
                 total_idp=Coalesce(
                     models.Sum(
                         "total_displacement",
-                        filter=models.Q(year=conflict_latest_stock_year),
+                        filter=models.Q(year=conflict_stock_year),
                         output_field=models.IntegerField(),
                     ),
                     0,
@@ -699,7 +731,10 @@ class Query(graphene.ObjectType):
         end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
         filters = custom_date_filters(start_year, end_year)
 
-        disaster_total_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
+        # IDP stock is read from a single year (the requested end_year, else the latest
+        # available year) and summed across countries/hazard types -- never across years.
+        disaster_stock_year = end_year
+        disaster_total_displacement_qs = disaster_qs.filter(total_displacement__gt=0, year=disaster_stock_year)
         disaster_new_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
 
         new_displacement_timeseries_by_year_qs = (
@@ -734,12 +769,8 @@ class Query(graphene.ObjectType):
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
-        # IDP stock (total_displacement) is a point-in-time, end-of-year figure,
-        # so the per-category total must come from a single year's snapshot, not
-        # a sum across years. Pin it to the latest year that has stock within the
-        # filtered range, grouped by hazard type.
-        disaster_latest_stock_year = disaster_qs.filter(total_displacement__gt=0).aggregate(year=models.Max("year"))["year"]
-
+        # Per-category stock is the same single-year snapshot (disaster_stock_year),
+        # summed across hazard types within that year -- never across years.
         categories_qs = (
             disaster_qs.values("hazard_type", "hazard_type__id")
             .annotate(
@@ -747,7 +778,7 @@ class Query(graphene.ObjectType):
                 total_idp=Coalesce(
                     models.Sum(
                         "total_displacement",
-                        filter=models.Q(year=disaster_latest_stock_year),
+                        filter=models.Q(year=disaster_stock_year),
                         output_field=models.IntegerField(),
                     ),
                     0,
@@ -986,7 +1017,9 @@ class Query(graphene.ObjectType):
 
         filters = custom_date_filters(start_year, end_year)
 
-        disaster_total_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
+        # IDP stock is read from a single year (end_year, else latest available), never summed across years.
+        disaster_base = DisasterStatisticsFilter(data=kwargs).qs
+        disaster_total_displacement_qs = disaster_base.filter(total_displacement__gt=0, year=end_year)
         disaster_internal_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
 
         disaster_total_displacement_stats = disaster_total_displacement_qs.aggregate(
@@ -1012,9 +1045,8 @@ class Query(graphene.ObjectType):
             if key not in ("hazard_types", "hazard_sub_types", "hazard_categories", "hazard_sub_categories")
         }
 
-        conflict_total_displacement_qs = ConflictStatisticsFilter(data=conflict_kwargs).qs.filter(
-            **filters.get("idps_date_filters")
-        )
+        conflict_base = ConflictStatisticsFilter(data=conflict_kwargs).qs
+        conflict_total_displacement_qs = conflict_base.filter(total_displacement__gt=0, year=end_year)
         conflict_internal_displacement_qs = ConflictStatisticsFilter(data=conflict_kwargs).qs.filter(
             **filters.get("nd_date_filters")
         )
@@ -1084,13 +1116,26 @@ class Query(graphene.ObjectType):
         if hazard_types:
             disaster_filter &= Q(hazard_type__in=hazard_types)
 
+        # new_displacement is a flow -> summed across the window per country.
+        # total_displacement is IDP stock (point-in-time) -> the requested end_year's value, or
+        # the (pre-)release year's snapshot when end_year is omitted, summed across sub types
+        # within that one year, never across years.
+        # `get`, not `pop`: the filterset above consumes end_year too.
+        end_year = kwargs.get("end_year") or default_end_year(kwargs)
+        conflict_stock_year = end_year
+        disaster_stock_year = end_year
+
         rows = (
             qs.values("iso3", "country_name", "country_id")
             .annotate(
                 conflict_nd=Coalesce(models.Sum("new_displacement", filter=conflict_filter), 0),
-                conflict_idp=Coalesce(models.Sum("total_displacement", filter=conflict_filter), 0),
+                conflict_idp=Coalesce(
+                    models.Sum("total_displacement", filter=conflict_filter & Q(year=conflict_stock_year)), 0
+                ),
                 disaster_nd=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
-                disaster_idp=Coalesce(models.Sum("total_displacement", filter=disaster_filter), 0),
+                disaster_idp=Coalesce(
+                    models.Sum("total_displacement", filter=disaster_filter & Q(year=disaster_stock_year)), 0
+                ),
             )
             .filter(Q(conflict_nd__gt=0) | Q(conflict_idp__gt=0) | Q(disaster_nd__gt=0) | Q(disaster_idp__gt=0))
             .order_by("iso3")
@@ -1121,6 +1166,29 @@ class Query(graphene.ObjectType):
         hazard_types = kwargs.pop("hazard_types", None)
         violence_types = kwargs.pop("violence_types", None)
         violence_sub_types = kwargs.pop("violence_sub_types", None)
+        # Paginated (page/pageSize), capped at GIDD_COUNTRY_YEAR_PAGE_SIZE per page.
+        page = max(1, kwargs.pop("page", None) or 1)
+        page_size = kwargs.pop("page_size", None) or GIDD_COUNTRY_YEAR_PAGE_SIZE
+        page_size = max(1, min(page_size, GIDD_COUNTRY_YEAR_PAGE_SIZE))
+        ordering = kwargs.pop("ordering", None)
+
+        # Ordering bounded to GIDD_COUNTRY_YEAR_ORDERING_FIELDS; nulls last; with a stable
+        # (iso3, year) tiebreak appended so rows never drift between pages.
+        order_by = []
+        ordered_columns = set()
+        for token in (ordering or "").replace(" ", "").split(","):
+            if not token:
+                continue
+            descending = token.startswith("-")
+            key = to_snake_case(token[1:] if descending else token)
+            column = GIDD_COUNTRY_YEAR_ORDERING_FIELDS.get(key)
+            if column is None:
+                raise ValueError(f"Invalid ordering field: {key}")
+            ordered_columns.add(column)
+            order_by.append(models.F(column).desc(nulls_last=True) if descending else models.F(column).asc(nulls_last=True))
+        for tiebreak in ("iso3", "year"):
+            if tiebreak not in ordered_columns:
+                order_by.append(models.F(tiebreak).asc())
 
         qs = GiddCountryDisplacementFilter(data=kwargs).qs
 
@@ -1143,23 +1211,29 @@ class Query(graphene.ObjectType):
                 disaster_idp=Coalesce(models.Sum("total_displacement", filter=disaster_filter), 0),
             )
             .filter(Q(conflict_nd__gt=0) | Q(conflict_idp__gt=0) | Q(disaster_nd__gt=0) | Q(disaster_idp__gt=0))
-            .order_by("iso3", "year")
+            .order_by(*order_by)
         )
 
-        return [
-            GiddCountryYearDisplacementType(
-                iso3=row["iso3"],
-                country_name=row["country_name"],
-                country_id=row["country_id"],
-                year=row["year"],
-                conflict_new_displacement=row["conflict_nd"] or None,
-                conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_nd"]),
-                conflict_total_displacement=row["conflict_idp"] or None,
-                conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_idp"]),
-                disaster_new_displacement=row["disaster_nd"] or None,
-                disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_nd"]),
-                disaster_total_displacement=row["disaster_idp"] or None,
-                disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_idp"]),
-            )
-            for row in rows
-        ]
+        offset = (page - 1) * page_size
+        return GiddCountryYearDisplacementListType(
+            total_count=rows.count(),
+            page=page,
+            page_size=page_size,
+            results=[
+                GiddCountryYearDisplacementType(
+                    iso3=row["iso3"],
+                    country_name=row["country_name"],
+                    country_id=row["country_id"],
+                    year=row["year"],
+                    conflict_new_displacement=row["conflict_nd"] or None,
+                    conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_nd"]),
+                    conflict_total_displacement=row["conflict_idp"] or None,
+                    conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_idp"]),
+                    disaster_new_displacement=row["disaster_nd"] or None,
+                    disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_nd"]),
+                    disaster_total_displacement=row["disaster_idp"] or None,
+                    disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_idp"]),
+                )
+                for row in rows[offset : offset + page_size]
+            ],
+        )
