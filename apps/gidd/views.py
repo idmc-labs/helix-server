@@ -177,6 +177,13 @@ class GiddOrderingFilter(filters.OrderingFilter):
                     continue
             mapping[source] = source
             mapping.setdefault(field_name, source)
+        for term, source in getattr(serializer_class, "ORDERING_SOURCES", {}).items():
+            try:
+                queryset.model._meta.get_field(source)
+            except FieldDoesNotExist:
+                if source not in queryset.query.annotations:
+                    continue
+            mapping.setdefault(term, source)
         return mapping
 
     def remove_invalid_fields(self, queryset, fields, view, request):

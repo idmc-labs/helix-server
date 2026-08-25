@@ -1,5 +1,6 @@
 from apps.contrib.models import Client
-from apps.gidd.models import Conflict, Disaster, ReleaseMetadata
+from apps.crisis.models import Crisis
+from apps.gidd.models import GiddDisplacement, GiddEventDisplacement, ReleaseMetadata
 from utils.factories import (
     CountryFactory,
     DisasterCategoryFactory,
@@ -49,7 +50,7 @@ COMBINED_STATISTICS = """
 
 DISASTERS_BY_EVENT_NAME = """
     query($clientId: String!, $eventName: String) {
-        giddPublicDisasters(clientId: $clientId, filters: { eventName: $eventName }) {
+        giddPublicEvents(clientId: $clientId, filters: { eventName: $eventName, cause: DISASTER }) {
             totalCount
             results { eventName }
         }
@@ -76,34 +77,47 @@ class TestGiddPublicStatistics(HelixGraphQLTestCase):
         cls.storm = DisasterTypeFactory.create(name="Storm")
 
         def create_conflict(country, year, nd, idps):
-            return Conflict(
+            return GiddDisplacement(
                 country=country,
                 iso3=country.iso3,
                 country_name=country.name,
                 year=year,
+                cause=Crisis.CRISIS_TYPE.CONFLICT,
                 new_displacement=nd,
                 total_displacement=idps,
             )
 
         hazard_sub_types = {hazard.id: DisasterSubTypeFactory.create(type=hazard) for hazard in (cls.flood, cls.storm)}
 
-        def create_disaster(country, year, hazard, event_name, nd, idps):
-            return Disaster(
-                country=country,
-                iso3=country.iso3,
-                country_name=country.name,
-                year=year,
-                event_name=event_name,
+        def hazard_columns(hazard):
+            return dict(
                 hazard_category=hazard_sub_category.category,
                 hazard_sub_category=hazard_sub_category,
                 hazard_type=hazard,
                 hazard_type_name=hazard.name,
                 hazard_sub_type=hazard_sub_types[hazard.id],
-                new_displacement=nd,
-                total_displacement=idps,
             )
 
-        Conflict.objects.bulk_create(
+        def create_disaster(country, year, hazard, event_name, nd, idps):
+            """The rollup row the statistics aggregate, plus its event-level row.
+
+            Generation writes both grains, so a fixture that seeded only one would let a resolver
+            reading the wrong table pass.
+            """
+            common = dict(
+                country=country,
+                iso3=country.iso3,
+                country_name=country.name,
+                year=year,
+                cause=Crisis.CRISIS_TYPE.DISASTER,
+                new_displacement=nd,
+                total_displacement=idps,
+                **hazard_columns(hazard),
+            )
+            GiddEventDisplacement.objects.create(event_name=event_name, **common)
+            return GiddDisplacement(**common)
+
+        GiddDisplacement.objects.bulk_create(
             [
                 create_conflict(npl, 2021, 50, 500),
                 create_conflict(npl, 2022, 100, 1000),
@@ -114,7 +128,7 @@ class TestGiddPublicStatistics(HelixGraphQLTestCase):
             ]
         )
 
-        Disaster.objects.bulk_create(
+        GiddDisplacement.objects.bulk_create(
             [
                 create_disaster(npl, 2023, cls.flood, "Karnali Flood", 10, 100),
                 create_disaster(npl, 2022, cls.storm, "Bagmati Storm", 20, 200),
