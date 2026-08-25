@@ -608,7 +608,6 @@ GRAPHENE_NODES_WHITELIST = (
     "giddPublicEvents",
     "giddPublicFigureAnalysisList",
     "giddPublicHazardTypes",
-    "giddPublicReleaseMetaData",
     "giddPublicViolenceSubTypes",
     "giddPublicYear",
     # __ double underscore nodes

@@ -6,7 +6,6 @@ from django.db.models import Q
 from django.db.models.functions import Coalesce
 from graphene.utils.str_converters import to_snake_case
 from graphene_django.filter.utils import get_filtering_args_from_filterset
-from graphene_django_extras import DjangoObjectField
 
 from apps.country.models import Country
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -383,16 +382,9 @@ class Query(graphene.ObjectType):
         required=True,
         client_id=graphene.String(required=True),
     )
-    gidd_log = DjangoObjectField(
-        GiddStatusLogType,
-    )
     gidd_logs = DjangoPaginatedListObjectField(
         GiddStatusLogListType,
         pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
-    )
-    gidd_public_release_meta_data = graphene.Field(
-        GiddReleaseMetadataType,
-        client_id=graphene.String(required=True),
     )
     gidd_release_meta_data = graphene.Field(
         GiddReleaseMetadataType,
@@ -466,14 +458,6 @@ class Query(graphene.ObjectType):
         ),
         client_id=graphene.String(required=True),
     )
-
-    @staticmethod
-    def resolve_gidd_public_release_meta_data(parent, info, **kwargs):
-        # Track
-        client_id = kwargs.pop("client_id")
-        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_RELEASE_META_DATA_GRAPHQL)
-
-        return ReleaseMetadata.objects.last()
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):

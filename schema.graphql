@@ -3364,9 +3364,7 @@ type Query {
   hulkBulkImports(filters: HulkBulkImportFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): HulkBulkImportListType
   giddPublicConflictStatistics(releaseEnvironment: String, startYear: Float, endYear: Float, countriesIso3: [String!], violenceTypes: [ID!], violenceSubTypes: [ID!], clientId: String!): GiddConflictStatisticsType!
   giddPublicDisasterStatistics(releaseEnvironment: String, hazardCategories: [ID!], hazardSubCategories: [ID!], hazardTypes: [ID!], hazardSubTypes: [ID!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddDisasterStatisticsType!
-  giddLog(id: ID!): GiddStatusLogType
   giddLogs(filters: GiddStatusLogFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
-  giddPublicReleaseMetaData(clientId: String!): GiddReleaseMetadataType
   giddReleaseMetaData: GiddReleaseMetadataType
   giddPublicCountries(clientId: String!): [GiddPublicCountryType!]
   giddPublicHazardTypes(clientId: String!): [GiddHazardType]
