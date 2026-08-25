@@ -607,7 +607,7 @@ class Query(graphene.ObjectType):
             .annotate(
                 total=Coalesce(models.Sum("new_displacement", output_field=models.IntegerField()), 0),
                 label=models.Case(
-                    models.When(hazard_sub_category=None, then=models.Value("Not labeled")),
+                    models.When(hazard_type=None, then=models.Value("Not labeled")),
                     default=models.F("hazard_type_name"),
                     output_field=models.CharField(),
                 ),
