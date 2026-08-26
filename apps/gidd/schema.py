@@ -54,17 +54,17 @@ def default_end_year(kwargs):
     return release_meta_data.release_year
 
 
-def custom_date_filters(start_year, end_year):
-    filters = {
-        "nd_date_filters": {},
-    }
+def new_displacement_filters(start_year, end_year):
+    """Rows with new displacement inside the requested year range.
 
-    filters["nd_date_filters"].update({"new_displacement__gt": 0})
-
+    A flow, so unlike total displacement it is summed across the range rather than read from one
+    year; the `> 0` drops the rows the statistics queries treat as absent.
+    """
+    filters = {"new_displacement__gt": 0}
     if start_year:
-        filters["nd_date_filters"].update({"year__gte": start_year})
+        filters["year__gte"] = start_year
     if end_year:
-        filters["nd_date_filters"].update({"year__lte": end_year})
+        filters["year__lte"] = end_year
     return filters
 
 
@@ -509,12 +509,12 @@ class Query(graphene.ObjectType):
         conflict_qs = ConflictStatisticsFilter(data=kwargs).qs
         start_year = kwargs.pop("start_year", None)
         end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
-        filters = custom_date_filters(start_year, end_year)
+        filters = new_displacement_filters(start_year, end_year)
 
         # IDP stock is point-in-time: taken from one year, never summed across years.
         conflict_stock_year = end_year
         conflict_total_displacement_qs = conflict_qs.filter(total_displacement__gt=0, year=conflict_stock_year)
-        conflict_new_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
+        conflict_new_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters)
 
         new_displacement_timeseries_by_year_qs = (
             conflict_qs.filter(new_displacement__gt=0)
@@ -651,12 +651,12 @@ class Query(graphene.ObjectType):
         event_filter_data = dict(kwargs)
         start_year = kwargs.pop("start_year", None)
         end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
-        filters = custom_date_filters(start_year, end_year)
+        filters = new_displacement_filters(start_year, end_year)
 
         # IDP stock is point-in-time: taken from one year, never summed across years.
         disaster_stock_year = end_year
         disaster_total_displacement_qs = disaster_qs.filter(total_displacement__gt=0, year=disaster_stock_year)
-        disaster_new_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
+        disaster_new_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters)
 
         new_displacement_timeseries_by_year_qs = (
             disaster_qs.filter(new_displacement__gt=0)
@@ -732,7 +732,7 @@ class Query(graphene.ObjectType):
             total_events=GiddEventDisplacementFilter(data=event_filter_data)
             .qs.filter(
                 cause=Crisis.CRISIS_TYPE.DISASTER,
-                **filters.get("nd_date_filters"),
+                **filters,
             )
             .filter(models.Q(new_displacement__gt=0) | models.Q(total_displacement__gt=0))
             .count(),
@@ -919,12 +919,12 @@ class Query(graphene.ObjectType):
         start_year = kwargs.pop("start_year", None)
         end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
 
-        filters = custom_date_filters(start_year, end_year)
+        filters = new_displacement_filters(start_year, end_year)
 
         # IDP stock is point-in-time: taken from one year, never summed across years.
         disaster_base = DisasterStatisticsFilter(data=kwargs).qs
         disaster_total_displacement_qs = disaster_base.filter(total_displacement__gt=0, year=end_year)
-        disaster_internal_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
+        disaster_internal_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters)
 
         disaster_total_displacement_stats = disaster_total_displacement_qs.aggregate(
             models.Sum("total_displacement"),
@@ -952,9 +952,7 @@ class Query(graphene.ObjectType):
 
         conflict_base = ConflictStatisticsFilter(data=conflict_kwargs).qs
         conflict_total_displacement_qs = conflict_base.filter(total_displacement__gt=0, year=end_year)
-        conflict_internal_displacement_qs = ConflictStatisticsFilter(data=conflict_kwargs).qs.filter(
-            **filters.get("nd_date_filters")
-        )
+        conflict_internal_displacement_qs = ConflictStatisticsFilter(data=conflict_kwargs).qs.filter(**filters)
 
         conflict_total_displacement_stats = conflict_total_displacement_qs.aggregate(
             models.Sum("total_displacement"),
