@@ -14,6 +14,7 @@ from apps.crisis.models import Crisis
 from apps.entry.enums import FigureCategoryTypeEnum
 from apps.entry.models import ExternalApiDump
 from utils.common import round_and_remove_zero, track_gidd
+from utils.db import tiebreak_fields
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.ordering import strip_direction
@@ -961,6 +962,11 @@ class Query(graphene.ObjectType):
             disaster_internal_displacement_qs.order_by().values_list("iso3", flat=True).distinct()
         )
 
+        # A hazard filter narrows what it can narrow and leaves conflict whole: with
+        # hazardTypes set, the combined figure is every conflict row plus the matching disaster
+        # rows, so it stays a true total for the scope asked about rather than a disaster-only
+        # figure wearing a combined name.
+        #
         # ConflictStatisticsFilter declares no hazard filter. django-filter would drop the
         # undeclared keys anyway, but stripping them here keeps the two call sites' inputs
         # explicit rather than relying on that.
@@ -1100,10 +1106,10 @@ class Query(graphene.ObjectType):
         page_size = get_page_size(kwargs.pop("page_size", None) or GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE)
         ordering = kwargs.pop("ordering", None)
 
-        # NULLS LAST, and always total. The tiebreak is (iso3, year) rather than the pk: this
+        # NULLS LAST, and always total. The tiebreak is the grouping rather than the pk: this
         # queryset is grouped, so ordering it by a column outside the GROUP BY would fold that
-        # column into the grouping and split every row -- and (iso3, year) is already unique per
-        # group, so it makes the sort total on its own.
+        # column into the grouping and split every row. It is appended below, once the grouped
+        # queryset exists to derive it from.
         order_by = []
         ordered_columns = set()
         for token in (ordering or "").replace(" ", "").split(","):
@@ -1115,10 +1121,6 @@ class Query(graphene.ObjectType):
                 raise ValueError(f"Invalid ordering field: {key}")
             ordered_columns.add(key)
             order_by.append(models.F(key).desc(nulls_last=True) if descending else models.F(key).asc(nulls_last=True))
-        for tiebreak in ("iso3", "year"):
-            if tiebreak not in ordered_columns:
-                order_by.append(models.F(tiebreak).asc())
-
         qs = GiddCountryDisplacementFilter(data=kwargs).qs
 
         conflict_filter = Q(cause=Crisis.CRISIS_TYPE.CONFLICT)
@@ -1145,8 +1147,14 @@ class Query(graphene.ObjectType):
                 | Q(disaster_new_displacement__gt=0)
                 | Q(disaster_total_displacement__gt=0)
             )
-            .order_by(*order_by)
         )
+
+        # Derived from the grouped queryset rather than named here: the tiebreak follows the
+        # grouping, so changing what this groups by cannot leave the sort non-total.
+        for tiebreak in tiebreak_fields(rows):
+            if tiebreak not in ordered_columns:
+                order_by.append(models.F(tiebreak).asc())
+        rows = rows.order_by(*order_by)
 
         offset = (page - 1) * page_size
         return GiddCountryYearDisplacementListType(
