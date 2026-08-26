@@ -68,6 +68,40 @@ def new_displacement_filters(start_year, end_year):
     return filters
 
 
+def cause_typology_filters(kwargs):
+    """The conflict and disaster filters the country queries scope their sums with.
+
+    Consumes the typology arguments from `kwargs` so what remains is the filterset's own. Both
+    causes are bounded in one call because a request may narrow the disaster side by hazard and the
+    conflict side by violence at once, and the two queries would otherwise drift apart -- they are
+    the same filter written twice.
+
+    All four hazard levels are accepted, matching the statistics and event queries; a caller
+    bounding by category should not have to enumerate its types.
+    """
+    conflict_filter = Q(cause=Crisis.CRISIS_TYPE.CONFLICT)
+    for argument, column in (
+        ("violence_types", "violence"),
+        ("violence_sub_types", "violence_sub_type"),
+    ):
+        value = kwargs.pop(argument, None)
+        if value:
+            conflict_filter &= Q(**{f"{column}__in": value})
+
+    disaster_filter = Q(cause=Crisis.CRISIS_TYPE.DISASTER)
+    for argument, column in (
+        ("hazard_categories", "hazard_category"),
+        ("hazard_sub_categories", "hazard_sub_category"),
+        ("hazard_types", "hazard_type"),
+        ("hazard_sub_types", "hazard_sub_type"),
+    ):
+        value = kwargs.pop(argument, None)
+        if value:
+            disaster_filter &= Q(**{f"{column}__in": value})
+
+    return conflict_filter, disaster_filter
+
+
 class GiddDisasterCountryType(graphene.ObjectType):
     id = graphene.Int(required=True)
     iso3 = graphene.String(required=True)
@@ -431,7 +465,10 @@ class Query(graphene.ObjectType):
     gidd_public_country_displacements = graphene.Field(
         graphene.List(graphene.NonNull(GiddCountryDisplacementType)),
         **get_filtering_args_from_filterset(GiddCountryDisplacementFilter, GiddCountryDisplacementType),
+        hazard_categories=graphene.List(graphene.NonNull(graphene.ID)),
+        hazard_sub_categories=graphene.List(graphene.NonNull(graphene.ID)),
         hazard_types=graphene.List(graphene.NonNull(graphene.ID)),
+        hazard_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
         violence_types=graphene.List(graphene.NonNull(graphene.ID)),
         violence_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
         client_id=graphene.String(required=True),
@@ -439,7 +476,10 @@ class Query(graphene.ObjectType):
     gidd_public_country_year_displacements = graphene.Field(
         GiddCountryYearDisplacementListType,
         **get_filtering_args_from_filterset(GiddCountryDisplacementFilter, GiddCountryYearDisplacementType),
+        hazard_categories=graphene.List(graphene.NonNull(graphene.ID)),
+        hazard_sub_categories=graphene.List(graphene.NonNull(graphene.ID)),
         hazard_types=graphene.List(graphene.NonNull(graphene.ID)),
+        hazard_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
         violence_types=graphene.List(graphene.NonNull(graphene.ID)),
         violence_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
         page=graphene.Int(description="1-indexed page number (default 1)."),
@@ -1003,21 +1043,9 @@ class Query(graphene.ObjectType):
         client_id = kwargs.pop("client_id")
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_COUNTRY_DISPLACEMENT_GRAPHQL)
 
-        hazard_types = kwargs.pop("hazard_types", None)
-        violence_types = kwargs.pop("violence_types", None)
-        violence_sub_types = kwargs.pop("violence_sub_types", None)
+        conflict_filter, disaster_filter = cause_typology_filters(kwargs)
 
         qs = GiddCountryDisplacementFilter(data=kwargs).qs
-
-        conflict_filter = Q(cause=Crisis.CRISIS_TYPE.CONFLICT)
-        if violence_types:
-            conflict_filter &= Q(violence__in=violence_types)
-        if violence_sub_types:
-            conflict_filter &= Q(violence_sub_type__in=violence_sub_types)
-
-        disaster_filter = Q(cause=Crisis.CRISIS_TYPE.DISASTER)
-        if hazard_types:
-            disaster_filter &= Q(hazard_type__in=hazard_types)
 
         # new_displacement is a flow, so it sums across the whole window. total_displacement is
         # IDP stock (point-in-time), so it is confined to a single year: end_year, or the
@@ -1069,9 +1097,7 @@ class Query(graphene.ObjectType):
         client_id = kwargs.pop("client_id")
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_COUNTRY_YEAR_DISPLACEMENT_GRAPHQL)
 
-        hazard_types = kwargs.pop("hazard_types", None)
-        violence_types = kwargs.pop("violence_types", None)
-        violence_sub_types = kwargs.pop("violence_sub_types", None)
+        conflict_filter, disaster_filter = cause_typology_filters(kwargs)
         page = max(1, kwargs.pop("page", None) or 1)
         page_size = get_page_size(kwargs.pop("page_size", None) or GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE)
         ordering = kwargs.pop("ordering", None)
@@ -1088,16 +1114,6 @@ class Query(graphene.ObjectType):
                 raise ValueError(f"Invalid ordering field: {key}")
             order_by.append(models.F(key).desc(nulls_last=True) if descending else models.F(key).asc(nulls_last=True))
         qs = GiddCountryDisplacementFilter(data=kwargs).qs
-
-        conflict_filter = Q(cause=Crisis.CRISIS_TYPE.CONFLICT)
-        if violence_types:
-            conflict_filter &= Q(violence__in=violence_types)
-        if violence_sub_types:
-            conflict_filter &= Q(violence_sub_type__in=violence_sub_types)
-
-        disaster_filter = Q(cause=Crisis.CRISIS_TYPE.DISASTER)
-        if hazard_types:
-            disaster_filter &= Q(hazard_type__in=hazard_types)
 
         rows = (
             qs.values("iso3", "country_name", "country_id", "year")
