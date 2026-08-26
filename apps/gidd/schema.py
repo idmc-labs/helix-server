@@ -457,7 +457,7 @@ class Query(graphene.ObjectType):
         required=True,
         client_id=graphene.String(required=True),
     )
-    gidd_public_events = DjangoPaginatedListObjectField(
+    gidd_public_displacement_events = DjangoPaginatedListObjectField(
         GiddEventDisplacementListType,
         pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize", page_size=50),
         client_id=graphene.String(required=True),

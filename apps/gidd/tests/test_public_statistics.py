@@ -50,7 +50,7 @@ COMBINED_STATISTICS = """
 
 DISASTERS_BY_EVENT_NAME = """
     query($clientId: String!, $eventName: String) {
-        giddPublicEvents(clientId: $clientId, filters: { eventName: $eventName, cause: DISASTER }) {
+        giddPublicDisplacementEvents(clientId: $clientId, filters: { eventName: $eventName, cause: DISASTER }) {
             totalCount
             results { eventName }
         }
