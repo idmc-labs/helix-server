@@ -2,9 +2,12 @@ import typing
 from datetime import datetime
 from pathlib import Path
 
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from django.db.models import Case, F, Q, When
+from django.db.models import Case, F, OuterRef, Q, Subquery, Sum, When
+from django.db.models.functions import Cast, Coalesce
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
@@ -22,6 +25,7 @@ from rest_framework.permissions import AllowAny
 from apps.common.utils import (
     EXTERNAL_ARRAY_SEPARATOR,
     EXTERNAL_FIELD_SEPARATOR,
+    extract_event_code_data_list,
     get_enum_label,
 )
 from apps.contrib.commons import DATE_ACCURACY
@@ -29,12 +33,21 @@ from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import ExternalApiDump, Figure, FigureLocation
 from apps.event.models import EventCode
-from utils.common import client_id, get_valid_xml_string, track_gidd
+from utils.common import client_id, get_valid_xml_string, round_and_remove_zero, track_gidd
+from utils.db import Array
 from utils.graphene.ordering import leads_descending, orders_by_pk
 from utils.streaming import stream_json_object_with_array
 
 from .cache import GiddExportCache
-from .models import Conflict, Disaster, DisplacementData, GiddFigure, IdpsSaddEstimate, PublicFigureAnalysis, StatusLog
+from .models import (
+    DisplacementData,
+    GiddDisplacement,
+    GiddEventDisplacement,
+    GiddFigure,
+    IdpsSaddEstimate,
+    PublicFigureAnalysis,
+    StatusLog,
+)
 from .paginations import GiddLimitOffsetPagination
 from .rest_filters import (
     DisaggregationFilterSet,
@@ -235,7 +248,45 @@ class ConflictViewSet(ListOnlyViewSetMixin):
             ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST,
             viewset=self,
         )
-        return Conflict.objects.all()
+        # Sourced from the new GiddDisplacement table: aggregate the disaggregated conflict rows
+        # back to one row per country x year (the old Conflict grain). Rounded figures are
+        # recomputed in the serializer from the summed raw values (Python banker's rounding).
+        return (
+            GiddDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.CONFLICT)
+            .values("iso3", "country_name", "year")
+            .annotate(
+                new_displacement=Sum("new_displacement"),
+                total_displacement=Sum("total_displacement"),
+            )
+            .order_by("iso3", "year")
+        )
+
+
+def _disaster_all_country_event_codes_subquery():
+    # Mirrors the OLD Disaster population exactly: aggregate an event's codes across ALL its
+    # countries (the old `country_id=F("country")` no-op made it non-country-specific). This is
+    # REST-dump-only; the GiddEventDisplacement.event_codes column itself stays country-correct
+    # for GraphQL.
+    return Coalesce(
+        Subquery(
+            EventCode.objects.filter(event_id=OuterRef("event"), country_id=F("country"))
+            .order_by()
+            .values("event")
+            .annotate(
+                code=ArrayAgg(
+                    Array(
+                        F("event_code"),
+                        Cast(F("event_code_type"), models.CharField()),
+                        F("country__iso3"),
+                        output_field=ArrayField(models.CharField()),
+                    ),
+                    distinct=True,
+                ),
+            )
+            .values("code")[:1],
+        ),
+        [],
+    )
 
 
 @extend_schema_view(
@@ -260,11 +311,18 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             api_type,
             viewset=self,
         )
-        qs = Disaster.objects.all()
+        # Sourced from GiddEventDisplacement (disaster rows share the old Disaster grain:
+        # event x country x year). `_all_event_codes` reproduces the old cross-country event
+        # codes for the REST dump; the serializer/export derive event_codes(_type) from it.
+        qs = (
+            GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.DISASTER)
+            .annotate(_all_event_codes=_disaster_all_country_event_codes_subquery())
+            .order_by("iso3", "year", "event_raw_id")
+        )
         if self.action == "export":
-            # Only the xlsx export dereferences disaster.country; the list serializer
-            # reads the denormalised iso3/country_name columns, so joining there just
-            # instantiates one throwaway Country per row.
+            # Only the xlsx export dereferences .country; the list serializer reads the
+            # denormalised iso3/country_name columns, so joining there just instantiates one
+            # throwaway Country per row.
             qs = qs.select_related("country")
         return qs
 
@@ -522,12 +580,22 @@ class DisasterViewSet(ListOnlyViewSetMixin):
     def export(self, request):
         qs = self.filter_queryset(self.get_queryset())
         filename = "IDMC_GIDD_Disasters_Internal_Displacement_Data.xlsx"
+
+        def build():
+            rows = list(qs)
+            # Reproduce the old cross-country event codes for the dump (REST-only).
+            for row in rows:
+                codes = extract_event_code_data_list(row._all_event_codes)
+                row.event_codes = codes["code"]
+                row.event_codes_type = codes["code_type"]
+            return self._export(rows)
+
         return GiddExportCache.get_or_create(
             filename,
             request,
             [self.filterset_class],
             GiddExportCache.Key.DISASTER_EXPORT,
-            lambda: self._export(qs),
+            build,
             s3_parameters={
                 "ResponseContentDisposition": f"attachment; filename={filename}",
                 "ResponseContentType": "application/octet-stream",
@@ -557,7 +625,20 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             api_type,
             viewset=self,
         )
-        return DisplacementData.objects.all()
+        # Sourced from GiddDisplacement: one row per country x year with conflict/disaster
+        # columns via conditional sums (NULL when a cause is absent, matching the old table).
+        # Rounded figures are recomputed from the summed raw values (in the serializer for the
+        # list endpoint, and in `export()` for the exports).
+        return (
+            GiddDisplacement.objects.values("iso3", "country_name", "year")
+            .annotate(
+                conflict_new_displacement=Sum("new_displacement", filter=Q(cause=Crisis.CRISIS_TYPE.CONFLICT)),
+                conflict_total_displacement=Sum("total_displacement", filter=Q(cause=Crisis.CRISIS_TYPE.CONFLICT)),
+                disaster_new_displacement=Sum("new_displacement", filter=Q(cause=Crisis.CRISIS_TYPE.DISASTER)),
+                disaster_total_displacement=Sum("total_displacement", filter=Q(cause=Crisis.CRISIS_TYPE.DISASTER)),
+            )
+            .order_by("iso3", "year")
+        )
 
     def export_conflicts(self, ws, qs):
         ws.append(
@@ -1117,10 +1198,29 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     )
     def export(self, request):
         # Track export
-        qs = self.filter_queryset(self.get_queryset()).order_by(
+        # get_queryset() yields aggregated dicts from GiddDisplacement; materialise them into
+        # (unsaved) DisplacementData instances with rounded figures so the sheet builders — which
+        # use attribute access and the *_rounded fields — stay untouched and produce identical output.
+        rows = self.filter_queryset(self.get_queryset()).order_by(
             "-year",
             "iso3",
         )
+        qs = [
+            DisplacementData(
+                iso3=row["iso3"],
+                country_name=row["country_name"],
+                year=row["year"],
+                conflict_new_displacement=row["conflict_new_displacement"],
+                conflict_total_displacement=row["conflict_total_displacement"],
+                disaster_new_displacement=row["disaster_new_displacement"],
+                disaster_total_displacement=row["disaster_total_displacement"],
+                conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_new_displacement"]),
+                conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_total_displacement"]),
+                disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_new_displacement"]),
+                disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_total_displacement"]),
+            )
+            for row in rows
+        ]
 
         request_cause = request.GET.get("cause")
 
