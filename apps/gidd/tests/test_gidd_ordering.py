@@ -10,12 +10,13 @@ These endpoints page by OFFSET, so a sort key with ties has no stable page bound
 is free to return a tie group in a different order per request, which lets a row arrive on two
 pages while another is never returned at all.
 
-The direction of the tiebreak follows the LEADING key, so a tie group reads the same way round
-as the sort that was asked for. The Client side of the same rule is pinned in
-`apps/contrib/tests/test_ordering_allowlist_registry.py`.
+The tiebreak is always ascending, and a column the caller already sorts on is skipped rather than
+repeated. It does not follow the caller's direction: totality is what the paging needs, and a tie
+group reading ascending under a descending sort costs nothing. The Client side of the ordering
+bound is pinned in `apps/contrib/tests/test_ordering_allowlist_registry.py`.
 """
 
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.test import TestCase
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
@@ -26,6 +27,7 @@ from apps.gidd.models import GiddDisplacement, GiddEventDisplacement, ReleaseMet
 from apps.gidd.schema import cause_typology_filters
 from apps.gidd.views import ConflictViewSet, DisasterViewSet
 from helix.caches import external_api_cache
+from utils.db import tiebreak_fields
 from utils.factories import ClientFactory, CountryFactory
 from utils.tests import HelixAPITestCase
 
@@ -290,3 +292,31 @@ class TestCountryQueryTypologyFilters(TestCase):
         conflict, disaster = self.build()
         assert str(conflict) == str(Q(cause=Crisis.CRISIS_TYPE.CONFLICT))
         assert str(disaster) == str(Q(cause=Crisis.CRISIS_TYPE.DISASTER))
+
+
+class TestTiebreakSkipsColumnsAlreadySorted(TestCase):
+    """A tiebreak column the sort already carries is not appended twice.
+
+    Repeating a term does not change the result, so this is about the ORDER BY staying readable and
+    the planner not carrying a key nobody asked for. Direction is deliberately not considered: the
+    tiebreak is always ascending.
+    """
+
+    def grouped(self):
+        return GiddDisplacement.objects.values("iso3", "year").annotate(total=Sum("new_displacement"))
+
+    def test_a_column_not_sorted_on_is_appended(self):
+        assert tiebreak_fields(self.grouped(), ["total"]) == ["iso3", "year"]
+
+    def test_a_column_already_sorted_on_is_skipped(self):
+        assert tiebreak_fields(self.grouped(), ["iso3"]) == ["year"]
+        assert tiebreak_fields(self.grouped(), ["iso3", "year"]) == []
+
+    def test_the_direction_prefix_does_not_hide_a_match(self):
+        # The caller's key arrives as "-iso3" on the REST side; stripping the prefix is what stops
+        # a descending sort from getting its own column appended again.
+        assert tiebreak_fields(self.grouped(), ["-iso3"]) == ["year"]
+
+    def test_without_an_ordering_every_column_is_returned(self):
+        assert tiebreak_fields(self.grouped()) == ["iso3", "year"]
+        assert tiebreak_fields(GiddDisplacement.objects.all()) == ["id"]

@@ -159,7 +159,7 @@ class GiddOrderingFilter(filters.OrderingFilter):
             ordering = [key for key in queryset.query.order_by if isinstance(key, str)]
             if not ordering:
                 return tiebreak_fields(queryset)
-        return [*ordering, *tiebreak_fields(queryset)]
+        return [*ordering, *tiebreak_fields(queryset, ordering)]
 
     def get_valid_fields(self, queryset, view, context={}):
         return [(term, term) for term in self._term_to_source(queryset, view, context)]
