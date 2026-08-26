@@ -34,8 +34,8 @@ from apps.crisis.models import Crisis
 from apps.entry.models import ExternalApiDump, Figure, FigureLocation
 from apps.event.models import EventCode
 from utils.common import client_id, get_valid_xml_string, round_and_remove_zero, track_gidd
-from utils.db import Array
-from utils.graphene.ordering import leads_descending, orders_by_pk
+from utils.db import Array, tiebreak_fields
+from utils.graphene.ordering import leads_descending, strip_direction
 from utils.streaming import stream_json_object_with_array
 
 from .cache import GiddExportCache
@@ -137,16 +137,16 @@ class GiddOrderingFilter(filters.OrderingFilter):
 
     def get_ordering(self, request, queryset, view):
         ordering = super().get_ordering(request, queryset, view)
-        pk_name = queryset.model._meta.pk.name
+        tiebreak = tiebreak_fields(queryset)
         if not ordering:
             # Exports iterate the queryset whole, so sorting one here would reorder a file nobody
             # asked to be sorted.
-            return [pk_name] if getattr(view, "paginator", None) is not None else ordering
-        if orders_by_pk(ordering, pk_name):
-            return ordering
+            return tiebreak if getattr(view, "paginator", None) is not None else ordering
         # Direction follows the leading key, as `nulls_last_order_queryset` does: a fixed ASC
         # tiebreak reads a bulk-created batch backwards under a descending sort.
-        return [*ordering, f"-{pk_name}" if leads_descending(ordering) else pk_name]
+        prefix = "-" if leads_descending(ordering) else ""
+        sorted_on = {strip_direction(key) for key in ordering if isinstance(key, str)}
+        return [*ordering, *(f"{prefix}{name}" for name in tiebreak if name not in sorted_on)]
 
     def get_valid_fields(self, queryset, view, context={}):
         return [(term, term) for term in self._term_to_source(queryset, view, context)]
