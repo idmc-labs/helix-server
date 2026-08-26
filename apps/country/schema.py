@@ -133,8 +133,6 @@ class CountryType(RelationBatchedDjangoObjectType):
         # tables -- every (year, cause, typology), and every (event, year). Unlike `figures`,
         # they get no paginated replacement below, so they are dropped rather than exposed.
         exclude_fields = (
-            "country_conflict",
-            "country_disaster",
             "gidd_displacements",
             "gidd_event_displacements",
             "organizations",
