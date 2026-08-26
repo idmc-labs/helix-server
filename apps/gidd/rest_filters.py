@@ -7,9 +7,8 @@ from apps.crisis.models import Crisis
 from .enums import CRISIS_TYPE_PUBLIC
 from .filters import ReleaseMetadataFilter, get_name_choices
 from .models import (
-    Conflict,
-    Disaster,
-    DisplacementData,
+    GiddDisplacement,
+    GiddEventDisplacement,
     GiddFigure,
     IdpsSaddEstimate,
     PublicFigureAnalysis,
@@ -22,12 +21,12 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
     end_year = django_filters.NumberFilter(field_name="end_year", method="filter_end_year")
 
     class Meta:
-        model = Conflict
+        model = GiddDisplacement
         fields = {
-            # `exact`, not `iexact`: id is an integer column and `iexact` compiles to UPPER("id"),
-            # which Postgres has no overload for -- the endpoint 500s on any value that passes
-            # form validation. `iso3` is text, so case-insensitivity is meaningful there.
-            "id": ["exact"],
+            # No `id` filter: this list is now an aggregate over GiddDisplacement with no pk of
+            # its own. The parameter filtered Conflict.id -- a surrogate key the table dropped and
+            # regenerated on every GIDD run, never exposed by the serializer, and a hard 500 until
+            # `iexact` was corrected to `exact`. Removing it is declared in the PR.
             "iso3": ["iexact"],
         }
 
@@ -56,7 +55,7 @@ class RestDisasterFilterSet(ReleaseMetadataFilter):
     )
 
     class Meta:
-        model = Disaster
+        model = GiddEventDisplacement
         fields = {
             "event_name": ["icontains"],
             "iso3": ["in"],
@@ -103,7 +102,7 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
     )
 
     class Meta:
-        model = DisplacementData
+        model = GiddDisplacement
         fields = {
             "iso3": ["in"],
         }

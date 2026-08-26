@@ -896,6 +896,7 @@ def update_new_gidd_tables():
             # The column is NOT NULL and a LEFT JOIN onto an event with no codes yields NULL; the
             # raw-insert path never runs the aggregate's convert_value, so nothing else fills it.
             event_codes=Coalesce(country_codes.col.codes, empty_char_array()),
+            event_codes_type=Coalesce(country_codes.col.type_labels, empty_char_array()),
             new_displacement=F("new_displacement"),
             total_displacement=F("total_displacement"),
             new_displacement_rounded=rounded_figure_expr("new_displacement"),
@@ -932,6 +933,8 @@ def update_new_gidd_tables():
                 violence_name=F("event__violence__name"),
                 violence_sub_type_id=F("event__violence_sub_type"),
                 violence_sub_type_name=F("event__violence_sub_type__name"),
+                glide_numbers=empty_char_array(),
+                displacement_occurred=empty_int_array(),
             ),
         )
 
@@ -945,6 +948,9 @@ def update_new_gidd_tables():
                 "event__name",
                 "event__start_date",
                 "event__end_date",
+                "event__start_date_accuracy",
+                "event__end_date_accuracy",
+                "event__glide_numbers",
                 "event__disaster_category",
                 "event__disaster_category__name",
                 "event__disaster_sub_category",
@@ -964,6 +970,23 @@ def update_new_gidd_tables():
             _with_country_codes(disaster_base),
             dict(
                 _shared_columns(year),
+                # CASE-mapped, not F(): the raw-insert path bypasses the TextField str()
+                # coercion that rendered these labels, so a bare F() publishes the digits.
+                start_date_accuracy=enum_label_case(
+                    "event__start_date_accuracy", Event._meta.get_field("start_date_accuracy").enum
+                ),
+                end_date_accuracy=enum_label_case(
+                    "event__end_date_accuracy", Event._meta.get_field("end_date_accuracy").enum
+                ),
+                glide_numbers=Coalesce(F("event__glide_numbers"), empty_char_array()),
+                displacement_occurred=Coalesce(
+                    ArrayAgg(
+                        F("displacement_occurred"),
+                        distinct=True,
+                        filter=Q(displacement_occurred__isnull=False),
+                    ),
+                    empty_int_array(),
+                ),
                 hazard_category_id=F("event__disaster_category"),
                 hazard_category_name=F("event__disaster_category__name"),
                 hazard_sub_category_id=F("event__disaster_sub_category"),
