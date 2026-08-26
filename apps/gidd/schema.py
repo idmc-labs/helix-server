@@ -1081,7 +1081,6 @@ class Query(graphene.ObjectType):
         # NULLS LAST throughout. The tiebreak is appended below instead, once the grouped queryset
         # exists for `tiebreak_fields` to derive it from.
         order_by = []
-        ordered_columns = set()
         for token in (ordering or "").replace(" ", "").split(","):
             if not token:
                 continue
@@ -1089,7 +1088,6 @@ class Query(graphene.ObjectType):
             key = to_snake_case(strip_direction(token))
             if key not in GIDD_COUNTRY_YEAR_SORTABLE:
                 raise ValueError(f"Invalid ordering field: {key}")
-            ordered_columns.add(key)
             order_by.append(models.F(key).desc(nulls_last=True) if descending else models.F(key).asc(nulls_last=True))
         qs = GiddCountryDisplacementFilter(data=kwargs).qs
 
@@ -1119,9 +1117,11 @@ class Query(graphene.ObjectType):
             )
         )
 
-        for tiebreak in tiebreak_fields(rows):
-            if tiebreak not in ordered_columns:
-                order_by.append(models.F(tiebreak).asc())
+        for tiebreak in tiebreak_fields(rows, order_by):
+            column = strip_direction(tiebreak)
+            order_by.append(
+                models.F(column).desc(nulls_last=True) if tiebreak.startswith("-") else models.F(column).asc(nulls_last=True)
+            )
         rows = rows.order_by(*order_by)
 
         offset = (page - 1) * page_size

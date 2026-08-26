@@ -48,6 +48,25 @@ def declared_ordering(qs) -> list:
     return list(qs.query.order_by) or list(qs.model._meta.ordering or [])
 
 
+def ordered_column_names(ordering: typing.Iterable) -> typing.Set[str]:
+    """The column names `ordering` already sorts on, whatever form its keys take.
+
+    A key is a `"-name"` string on the REST side and an `OrderBy` wrapping an `F` on the GraphQL
+    side; an expression naming no column (a `Case`, say) contributes nothing. Callers use this to
+    avoid appending a tiebreak the sort already carries.
+    """
+    names = set()
+    for key in ordering:
+        if isinstance(key, str):
+            names.add(strip_direction(key))
+            continue
+        expression = getattr(key, "expression", key)
+        name = getattr(expression, "name", None)
+        if name:
+            names.add(strip_direction(name))
+    return names
+
+
 def leads_descending(ordering: typing.Iterable) -> bool:
     """Whether the first key of `ordering` sorts descending.
 
