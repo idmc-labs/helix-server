@@ -1851,19 +1851,22 @@ class ExternalApiDump(models.Model):
         GIDD_CONFLICT_REST = "gidd-conflict-rest", _("/external-api/gidd/conflicts/")
         GIDD_DISASTER_REST = "gidd-disaster-rest", _("/external-api/gidd/disasters/")
         GIDD_DISPLACEMENT_REST = "gidd-displacement-rest", _("/external-api/gidd/displacements/")
-        GIDD_DISASTER_EXPORT_REST = "gidd-disaster-export-rest", _("/external-api/gidd/disasters/export/")
-        GIDD_DISPLACEMENT_EXPORT_REST = "gidd-displacement-export-rest", _("/external-api/gidd/displacements/export/")
+        GIDD_DISASTER_EXPORT_REST = "gidd-disaster-export-rest", _("/external-api/gidd/disasters/disaster-export/")
+        GIDD_DISPLACEMENT_EXPORT_REST = (
+            "gidd-displacement-export-rest",
+            _("/external-api/gidd/displacements/displacement-export/"),
+        )
         GIDD_PUBLIC_FIGURE_ANALYSIS_REST = (
             "gidd-public-figure-analysis-rest",
             _("/external-api/gidd/public-figure-analyses/"),
         )
         GIDD_DISAGGREGATION_EXPORT_GEOJSON = (
             "gidd-disaggregation-export-geojson-rest",
-            _("/external-api/gidd/disaggregations/disaggregated-geojson/"),
+            _("/external-api/gidd/disaggregations/disaggregation-geojson/"),
         )
         GIDD_DISAGGREGATION_EXPORT_EXCEL = (
             "gidd-disaggregation-export-xlsx-rest",
-            _("/external-api/gidd/disaggregations/disaggregated-export/"),
+            _("/external-api/gidd/disaggregations/disaggregation-export/"),
         )
 
         # Dead: no query resolves to these any more. giddPublicConflicts, giddPublicDisasters and
@@ -2061,7 +2064,7 @@ class ExternalApiDump(models.Model):
             description="Conflict and disaster data aggregated by country and year",
             example_request=(
                 lambda request, client_code: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.GIDD_DISASTER_REST.label + f"?client_id={client_code}"
+                    ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_REST.label + f"?client_id={client_code}"
                 )
             ),
         ),
