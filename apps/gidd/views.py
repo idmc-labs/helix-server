@@ -141,7 +141,13 @@ class GiddOrderingFilter(filters.OrderingFilter):
         if not ordering:
             # Exports iterate the queryset whole, so sorting one here would reorder a file nobody
             # asked to be sorted.
-            return tiebreak if getattr(view, "paginator", None) is not None else ordering
+            if getattr(view, "paginator", None) is None:
+                return ordering
+            # `filter_queryset` applies this through `order_by()`, which REPLACES whatever the
+            # queryset carries, so an endpoint's own default ordering is restated to survive.
+            ordering = [key for key in queryset.query.order_by if isinstance(key, str)]
+            if not ordering:
+                return tiebreak
         # Direction follows the leading key, as `nulls_last_order_queryset` does: a fixed ASC
         # tiebreak reads a bulk-created batch backwards under a descending sort.
         prefix = "-" if leads_descending(ordering) else ""
