@@ -16,7 +16,7 @@ group reading ascending under a descending sort costs nothing. The Client side o
 bound is pinned in `apps/contrib/tests/test_ordering_allowlist_registry.py`.
 """
 
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.test import TestCase
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
@@ -24,6 +24,7 @@ from rest_framework.test import APIRequestFactory
 
 from apps.crisis.models import Crisis
 from apps.gidd.models import GiddDisplacement, GiddEventDisplacement, ReleaseMetadata
+from apps.gidd.schema import cause_typology_filters
 from apps.gidd.views import ConflictViewSet, DisasterViewSet
 from helix.caches import external_api_cache
 from utils.db import tiebreak_fields
@@ -250,7 +251,44 @@ class GiddComputedFieldOrderingTest(GiddConflictListMixin, HelixAPITestCase):
             self.order_by_sql(ConflictViewSet, GiddDisplacement.objects.all(), "not_a_column")
 
 
+class TestCountryQueryTypologyFilters(TestCase):
+    """Which typology arguments the country queries accept.
 
+    They took `hazardTypes` only, while the statistics and event queries took all four hazard
+    levels, so a caller bounding by category had to enumerate its types. The builder is shared by
+    both country resolvers so the pair cannot drift apart again.
+    """
+
+    def build(self, **kwargs):
+        return cause_typology_filters(kwargs)
+
+    def test_every_hazard_level_narrows_the_disaster_side(self):
+        for argument, column in (
+            ("hazard_categories", "hazard_category"),
+            ("hazard_sub_categories", "hazard_sub_category"),
+            ("hazard_types", "hazard_type"),
+            ("hazard_sub_types", "hazard_sub_type"),
+        ):
+            with self.subTest(argument=argument):
+                _, disaster = self.build(**{argument: [1]})
+                assert f"{column}__in" in str(disaster), f"{argument} did not reach the disaster filter"
+
+    def test_violence_levels_narrow_the_conflict_side(self):
+        conflict, _ = self.build(violence_types=[1], violence_sub_types=[2])
+        assert "violence__in" in str(conflict)
+        assert "violence_sub_type__in" in str(conflict)
+
+    def test_the_arguments_are_consumed_so_the_filterset_never_sees_them(self):
+        # `GiddCountryDisplacementFilter` does not declare them; a leftover key would be handed to
+        # django-filter, which ignores it, and the caller's narrowing would silently do nothing.
+        kwargs = {"hazard_categories": [1], "violence_types": [2], "countries_iso3": ["NPL"]}
+        cause_typology_filters(kwargs)
+        assert kwargs == {"countries_iso3": ["NPL"]}
+
+    def test_an_absent_argument_leaves_the_cause_filter_alone(self):
+        conflict, disaster = self.build()
+        assert str(conflict) == str(Q(cause=Crisis.CRISIS_TYPE.CONFLICT))
+        assert str(disaster) == str(Q(cause=Crisis.CRISIS_TYPE.DISASTER))
 
 
 class TestTiebreakSkipsColumnsAlreadySorted(TestCase):
