@@ -1886,7 +1886,7 @@ class ExternalApiDump(models.Model):
         GIDD_RELEASE_META_DATA_GRAPHQL = "gidd-release-meta-data-graphql", _("query.giddPublicReleaseMetaData")
         GIDD_PUBLIC_COUNTRIES_GRAPHQL = "gidd-public-countries-graphql", _("query.giddPublicCountries")
         # `giddPublicDisplacements` is not a schema field either; kept for the reason above.
-        GIDD_NEW_EVENTS_GRAPHQL = "gidd-new-events-graphql", _("query.giddPublicEvents")
+        GIDD_NEW_EVENTS_GRAPHQL = "gidd-new-events-graphql", _("query.giddPublicDisplacementEvents")
         GIDD_COUNTRY_DISPLACEMENT_GRAPHQL = "gidd-country-displacement-graphql", _("query.giddPublicCountryDisplacements")
         GIDD_COUNTRY_YEAR_DISPLACEMENT_GRAPHQL = (
             "gidd-country-year-displacement-graphql",

@@ -647,7 +647,7 @@ class GiddEventDisplacement(models.Model):
     Disaster rows: hazard_type + hazard_sub_type set; violence fields null.
     """
 
-    # Every scalar column `giddPublicEvents` publishes, and nothing else: a sort key a caller
+    # Every scalar column `giddPublicDisplacementEvents` publishes, and nothing else: a sort key a caller
     # cannot read back only widens what an unauthenticated request can make the database do.
     # REST ordering is bounded separately, by the serializer's own fields.
     ORDERING_ALLOWLIST = frozenset(

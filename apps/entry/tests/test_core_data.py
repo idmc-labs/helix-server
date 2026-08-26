@@ -1913,7 +1913,7 @@ class TestCoreData(HelixGraphQLTestCase):
 
         query = """
             query DisasterData($clientId: String!){
-                giddPublicEvents(
+                giddPublicDisplacementEvents(
                     filters: {cause: DISASTER},
                     clientId: $clientId,
                     pageSize: 10000,
@@ -1933,7 +1933,7 @@ class TestCoreData(HelixGraphQLTestCase):
             }
         """
         response = self.query_json(query, variables={"clientId": self.gidd_client.code})
-        r_data = response["data"]["giddPublicEvents"]["results"]
+        r_data = response["data"]["giddPublicDisplacementEvents"]["results"]
         system_data = [
             {
                 "id": i["eventId"],

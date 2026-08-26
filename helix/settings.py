@@ -605,7 +605,7 @@ GRAPHENE_NODES_WHITELIST = (
     "giddPublicCountryYearDisplacements",
     "giddPublicDisasterStatistics",
     "giddPublicEvent",
-    "giddPublicEvents",
+    "giddPublicDisplacementEvents",
     "giddPublicFigureAnalysisList",
     "giddPublicHazardTypes",
     "giddPublicViolenceSubTypes",
