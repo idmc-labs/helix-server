@@ -3341,8 +3341,6 @@ input PublicFigureAnalysisFilterDataInputType {
   iso3: String
   year: Int
   releaseEnvironment: String
-  countriesIso3: [String!]
-  years: [ID!]
   figureCause: CRISIS_TYPE
   figureCategory: FIGURE_CATEGORY_TYPES
 }
