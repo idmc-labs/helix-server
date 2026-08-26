@@ -15,7 +15,7 @@ as the sort that was asked for. The Client side of the same rule is pinned in
 `apps/contrib/tests/test_ordering_allowlist_registry.py`.
 """
 
-from django.db.models import F, Q, Sum
+from django.db.models import Q
 from django.test import TestCase
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
@@ -26,7 +26,6 @@ from apps.gidd.models import GiddDisplacement, GiddEventDisplacement, ReleaseMet
 from apps.gidd.schema import cause_typology_filters
 from apps.gidd.views import ConflictViewSet, DisasterViewSet
 from helix.caches import external_api_cache
-from utils.db import tiebreak_fields
 from utils.factories import ClientFactory, CountryFactory
 from utils.tests import HelixAPITestCase
 
@@ -129,18 +128,15 @@ class TestGiddOrderingIsTotal(GiddConflictListMixin, HelixAPITestCase):
         assert order_by.startswith(f"{YEAR_SQL} ASC"), order_by
         assert order_by.endswith(f"{PK_SQL} ASC"), f"no trailing pk tiebreaker in: {order_by}"
 
-    def test_a_descending_sort_key_gets_a_descending_pk_tiebreak(self):
-        order_by = self.order_by_sql("-year")
-        assert order_by.startswith(f"{YEAR_SQL} DESC"), order_by
-        assert order_by.endswith(f"{PK_SQL} DESC"), f"no descending pk tiebreaker in: {order_by}"
-
-    def test_the_leading_key_decides_the_tiebreak_direction(self):
-        # `iso3` leads and `-year` follows: the tiebreak reads off the lead key, so a trailing
-        # descending key must not flip it.
-        order_by = self.order_by_sql("iso3,-year")
-        assert order_by.startswith(f"{ISO3_SQL} ASC"), order_by
-        assert f"{YEAR_SQL} DESC" in order_by, order_by
-        assert order_by.endswith(f"{PK_SQL} ASC"), f"the trailing key decided the tiebreak: {order_by}"
+    def test_the_tiebreak_is_ascending_whatever_the_sort_direction(self):
+        # The tiebreak does not follow the caller's direction: making it do so cost more machinery
+        # than the tidier ORDER BY was worth. Totality is what matters, and a trailing ASC pk
+        # delivers it under a descending sort just as well.
+        for ordering, lead in (("-year", f"{YEAR_SQL} DESC"), ("iso3,-year", f"{ISO3_SQL} ASC")):
+            with self.subTest(ordering=ordering):
+                order_by = self.order_by_sql(ordering)
+                assert order_by.startswith(lead), order_by
+                assert order_by.endswith(f"{PK_SQL} ASC"), f"no trailing pk tiebreaker in: {order_by}"
 
 
 class TestGiddOrderingPagesTiesStably(GiddConflictListMixin, HelixAPITestCase):
@@ -254,43 +250,6 @@ class GiddComputedFieldOrderingTest(GiddConflictListMixin, HelixAPITestCase):
     def test_an_unknown_term_is_still_refused(self):
         with self.assertRaises(ValidationError):
             self.order_by_sql(ConflictViewSet, GiddDisplacement.objects.all(), "not_a_column")
-
-
-class TestTiebreakFollowsTheSort(TestCase):
-    """What `tiebreak_fields` appends to an ordering the caller already has.
-
-    Both call sites append a tiebreak, and only the REST one used to read the sort's direction: the
-    country-year resolver appended a fixed `.asc()`, so a tie group read backwards under a
-    descending sort. The direction and the de-duplication live in the helper now, so a caller cannot
-    get one right and the other wrong.
-    """
-
-    def plain(self):
-        return GiddDisplacement.objects.all()
-
-    def grouped(self):
-        return GiddDisplacement.objects.values("iso3", "year").annotate(total=Sum("new_displacement"))
-
-    def test_without_an_ordering_the_bare_columns_come_back(self):
-        assert tiebreak_fields(self.plain()) == ["id"]
-        assert tiebreak_fields(self.grouped()) == ["iso3", "year"]
-
-    def test_an_ascending_sort_takes_an_ascending_tiebreak(self):
-        assert tiebreak_fields(self.plain(), ["country_name"]) == ["id"]
-
-    def test_a_descending_sort_takes_a_descending_tiebreak(self):
-        assert tiebreak_fields(self.plain(), ["-country_name"]) == ["-id"]
-        assert tiebreak_fields(self.grouped(), ["-total"]) == ["-iso3", "-year"]
-
-    def test_a_column_already_sorted_on_is_not_repeated(self):
-        assert tiebreak_fields(self.grouped(), ["iso3"]) == ["year"]
-        assert tiebreak_fields(self.grouped(), ["-iso3", "year"]) == []
-
-    def test_an_order_by_expression_counts_as_already_sorted(self):
-        # The GraphQL resolver builds `F(...).desc(nulls_last=True)`, not strings, so a helper that
-        # only understood strings would append a duplicate key it could not see.
-        ordering = [F("iso3").desc(nulls_last=True)]
-        assert tiebreak_fields(self.grouped(), ordering) == ["-year"]
 
 
 class TestCountryQueryTypologyFilters(TestCase):

@@ -1131,11 +1131,8 @@ class Query(graphene.ObjectType):
             )
         )
 
-        for tiebreak in tiebreak_fields(rows, order_by):
-            column = strip_direction(tiebreak)
-            order_by.append(
-                models.F(column).desc(nulls_last=True) if tiebreak.startswith("-") else models.F(column).asc(nulls_last=True)
-            )
+        for tiebreak in tiebreak_fields(rows):
+            order_by.append(models.F(tiebreak).asc(nulls_last=True))
         rows = rows.order_by(*order_by)
 
         offset = (page - 1) * page_size
