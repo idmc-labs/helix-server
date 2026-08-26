@@ -31,7 +31,6 @@ from apps.entry.models import ExternalApiDump, Figure, FigureLocation
 from apps.event.models import EventCode
 from utils.common import client_id, get_valid_xml_string, track_gidd
 from utils.db import rounded_figure_expr, tiebreak_fields
-from utils.graphene.ordering import leads_descending, strip_direction
 from utils.streaming import stream_json_object_with_array
 
 from .cache import GiddExportCache
@@ -132,7 +131,6 @@ class GiddOrderingFilter(filters.OrderingFilter):
 
     def get_ordering(self, request, queryset, view):
         ordering = super().get_ordering(request, queryset, view)
-        tiebreak = tiebreak_fields(queryset)
         if not ordering:
             # Exports iterate the queryset whole, so sorting one here would reorder a file nobody
             # asked to be sorted.
@@ -142,12 +140,8 @@ class GiddOrderingFilter(filters.OrderingFilter):
             # queryset carries, so an endpoint's own default ordering is restated to survive.
             ordering = [key for key in queryset.query.order_by if isinstance(key, str)]
             if not ordering:
-                return tiebreak
-        # Direction follows the leading key, as `nulls_last_order_queryset` does: a fixed ASC
-        # tiebreak reads a bulk-created batch backwards under a descending sort.
-        prefix = "-" if leads_descending(ordering) else ""
-        sorted_on = {strip_direction(key) for key in ordering if isinstance(key, str)}
-        return [*ordering, *(f"{prefix}{name}" for name in tiebreak if name not in sorted_on)]
+                return tiebreak_fields(queryset)
+        return [*ordering, *tiebreak_fields(queryset, ordering)]
 
     def get_valid_fields(self, queryset, view, context={}):
         return [(term, term) for term in self._term_to_source(queryset, view, context)]

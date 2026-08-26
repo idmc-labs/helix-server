@@ -10,11 +10,14 @@ These endpoints page by OFFSET, so a sort key with ties has no stable page bound
 is free to return a tie group in a different order per request, which lets a row arrive on two
 pages while another is never returned at all.
 
-The direction of the tiebreak follows the LEADING key, so a tie group reads the same way round
-as the sort that was asked for. The Client side of the same rule is pinned in
-`apps/contrib/tests/test_ordering_allowlist_registry.py`.
+The tiebreak is always ascending, and a column the caller already sorts on is skipped rather than
+repeated. It does not follow the caller's direction: totality is what the paging needs, and a tie
+group reading ascending under a descending sort costs nothing. The Client side of the ordering
+bound is pinned in `apps/contrib/tests/test_ordering_allowlist_registry.py`.
 """
 
+from django.db.models import Sum
+from django.test import TestCase
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
@@ -23,6 +26,7 @@ from apps.crisis.models import Crisis
 from apps.gidd.models import GiddDisplacement, GiddEventDisplacement, ReleaseMetadata
 from apps.gidd.views import ConflictViewSet, DisasterViewSet
 from helix.caches import external_api_cache
+from utils.db import tiebreak_fields
 from utils.factories import ClientFactory, CountryFactory
 from utils.tests import HelixAPITestCase
 
@@ -125,18 +129,15 @@ class TestGiddOrderingIsTotal(GiddConflictListMixin, HelixAPITestCase):
         assert order_by.startswith(f"{YEAR_SQL} ASC"), order_by
         assert order_by.endswith(f"{PK_SQL} ASC"), f"no trailing pk tiebreaker in: {order_by}"
 
-    def test_a_descending_sort_key_gets_a_descending_pk_tiebreak(self):
-        order_by = self.order_by_sql("-year")
-        assert order_by.startswith(f"{YEAR_SQL} DESC"), order_by
-        assert order_by.endswith(f"{PK_SQL} DESC"), f"no descending pk tiebreaker in: {order_by}"
-
-    def test_the_leading_key_decides_the_tiebreak_direction(self):
-        # `iso3` leads and `-year` follows: the tiebreak reads off the lead key, so a trailing
-        # descending key must not flip it.
-        order_by = self.order_by_sql("iso3,-year")
-        assert order_by.startswith(f"{ISO3_SQL} ASC"), order_by
-        assert f"{YEAR_SQL} DESC" in order_by, order_by
-        assert order_by.endswith(f"{PK_SQL} ASC"), f"the trailing key decided the tiebreak: {order_by}"
+    def test_the_tiebreak_is_ascending_whatever_the_sort_direction(self):
+        # The tiebreak does not follow the caller's direction: making it do so cost more machinery
+        # than the tidier ORDER BY was worth. Totality is what matters, and a trailing ASC pk
+        # delivers it under a descending sort just as well.
+        for ordering, lead in (("-year", f"{YEAR_SQL} DESC"), ("iso3,-year", f"{ISO3_SQL} ASC")):
+            with self.subTest(ordering=ordering):
+                order_by = self.order_by_sql(ordering)
+                assert order_by.startswith(lead), order_by
+                assert order_by.endswith(f"{PK_SQL} ASC"), f"no trailing pk tiebreaker in: {order_by}"
 
 
 class TestGiddOrderingPagesTiesStably(GiddConflictListMixin, HelixAPITestCase):
@@ -247,3 +248,34 @@ class GiddComputedFieldOrderingTest(GiddConflictListMixin, HelixAPITestCase):
     def test_an_unknown_term_is_still_refused(self):
         with self.assertRaises(ValidationError):
             self.order_by_sql(ConflictViewSet, GiddDisplacement.objects.all(), "not_a_column")
+
+
+
+
+
+class TestTiebreakSkipsColumnsAlreadySorted(TestCase):
+    """A tiebreak column the sort already carries is not appended twice.
+
+    Repeating a term does not change the result, so this is about the ORDER BY staying readable and
+    the planner not carrying a key nobody asked for. Direction is deliberately not considered: the
+    tiebreak is always ascending.
+    """
+
+    def grouped(self):
+        return GiddDisplacement.objects.values("iso3", "year").annotate(total=Sum("new_displacement"))
+
+    def test_a_column_not_sorted_on_is_appended(self):
+        assert tiebreak_fields(self.grouped(), ["total"]) == ["iso3", "year"]
+
+    def test_a_column_already_sorted_on_is_skipped(self):
+        assert tiebreak_fields(self.grouped(), ["iso3"]) == ["year"]
+        assert tiebreak_fields(self.grouped(), ["iso3", "year"]) == []
+
+    def test_the_direction_prefix_does_not_hide_a_match(self):
+        # The caller's key arrives as "-iso3" on the REST side; stripping the prefix is what stops
+        # a descending sort from getting its own column appended again.
+        assert tiebreak_fields(self.grouped(), ["-iso3"]) == ["year"]
+
+    def test_without_an_ordering_every_column_is_returned(self):
+        assert tiebreak_fields(self.grouped()) == ["iso3", "year"]
+        assert tiebreak_fields(GiddDisplacement.objects.all()) == ["id"]
