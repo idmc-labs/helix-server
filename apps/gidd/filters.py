@@ -150,8 +150,6 @@ class GiddStatusLogFilter(django_filters.FilterSet):
 
 
 class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
-    countries_iso3 = StringListFilter(method="filter_countries_iso3")
-    years = IDListFilter(method="filter_years")
     # Both columns are EnumFields, i.e. integer columns: a raw name reaches the ORM as a string
     # and `int("CONFLICT")` raises. An enum input also rejects unknown members before the ORM.
     figure_cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="figure_cause")
@@ -159,16 +157,14 @@ class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
 
     class Meta:
         model = PublicFigureAnalysis
+        # `iso3` and `year` only. The list forms of both were also declared, which made two ways to
+        # ask one question, and the year list arrived typed as `[ID!]` -- a year is not an id.
+        # Unlike the filtersets that carry `countries_iso3` as their only country filter, this one
+        # already had the scalar.
         fields = {
             "iso3": ["exact"],
             "year": ["exact"],
         }
-
-    def filter_countries_iso3(self, queryset, name, value):
-        return queryset.filter(iso3__in=value)
-
-    def filter_years(self, queryset, name, value):
-        return queryset.filter(year__in=value)
 
 
 class GiddEventDisplacementFilter(ReleaseMetadataFilter):
