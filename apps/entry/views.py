@@ -11,6 +11,7 @@ from django.db.models.sql.constants import LOUTER
 from django.shortcuts import redirect
 from django.utils import timezone
 from django_cte import With
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from openpyxl import Workbook
 from rest_framework import status, viewsets
@@ -707,7 +708,15 @@ class IdusAllDisasterCachedView(BaseIdusCachedView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER
 
 
-@extend_schema(exclude=True)
+@extend_schema(
+    description=(
+        "The reference lists the IDU feeds are keyed against: disaster and violence typologies, "
+        "geographical groups, and countries with their bounding boxes. Answers with a redirect to "
+        "the generated dump, as the other IDU endpoints do."
+    ),
+    responses={(302, "application/json"): OpenApiTypes.STR},
+    tags=["IDU"],
+)
 class IduReferencesCachedView(ExternalEndpointBaseCachedViewMixin, ViewSet):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDU_REFERENCES
     # One dump serves every client: the references carry no source information to withhold.
