@@ -205,7 +205,7 @@ class TestImportFiguresCommand(HelixTestCase):
         workbook = load_workbook(tmp.name)
 
         text = "\n".join(str(cell.value) for row in workbook["README"].iter_rows() for cell in row if cell.value is not None)
-        self.assertIn("exactly one of", text)
+        self.assertIn("at least one of", text)
         # Neither key is marked required on its own, since supplying both is rejected.
         shape = [
             (row[0].value, row[2].value) for row in workbook["README"].iter_rows() if row and row[0].value in ("id", "uuid")
@@ -375,16 +375,46 @@ class TestImportFiguresCommand(HelixTestCase):
 
         self.assertIn("no Figure found with uuid 4a1c9f2e-0000-4000-8000-000000000000", out.getvalue())
 
-    def test_supplying_both_keys_fails_the_row(self):
+    def test_supplying_both_keys_is_allowed_and_cross_checked(self):
+        # Both keys is the safe form: the id resolves the row and the uuid confirms it.
         path = write_sheet(
             ["id", "uuid", "role"],
             [{"id": self.figure.id, "uuid": str(self.figure.uuid), "role": "TRIANGULATION"}],
+        )
+        call_command("import_figures", path)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
+
+    def test_a_uuid_naming_a_different_row_than_the_id_fails(self):
+        # The signature of a sheet built against another database: the id resolves here, but to
+        # the wrong figure. Without the cross-check this edits silently.
+        other = self._figure()
+        path = write_sheet(
+            ["id", "uuid", "role"],
+            [{"id": self.figure.id, "uuid": str(other.uuid), "role": "TRIANGULATION"}],
         )
         out = StringIO()
         with self.assertRaises(CommandError):
             call_command("import_figures", path, stdout=out)
 
-        self.assertIn("exactly one of id · uuid is required; 2 given", out.getvalue())
+        self.assertIn("does not name the same row", out.getvalue())
+        self.assertIn("built against a different database", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.RECOMMENDED.value)
+
+    def test_a_malformed_second_key_fails_the_row(self):
+        path = write_sheet(
+            ["id", "uuid", "role"],
+            [{"id": self.figure.id, "uuid": "not-a-uuid", "role": "TRIANGULATION"}],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn("is not a valid uuid", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.RECOMMENDED.value)
         self.figure.refresh_from_db()
         self.assertEqual(self.figure.role, Figure.ROLE.RECOMMENDED.value)
 
@@ -395,7 +425,7 @@ class TestImportFiguresCommand(HelixTestCase):
             call_command("import_figures", path, stdout=out)
         output = out.getvalue()
 
-        self.assertIn("exactly one of id · uuid is required; none given", output)
+        self.assertIn("at least one of id · uuid is required; none given", output)
         self.assertIn("only updates existing Figure rows", output)
 
     def test_a_uuid_shared_by_two_figures_fails_the_row(self):
@@ -493,7 +523,7 @@ class TestImportFiguresCommand(HelixTestCase):
         with self.assertRaises(CommandError):
             call_command("import_figures", path, stdout=out)
 
-        self.assertIn("exactly one of id · uuid is required; none given", out.getvalue())
+        self.assertIn("at least one of id · uuid is required; none given", out.getvalue())
 
     def test_a_sheet_of_only_the_key_column_changes_nothing(self):
         path = write_sheet(["id"], [{"id": self.figure.id}])
@@ -702,6 +732,20 @@ class TestImportFiguresCommand(HelixTestCase):
 
         figure.refresh_from_db()
         self.assertEqual(figure.total_figures, 100)
+
+    def test_a_zero_household_size_is_refused(self):
+        # Zero would publish a real displacement as 0, so it is refused rather than derived.
+        path = write_sheet(
+            ["id", "unit", "reported", "household_size"],
+            [{"id": self.figure.id, "unit": "HOUSEHOLD", "reported": 100, "household_size": 0}],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn("greater than zero", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.total_figures, 100)
 
     def test_household_unit_without_a_household_size_is_refused(self):
         path = write_sheet(

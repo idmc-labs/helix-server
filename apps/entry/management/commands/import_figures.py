@@ -108,11 +108,22 @@ class FigureRoleDatesAndValuesSerializer(MetaInformationSerializerMixin, seriali
             attrs["household_size"] = None
             attrs["total_figures"] = reported
         elif unit == Figure.UNIT.HOUSEHOLD:
-            if not household_size:
+            # A household figure's total is reported x household size, so the size has to be a
+            # positive number: zero would publish a real displacement as 0, and a negative one
+            # would drive the total below the column's range.
+            #
+            # NOTE: this makes a household figure whose *stored* household size is already 0 or
+            # NULL uneditable through this importer, even for its role or dates. Such rows exist
+            # (they predate the rule and were written by paths that bypass the serializer), and
+            # because an import is all-or-nothing a single one fails the whole sheet.
+            # FIXME: only demand a household size when the row actually changes `unit` or
+            # `household_size`, so a figure with a bad stored size stays editable on its other
+            # fields. Left alone for now: no such figure is in the current drift set.
+            if household_size is None:
                 errors["household_size"] = "This field is required for a household-unit figure"
                 return
-            if household_size < 0:
-                errors["household_size"] = "This must not be negative"
+            if household_size <= 0:
+                errors["household_size"] = "This must be greater than zero for a household-unit figure"
                 return
             attrs["total_figures"] = int(round_half_up(reported * Decimal(str(household_size))))
         else:
@@ -133,7 +144,8 @@ class Command(BaseImportCommand):
         "Bulk update the role, dates and reported values of existing figures from an .xlsx sheet. "
         "`total_figures` is derived from unit, reported and household size, never supplied. "
         "Use --make-template to generate a blank template. "
-        "Each row names its figure by either id or uuid, exactly one; it never creates."
+        "Each row names its figure by id or uuid, or both - supplying both is safer, since the "
+        "second is checked against the row the first resolved. It never creates."
     )
 
     model = Figure
@@ -142,7 +154,9 @@ class Command(BaseImportCommand):
 
     # A sheet built from a figure export carries ids; one built from the system that supplied the
     # figures carries uuids, which hulk writes into Figure.uuid as well as its own row. Either
-    # names a figure, so both are offered and a row supplies exactly one.
+    # names a figure. A row supplying both is safest: the id resolves it and the uuid is checked
+    # against the resolved figure, so a sheet built against another instance fails instead of
+    # editing whatever happens to hold that id here.
     match_columns = (("id", "pk"), ("uuid", "uuid"))
 
     lookups = [
