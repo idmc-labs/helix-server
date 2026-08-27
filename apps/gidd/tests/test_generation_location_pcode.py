@@ -3,6 +3,7 @@ import io
 import openpyxl
 from django.test import TestCase
 
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, FigureLocation
 from apps.gidd.models import GiddFigure, PublicFigureAnalysis, StatusLog
@@ -164,3 +165,49 @@ class GiddFigureLocationPcodeTestCase(TestCase):
         assert position["Pcode source"] == position["Pcode accuracy"] + 1
         assert rows[1][position["Pcode"]] == "NPL-B"
         assert rows[1][position["Pcode source"]] == "HDX"
+
+    def test_the_xlsx_keeps_an_empty_slot_for_a_location_with_no_pcode(self):
+        """A location without a p-code must still occupy its position in the joined cell.
+
+        The cell is one string per column, so the only thing tying a code to its location is the
+        slot it sits in. `string_join` drops None, which would pull every later code one slot left
+        and silently attribute it to the wrong location -- the cell would still look well-formed.
+        """
+        figure = FigureFactory.create(
+            entry=EntryFactory.create(publish_date="2019-01-01"),
+            event=self.event,
+            country=self.country,
+            role=Figure.ROLE.RECOMMENDED,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            total_figures=500,
+            start_date="2018-01-01",
+            end_date="2018-12-31",
+        )
+        # The FIRST location carries no code, so a dropped slot shows up as the second location's
+        # code moving to the front rather than as a length change alone.
+        for name, pcode in (("Alpha-A", None), ("Zone-B", "NPL-B")):
+            figure.geo_locations.add(
+                FigureLocationFactory.create(
+                    display_name=name,
+                    pcode=pcode,
+                    pcode_accuracy=None if pcode is None else FigureLocation.PCODE_ACCURACY.ADM2,
+                    pcode_source=None if pcode is None else "HDX",
+                )
+            )
+        self.generate(figure)
+
+        workbook = DisaggregationViewSet()._export_disaggregated_excel(
+            "probe.xlsx", GiddFigure.objects.all(), PublicFigureAnalysis.objects.none()
+        )
+        buffer = io.BytesIO()
+        workbook.save(buffer)
+        buffer.seek(0)
+        rows = list(openpyxl.load_workbook(buffer, read_only=True)["1_Disaggregated_Data"].values)
+        position = {name: index for index, name in enumerate(rows[0])}
+        row = rows[1]
+
+        names = (row[position["Locations name"]] or "").split(EXTERNAL_ARRAY_SEPARATOR)
+        pcodes = (row[position["Pcode"]] or "").split(EXTERNAL_ARRAY_SEPARATOR)
+        assert len(pcodes) == len(names), f"{len(pcodes)} p-code slots against {len(names)} locations"
+        assert pcodes[names.index("Alpha-A")] == "", f"the empty slot was dropped: {pcodes}"
+        assert pcodes[names.index("Zone-B")] == "NPL-B", f"the code moved slot: {pcodes}"
