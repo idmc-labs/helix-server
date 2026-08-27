@@ -1261,7 +1261,13 @@ DISAGGREGATION_EXPORT_VALUES = (
 )
 
 
+@client_id
 class DisaggregationViewSet(viewsets.GenericViewSet):
+    # `@client_id` is declared here rather than inherited: it documents the required query
+    # parameter, and `ListOnlyViewSetMixin` was the only thing carrying it. Both actions demand a
+    # registered client at runtime via `track_gidd`, so a schema that omits the parameter describes
+    # an endpoint nobody can call.
+    #
     # Only the two export actions are routed (helix/external_urls.py). This was a
     # ListOnlyViewSetMixin with pagination_class = None — an UNPAGINATED list over the whole
     # GiddFigure table, unrouted but one router.register away from shipping; drop the list
