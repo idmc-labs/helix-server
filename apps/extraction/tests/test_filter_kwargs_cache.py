@@ -1,4 +1,5 @@
 from django.core.cache import cache
+from django.core.management import call_command
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
@@ -41,3 +42,30 @@ class TestGetFilterKwargsCache(HelixTestCase):
         self.report.filter_figure_countries.set(self.countries[:1])
         fresh = self.report.get_filter_kwargs
         self.assertEqual(fresh["filter_figure_countries"], [self.countries[0].id])
+
+
+class TestClearFilterKwargsCacheCommand(HelixTestCase):
+    """`clear_filter_kwargs_cache` drops entries a write that bypassed `save()` left stale.
+
+    Such a write does not rotate `modified_at`, so the key survives it and the entry keeps serving
+    the pre-write filters until the TTL expires.
+    """
+
+    def setUp(self) -> None:
+        cache.clear()
+        self.report = ReportFactory.create()
+        self.report.filter_figure_countries.set(CountryFactory.create_batch(2))
+        self.report.save()
+
+    def test_command_clears_a_populated_entry(self):
+        self.report.get_filter_kwargs
+        key = self.report.filter_kwargs_cache_key()
+        self.assertIsNotNone(cache.get(key), "precondition: the entry should be cached")
+
+        call_command("clear_filter_kwargs_cache")
+
+        self.assertIsNone(cache.get(key))
+
+    def test_command_is_safe_when_nothing_is_cached(self):
+        call_command("clear_filter_kwargs_cache")
+        call_command("clear_filter_kwargs_cache")

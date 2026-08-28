@@ -145,6 +145,9 @@ class QueryAbstractModel(models.Model):
     # cache key rotates on edit and the TTL only matters for out-of-band writes
     # (e.g. a data migration touching the filter M2Ms directly).
     FILTER_KWARGS_CACHE_TTL = 6 * 60 * 60
+    # Shared with `clear_filter_kwargs_cache`, which deletes by pattern: a literal in two
+    # places would let the command silently clear nothing after a key change.
+    FILTER_KWARGS_CACHE_PREFIX = "query_filter_kwargs:v1"
 
     def filter_kwargs_cache_key(self):
         """Cache key of this instance's computed filter kwargs, None for an unsaved one.
@@ -156,7 +159,7 @@ class QueryAbstractModel(models.Model):
             return None
         modified_at = getattr(self, "modified_at", None)  # from the MetaInformation mixins
         stamp = modified_at.isoformat() if modified_at else "na"
-        return f"query_filter_kwargs:v1:{self._meta.label_lower}:{self.pk}:{stamp}"
+        return f"{self.FILTER_KWARGS_CACHE_PREFIX}:{self._meta.label_lower}:{self.pk}:{stamp}"
 
     @classmethod
     def with_uncached_filter_kwargs(cls, instances):
