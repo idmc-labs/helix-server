@@ -597,7 +597,9 @@ class Query(graphene.ObjectType):
             conflict_qs.filter(new_displacement__gt=0)
             .values("year")
             .annotate(total=Coalesce(models.Sum("new_displacement", output_field=models.IntegerField()), 0))
-            .order_by("year")
+            # `year` alone is a partial sort -- a year holds one row per country -- so the
+            # order of a year's countries would otherwise follow the plan and differ per run.
+            .order_by("year", "iso3")
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
@@ -613,7 +615,9 @@ class Query(graphene.ObjectType):
             conflict_qs.filter(total_displacement__gt=0)
             .values("year")
             .annotate(total=Coalesce(models.Sum("total_displacement", output_field=models.IntegerField()), 0))
-            .order_by("year")
+            # `year` alone is a partial sort -- a year holds one row per country -- so the
+            # order of a year's countries would otherwise follow the plan and differ per run.
+            .order_by("year", "iso3")
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
@@ -738,7 +742,9 @@ class Query(graphene.ObjectType):
             disaster_qs.filter(new_displacement__gt=0)
             .values("year")
             .annotate(total=Coalesce(models.Sum("new_displacement", output_field=models.IntegerField()), 0))
-            .order_by("year")
+            # `year` alone is a partial sort -- a year holds one row per country -- so the
+            # order of a year's countries would otherwise follow the plan and differ per run.
+            .order_by("year", "iso3")
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
@@ -754,7 +760,9 @@ class Query(graphene.ObjectType):
             disaster_qs.filter(total_displacement__gt=0)
             .values("year")
             .annotate(total=Coalesce(models.Sum("total_displacement", output_field=models.IntegerField()), 0))
-            .order_by("year")
+            # `year` alone is a partial sort -- a year holds one row per country -- so the
+            # order of a year's countries would otherwise follow the plan and differ per run.
+            .order_by("year", "iso3")
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
