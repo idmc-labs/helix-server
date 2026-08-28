@@ -100,14 +100,14 @@ DISPLACEMENT_FIELDS = [
     "iso3",
     "country_name",
     "year",
-    "conflict_new_displacement",
-    "conflict_new_displacement_rounded",
-    "conflict_total_displacement",
     "conflict_total_displacement_rounded",
-    "disaster_new_displacement",
+    "conflict_total_displacement",
+    "conflict_new_displacement_rounded",
+    "conflict_new_displacement",
     "disaster_new_displacement_rounded",
-    "disaster_total_displacement",
+    "disaster_new_displacement",
     "disaster_total_displacement_rounded",
+    "disaster_total_displacement",
 ]
 
 # NOTE: `figure_category` is listed twice in PublicFigureAnalysisSerializer.Meta.fields;

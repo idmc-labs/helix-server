@@ -185,61 +185,49 @@ class DisasterSerializer(serializers.ModelSerializer):
 
 
 class DisplacementDataSerializer(serializers.Serializer):
-    # Field declaration order is the response key order, and that order is part of the contract
-    # these endpoints publish.
     iso3 = serializers.CharField(
         help_text="Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area."
     )
-
     country_name = serializers.CharField(help_text="Short name of the country or territory.")
-
     year = serializers.IntegerField(help_text="Indicates the year for which displacement data are reported.")
-
-    conflict_new_displacement = serializers.IntegerField(
-        help_text="Total number of internal displacements reported "
-        '"(not rounded)" as a result of conflict and violence over the '
-        "reporting year. Units are recorded as 'internal displacement flows'."
-    )
-
-    conflict_new_displacement_rounded = serializers.SerializerMethodField(
-        help_text="Total number of internal displacements reported "
-        '"(rounded figures at national level)" as a result of conflict '
-        "and violence over the reporting year. Units are recorded as 'internal displacement flows'."
-    )
-
-    conflict_total_displacement = serializers.IntegerField(
-        help_text='Total number of IDPs "(not rounded)" '
-        "as a result of conflict and violence as of the end of the reporting year."
-        "Units are recorded as 'People'."
-    )
-
     conflict_total_displacement_rounded = serializers.SerializerMethodField(
         help_text='Total number of IDPs "(rounded figures at the national level)" '
         "as a result of conflict and violence as of the end of the reporting year. "
         "Units are recorded as 'People'."
     )
-
-    disaster_new_displacement = serializers.IntegerField(
-        help_text='Total number of internal displacements reported "(not rounded)" as a '
-        "result of disasters over the reporting year. "
-        "Units are recorded as 'internal displacement flows'."
+    conflict_total_displacement = serializers.IntegerField(
+        help_text='Total number of IDPs "(not rounded)" '
+        "as a result of conflict and violence as of the end of the reporting year."
+        "Units are recorded as 'People'."
     )
-
+    conflict_new_displacement_rounded = serializers.SerializerMethodField(
+        help_text="Total number of internal displacements reported "
+        '"(rounded figures at national level)" as a result of conflict '
+        "and violence over the reporting year. Units are recorded as 'internal displacement flows'."
+    )
+    conflict_new_displacement = serializers.IntegerField(
+        help_text="Total number of internal displacements reported "
+        '"(not rounded)" as a result of conflict and violence over the '
+        "reporting year. Units are recorded as 'internal displacement flows'."
+    )
     disaster_new_displacement_rounded = serializers.SerializerMethodField(
         help_text="Total number of internal displacements reported "
         '"(rounded figures at national level)" as a result of disasters over the reporting year. '
         "Units are recorded as 'internal displacement flows'."
     )
-
-    disaster_total_displacement = serializers.IntegerField(
-        help_text='Total number of IDPs "(not rounded)" as a result'
-        "of disasters as of the end of the reporting year. Units are recorded as 'People'."
+    disaster_new_displacement = serializers.IntegerField(
+        help_text='Total number of internal displacements reported "(not rounded)" as a '
+        "result of disasters over the reporting year. "
+        "Units are recorded as 'internal displacement flows'."
     )
-
     disaster_total_displacement_rounded = serializers.SerializerMethodField(
         help_text='Total number of IDPs "(rounded figures at national level)" as a '
         "result of disasters as of the end of the reporting year. "
         "Units are recorded as 'People'."
+    )
+    disaster_total_displacement = serializers.IntegerField(
+        help_text='Total number of IDPs "(not rounded)" as a result'
+        "of disasters as of the end of the reporting year. Units are recorded as 'People'."
     )
 
     ORDERING_SOURCES = {
