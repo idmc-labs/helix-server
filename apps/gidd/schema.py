@@ -66,35 +66,23 @@ def resolve_stock_year(kwargs, requested_end_year):
     return requested_end_year or release_year
 
 
-def displacement_year_range(start_year, end_year):
-    """The year scoping new displacement and IDP stock share.
-
-    Both figures select rows the same way wherever a result row is itself one year -- the lists and
-    the per-year timeseries. They diverge only where an aggregate collapses years: a flow sums the
-    range, a stock must read a single one.
-    """
-    filters = {}
+def _displacement_year_range(start_year, end_year):
+    """The year window both figures scope rows by, before either narrows it further."""
+    q = models.Q()
     if start_year:
-        filters["year__gte"] = start_year
+        q &= models.Q(year__gte=start_year)
     if end_year:
-        filters["year__lte"] = end_year
-    return filters
+        q &= models.Q(year__lte=end_year)
+    return q
 
 
-def new_displacement_filters(start_year, end_year):
-    """Rows with new displacement across the requested year range.
-
-    A flow, so it is summed across the range; the `> 0` drops the rows the statistics queries
-    treat as absent.
-    """
-    return {"new_displacement__gt": 0, **displacement_year_range(start_year, end_year)}
+def new_displacement_q_for_aggregate(start_year, end_year):
+    """Rows summed for new displacement: a flow, so the whole window adds up."""
+    return models.Q(new_displacement__gt=0) & _displacement_year_range(start_year, end_year)
 
 
-def idp_stock_filter(stock_year):
-    """Rows carrying the IDP stock for `stock_year`, as a `Q` so an aggregate can AND it with a cause.
-
-    A stock is point-in-time: read from one year, never summed across years.
-    """
+def idp_stock_q_for_aggregate(stock_year):
+    """Rows summed for IDP stock: point-in-time, so one year, never summed across years."""
     return models.Q(total_displacement__gt=0, year=stock_year)
 
 
@@ -579,11 +567,11 @@ class Query(graphene.ObjectType):
         conflict_qs = ConflictStatisticsFilter(data=kwargs).qs
         start_year = kwargs.pop("start_year", None)
         end_year = resolve_stock_year(kwargs, kwargs.pop("end_year", None))
-        filters = new_displacement_filters(start_year, end_year)
+        new_displacement_q = new_displacement_q_for_aggregate(start_year, end_year)
 
         conflict_stock_year = end_year
-        conflict_total_displacement_qs = conflict_qs.filter(idp_stock_filter(conflict_stock_year))
-        conflict_new_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters)
+        conflict_total_displacement_qs = conflict_qs.filter(idp_stock_q_for_aggregate(conflict_stock_year))
+        conflict_new_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(new_displacement_q)
 
         new_displacement_timeseries_by_year_qs = (
             conflict_qs.filter(new_displacement__gt=0)
@@ -625,7 +613,7 @@ class Query(graphene.ObjectType):
                 total_idp=Coalesce(
                     models.Sum(
                         "total_displacement",
-                        filter=idp_stock_filter(conflict_stock_year),
+                        filter=idp_stock_q_for_aggregate(conflict_stock_year),
                         output_field=models.IntegerField(),
                     ),
                     0,
@@ -720,11 +708,11 @@ class Query(graphene.ObjectType):
         event_filter_data = dict(kwargs)
         start_year = kwargs.pop("start_year", None)
         end_year = resolve_stock_year(kwargs, kwargs.pop("end_year", None))
-        filters = new_displacement_filters(start_year, end_year)
+        new_displacement_q = new_displacement_q_for_aggregate(start_year, end_year)
 
         disaster_stock_year = end_year
-        disaster_total_displacement_qs = disaster_qs.filter(idp_stock_filter(disaster_stock_year))
-        disaster_new_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters)
+        disaster_total_displacement_qs = disaster_qs.filter(idp_stock_q_for_aggregate(disaster_stock_year))
+        disaster_new_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(new_displacement_q)
 
         new_displacement_timeseries_by_year_qs = (
             disaster_qs.filter(new_displacement__gt=0)
@@ -766,7 +754,7 @@ class Query(graphene.ObjectType):
                 total_idp=Coalesce(
                     models.Sum(
                         "total_displacement",
-                        filter=idp_stock_filter(disaster_stock_year),
+                        filter=idp_stock_q_for_aggregate(disaster_stock_year),
                         output_field=models.IntegerField(),
                     ),
                     0,
@@ -798,10 +786,7 @@ class Query(graphene.ObjectType):
                 total=Coalesce(models.Sum("total_displacement", output_field=models.IntegerField()), 0)
             )["total"],
             total_events=GiddEventDisplacementFilter(data=event_filter_data)
-            .qs.filter(
-                cause=Crisis.CRISIS_TYPE.DISASTER,
-                **filters,
-            )
+            .qs.filter(models.Q(cause=Crisis.CRISIS_TYPE.DISASTER) & new_displacement_q)
             .filter(models.Q(new_displacement__gt=0) | models.Q(total_displacement__gt=0))
             .count(),
             total_displacement_countries=disaster_total_displacement_qs.distinct("iso3").count(),
@@ -987,11 +972,11 @@ class Query(graphene.ObjectType):
         start_year = kwargs.pop("start_year", None)
         end_year = resolve_stock_year(kwargs, kwargs.pop("end_year", None))
 
-        filters = new_displacement_filters(start_year, end_year)
+        new_displacement_q = new_displacement_q_for_aggregate(start_year, end_year)
 
         disaster_base = DisasterStatisticsFilter(data=kwargs).qs
-        disaster_total_displacement_qs = disaster_base.filter(idp_stock_filter(end_year))
-        disaster_internal_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters)
+        disaster_total_displacement_qs = disaster_base.filter(idp_stock_q_for_aggregate(end_year))
+        disaster_internal_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(new_displacement_q)
 
         disaster_total_displacement_stats = disaster_total_displacement_qs.aggregate(
             models.Sum("total_displacement"),
@@ -1018,8 +1003,8 @@ class Query(graphene.ObjectType):
         }
 
         conflict_base = ConflictStatisticsFilter(data=conflict_kwargs).qs
-        conflict_total_displacement_qs = conflict_base.filter(idp_stock_filter(end_year))
-        conflict_internal_displacement_qs = ConflictStatisticsFilter(data=conflict_kwargs).qs.filter(**filters)
+        conflict_total_displacement_qs = conflict_base.filter(idp_stock_q_for_aggregate(end_year))
+        conflict_internal_displacement_qs = ConflictStatisticsFilter(data=conflict_kwargs).qs.filter(new_displacement_q)
 
         conflict_total_displacement_stats = conflict_total_displacement_qs.aggregate(
             models.Sum("total_displacement"),
@@ -1086,11 +1071,17 @@ class Query(graphene.ObjectType):
             .annotate(
                 conflict_new_displacement=Coalesce(models.Sum("new_displacement", filter=conflict_filter), 0),
                 conflict_total_displacement=Coalesce(
-                    models.Sum("total_displacement", filter=conflict_filter & idp_stock_filter(conflict_stock_year)), 0
+                    models.Sum(
+                        "total_displacement", filter=conflict_filter & idp_stock_q_for_aggregate(conflict_stock_year)
+                    ),
+                    0,
                 ),
                 disaster_new_displacement=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
                 disaster_total_displacement=Coalesce(
-                    models.Sum("total_displacement", filter=disaster_filter & idp_stock_filter(disaster_stock_year)), 0
+                    models.Sum(
+                        "total_displacement", filter=disaster_filter & idp_stock_q_for_aggregate(disaster_stock_year)
+                    ),
+                    0,
                 ),
             )
             .filter(
