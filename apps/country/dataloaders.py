@@ -5,14 +5,14 @@ from promise.dataloader import DataLoader
 from apps.country.models import ContextualAnalysis, Country, MonitoringSubRegion, Summary
 
 
-class TotalFigureThisYearByCountryLoader(DataLoader):
-    """The four current-year figure totals of a country: (ND, IDP) x (conflict, disaster).
+class CountryTotalFigureDisaggregationLoader(DataLoader):
+    """All four current-year figure-disaggregation totals in ONE batched, set-based
+    aggregation keyed by country id. Replaces the four per-field loaders that each
+    recomputed all four totals via correlated subqueries (4x redundant work + 4 round-trips).
 
-    One grouped pass over the figure table carries all four, so the four fields share one
-    loader — and one query. The values match `_total_figure_disaggregation_subquery` in its
-    default current-year unfiltered scope, which is the only scope that reaches a loader:
-    `CountryType` reads an annotation whenever the list built one (aggregate figures, or a
-    sort by a total).
+    The values match `_total_figure_disaggregation_subquery` in its default current-year
+    unfiltered scope, which is the only scope that reaches a loader: `CountryType` reads an
+    annotation whenever the list built one (aggregate figures, or a sort by a total).
     """
 
     TOTAL_FIELDS = (
@@ -26,10 +26,10 @@ class TotalFigureThisYearByCountryLoader(DataLoader):
         """
         keys: [countryId]
         """
-        qs = Country.annotate_total_figure_disaggregation_via_cte(Country.objects.filter(id__in=keys)).values(
+        rows = Country.annotate_total_figure_disaggregation_via_cte(Country.objects.filter(id__in=keys), keys=keys).values(
             "id", *self.TOTAL_FIELDS
         )
-        totals_by_country = {row["id"]: {field: row[field] for field in self.TOTAL_FIELDS} for row in qs}
+        totals_by_country = {row["id"]: {field: row[field] for field in self.TOTAL_FIELDS} for row in rows}
         # A country the filter did not return has no total of any kind.
         missing = {field: None for field in self.TOTAL_FIELDS}
 

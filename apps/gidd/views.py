@@ -235,7 +235,7 @@ class ConflictViewSet(ListOnlyViewSetMixin):
             ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST,
             viewset=self,
         )
-        return Conflict.objects.all().select_related("country")
+        return Conflict.objects.all()
 
 
 @extend_schema_view(
@@ -260,7 +260,13 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             api_type,
             viewset=self,
         )
-        return Disaster.objects.select_related("country")
+        qs = Disaster.objects.all()
+        if self.action == "export":
+            # Only the xlsx export dereferences disaster.country; the list serializer
+            # reads the denormalised iso3/country_name columns, so joining there just
+            # instantiates one throwaway Country per row.
+            qs = qs.select_related("country")
+        return qs
 
     @staticmethod
     def get_displacement_status(displacement_occurred: typing.List[int]) -> str:

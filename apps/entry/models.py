@@ -626,10 +626,39 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             # keeping it small on this 186k-row table. The literal 0 is ROLE.RECOMMENDED.value
             # (`role` is an enum.EnumField stored as int); the enum class isn't in scope inside
             # Meta, and the CTE itself filters on `rec = Figure.ROLE.RECOMMENDED.value` == 0.
+            # `total_figures` is INCLUDEd for the same reason as the country pair below: the
+            # sibling Sum() aggregate over this same (role, category, event) scope reads it,
+            # and without it in the index the planner skips this index and seq-scans.
+            # MAX(end_date) is still served by the key columns as before.
             models.Index(
                 fields=["event", "category", "end_date"],
+                include=["total_figures"],
                 condition=models.Q(role=0),
                 name="figure_event_cat_role_rec_idx",
+            ),
+            # The report/listing scope is a 3-way OR over (category, start_date) and
+            # (category, end_date). Without these composites the planner can only BitmapAnd
+            # category x date, which costs enough that it prefers a parallel seq scan — the
+            # same rows over more CPU, which is what the 1-CPU prod cap punishes.
+            models.Index(fields=["category", "start_date"]),
+            models.Index(fields=["category", "end_date"]),
+            # Aggregations (unlike listings) only ever count RECOMMENDED figures, so `role`
+            # is a partial condition rather than a leading key column: that keeps the index
+            # small without making it unusable for lookups that do not mention `role`.
+            # `total_figures` is INCLUDEd because it is the only non-key column the aggregate
+            # reads — without it the planner must visit the heap and ignores the index
+            # entirely. The literal 0 is ROLE.RECOMMENDED.value (see the note above).
+            models.Index(
+                fields=["country", "category", "end_date"],
+                include=["total_figures"],
+                condition=models.Q(role=0),
+                name="figure_ctry_cat_end_rec_idx",
+            ),
+            models.Index(
+                fields=["country", "category", "start_date"],
+                include=["total_figures"],
+                condition=models.Q(role=0),
+                name="figure_ctry_cat_start_rec_idx",
             ),
         ]
         permissions = (("approve_figure", "Can approve/unapprove figure"),)

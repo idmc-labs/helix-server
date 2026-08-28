@@ -16,18 +16,21 @@ This module provides:
   * ``ReverseFKListLoader`` — batch a reverse-FK list: one query per (parent, accessor), grouped
     by parent id.
   * ``M2MListLoader`` — the same for an M2M, read through the through table.
+  * ``ReverseOneToOneLoader`` — batch the reverse side of a OneToOne (one child, or None, per parent).
   * ``RelationBatchedDjangoObjectType`` — a base type that installs a resolver for every exposed
     relation field WITHOUT a hand-written resolver: forward FK / O2O through ``RelationNodeLoader``,
-    non-paginated reverse-FK / M2M lists through the grouped list loaders above. A field declared
-    as a paginated list is left alone — ``FilteredRelationListLoader`` serves those, because they
-    carry the field's own filterset, ordering and pagination.
+    non-paginated reverse-FK / M2M lists through the grouped list loaders above, and the reverse
+    side of a OneToOne through ``ReverseOneToOneLoader``. A field declared as a paginated list is
+    left alone — ``FilteredRelationListLoader`` serves those, because they carry the field's own
+    filterset, ordering and pagination.
 
-NOTE: every loader here reaches its rows through ``objects``. Django's own descriptors do not —
-``ForwardManyToOneDescriptor`` resolves an FK through ``_base_manager`` and ``ManyRelatedManager``
-derives from the target's ``_default_manager`` — precisely so a filtering default manager cannot
-make an existing relation look absent. No model in this project has one, so the three are
-equivalent today. Give any model a default manager that filters rows and these loaders will start
-hiding relations the real descriptor would return.
+NOTE: the node and list loaders here reach their rows through ``objects``; ``ReverseOneToOneLoader``
+uses ``_base_manager``, mirroring ``ReverseOneToOneDescriptor``. Django's own descriptors avoid
+``objects`` throughout — ``ForwardManyToOneDescriptor`` resolves an FK through ``_base_manager`` and
+``ManyRelatedManager`` derives from the target's ``_default_manager`` — precisely so a filtering
+default manager cannot make an existing relation look absent. No model in this project has one, so
+they are equivalent today. Give any model a default manager that filters rows and the
+``objects``-based loaders will start hiding relations the real descriptor would return.
 """
 
 from collections import defaultdict
@@ -75,6 +78,26 @@ class ReverseFKListLoader(DataLoader):
         return Promise.resolve([grouped.get(key, []) for key in keys])
 
 
+class ReverseOneToOneLoader(DataLoader):
+    """Batch a reverse OneToOne: child_model.filter(fk__in=keys), ONE child (or None) per parent."""
+
+    def __init__(self, child_model, fk_name, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.child_model = child_model
+        self.fk_name = fk_name
+
+    def batch_load_fn(self, keys):
+        fk_id_attr = "%s_id" % self.fk_name
+        # _base_manager mirrors Django's ReverseOneToOneDescriptor.get_queryset, which uses
+        # _base_manager so the accessor reports "absent" only when the row really is absent,
+        # never because a filtered default manager hid it. This resolver stands in for that
+        # descriptor, so `objects` here could turn an existing child into a silent null.
+        # No ordering: the FK is UNIQUE, so at most one child exists per key.
+        qs = self.child_model._base_manager.filter(**{"%s__in" % self.fk_name: keys})
+        by_parent = {getattr(obj, fk_id_attr): obj for obj in qs}
+        return Promise.resolve([by_parent.get(key) for key in keys])
+
+
 class M2MListLoader(DataLoader):
     """Batch an M2M list via the through table: through.filter(source_fk__in=keys), grouped, target select_related."""
 
@@ -114,7 +137,19 @@ def _make_fk_resolver(field_name, target_model):
 
 def _make_list_resolver(field_name, ref, loader_factory):
     def resolver(root, info, **kwargs):
-        loader = info.context.get_relation_list_loader(ref, loader_factory)
+        loader = info.context.get_relation_loader(ref, loader_factory)
+        return loader.load(root.id)
+
+    resolver.__name__ = "resolve_%s" % field_name
+    return resolver
+
+
+def _make_reverse_o2o_resolver(field_name, ref, loader_factory):
+    # Body-identical to _make_list_resolver but kept separate: the wired resolver's qualname is
+    # how the schema-wide structural guard tells the relation kinds apart, and a to-many field
+    # silently wired to a single-object loader (or the reverse) would otherwise be invisible.
+    def resolver(root, info, **kwargs):
+        loader = info.context.get_relation_loader(ref, loader_factory)
         return loader.load(root.id)
 
     resolver.__name__ = "resolve_%s" % field_name
@@ -128,6 +163,14 @@ def _reverse_fk_spec(child_model, fk_name):
     # one field would get the other model's rows.
     ref = "rfk:%s.%s" % (child_model._meta.label, fk_name)
     return ref, lambda: ReverseFKListLoader(child_model, fk_name)
+
+
+def _reverse_o2o_spec(child_model, fk_name):
+    # Same ref discipline as _reverse_fk_spec, with its own prefix: the reverse-O2O loader
+    # returns one object where the reverse-FK loader returns a list, so the two must never
+    # share a cache entry even for the same (child model, FK).
+    ref = "ro2o:%s.%s" % (child_model._meta.label, fk_name)
+    return ref, lambda: ReverseOneToOneLoader(child_model, fk_name)
 
 
 def reverse_fk_list_resolver(child_model, fk_name):
@@ -189,6 +232,13 @@ class RelationBatchedDjangoObjectType(DjangoObjectType):
             # concrete forward relation on THIS model: FK (many_to_one) or forward O2O -> node loader
             if getattr(rel, "concrete", False) and (getattr(rel, "many_to_one", False) or getattr(rel, "one_to_one", False)):
                 setattr(cls, "resolve_%s" % snake, _make_fk_resolver(snake, rel.related_model))
+                continue
+            # reverse O2O (OneToOneRel): concrete=False and one_to_many=False, so it matches
+            # neither branch around it; without this branch it falls through with NO loader
+            # at all — one query per parent row.
+            if getattr(rel, "one_to_one", False) and not getattr(rel, "concrete", False):
+                ref, factory = _reverse_o2o_spec(rel.related_model, rel.field.name)
+                setattr(cls, "resolve_%s" % snake, _make_reverse_o2o_resolver(snake, ref, factory))
                 continue
             # reverse-FK list / M2M (non-paginated graphene.List) -> grouped list loader
             if getattr(rel, "one_to_many", False) or getattr(rel, "many_to_many", False):

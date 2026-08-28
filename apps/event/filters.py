@@ -262,13 +262,22 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
             self.request,
         )
         # nd/idp totals are annotated only when needed: aggregate_figures set, or sorting by them
-        # (else resolvers read the default dataloaders). We need BOTH a subquery and a CTE; a CTE
-        # alone can't do it — it is fixed to the default unfiltered scope, so aggregate_figures'
-        # filtered values must come from the parametrized subquery. When sorting, the CTE is much
-        # the cheaper of the two: its cost is one grouped pass over the figure table, while the
-        # subquery's is per event row. The same holds on crisis and country, where the row count is
-        # small but each row still drives its own aggregation over the whole figure table.
-        # TODO: move aggregate_figures onto dataloaders -> the subquery arm goes away.
+        # (else resolvers read the default dataloaders). The two cases use different shapes, and the
+        # split is by how many rows must carry a total, not by what each helper can express:
+        #
+        #   aggregate_figures -> subquery, scoped to the page. `figure.event_id` is a direct indexed
+        #     FK, so one event's correlated aggregate is nearly free and the whole page costs about
+        #     the same at pageSize 10 as at 1000. The CTE has to materialize a grouped aggregate
+        #     over the entire filtered figure set before it can join, a fixed cost that a page never
+        #     amortizes -- measured 15-35x slower than the subquery at every page size up to 1000,
+        #     crossing over only past ~10k rows.
+        #   sorting -> CTE, over the whole list. A sort has to rank every event, so the grouped pass
+        #     is paid once instead of per row, and the CTE is several times cheaper.
+        #
+        # Crisis and country make the opposite call for aggregate_figures (both scopes go through
+        # their CTE) because their lists are ~78 and ~252 rows -- a whole-table pass amortizes
+        # immediately -- and their per-row subqueries aggregate across a two-hop join, which event's
+        # does not.
         figure_disaggregation = Event._total_figure_disaggregation_subquery(
             figures=figure_qs,
             reference_date=reference_date,

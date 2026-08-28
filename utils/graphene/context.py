@@ -8,33 +8,29 @@ from apps.country.dataloaders import (
     CountryLastContextualAnalysisLoader,
     CountryLastSummaryLoader,
     CountryMonitoringExpertLoader,
+    CountryTotalFigureDisaggregationLoader,
     MonitoringSubRegionCountryCountLoader,
     MonitoringSubRegionRegionalCoordinatorLoader,
-    TotalFigureThisYearByCountryLoader,
 )
 from apps.crisis.dataloaders import (
     CrisisReviewCountLoader,
+    CrisisTotalFigureDisaggregationLoader,
     EventCountLoader,
     MaxStockIDPFigureEndDateByCrisisLoader,
-    TotalIDPFigureByCrisisLoader,
-    TotalNDFigureByCrisisLoader,
 )
 from apps.entry.dataloaders import (
     FigureGeoLocationLoader,
     FigureLastReviewCommentStatusLoader,
     FigureSourcesReliability,
     FigureTypologyLoader,
-    TotalIDPFigureByEntryLoader,
-    TotalNDFigureByEntryLoader,
 )
 from apps.event.dataloaders import (
     EventEntryCountLoader,
     EventFigureTypologyLoader,
     EventReviewCountLoader,
+    EventTotalFigureDisaggregationLoader,
     EventTypologyLoader,
     MaxStockIDPFigureEndDateByEventLoader,
-    TotalIDPFigureByEventLoader,
-    TotalNDFigureByEventLoader,
 )
 from apps.hulk.dataloaders import (
     AttachmentHulkLoader,
@@ -65,8 +61,8 @@ class GQLContext:
         self.filtered_relation_count_loaders = {}
         # one RelationNodeLoader per related model (forward FK / O2O batching)
         self.relation_node_loaders = {}
-        # one reverse-FK / M2M list loader per (parent, accessor) ref
-        self.relation_list_loaders = {}
+        # one reverse-FK / M2M / reverse-O2O loader per relation ref
+        self.relation_loaders = {}
 
     @cached_property
     def user(self):
@@ -101,12 +97,12 @@ class GQLContext:
             self.relation_node_loaders[ref] = RelationNodeLoader(model)
         return self.relation_node_loaders[ref]
 
-    def get_relation_list_loader(self, ref, factory):
-        # one reverse-FK / M2M list loader per relation ref (keyed by what the loader
-        # queries: child/through model + FK names); factory() builds it once
-        if ref not in self.relation_list_loaders:
-            self.relation_list_loaders[ref] = factory()
-        return self.relation_list_loaders[ref]
+    def get_relation_loader(self, ref, factory):
+        # one loader per relation ref (keyed by what the loader queries: child/through
+        # model + FK names, prefixed by relation kind); factory() builds it once
+        if ref not in self.relation_loaders:
+            self.relation_loaders[ref] = factory()
+        return self.relation_loaders[ref]
 
     """
     NOTE: As a convention, data loader should have the name as:
@@ -114,42 +110,26 @@ class GQLContext:
     """
 
     @cached_property
-    def entry_entry_total_stock_idp_figures(self):
-        return TotalIDPFigureByEntryLoader()
-
-    @cached_property
-    def entry_entry_total_flow_nd_figures(self):
-        return TotalNDFigureByEntryLoader()
-
-    @cached_property
-    def crisis_crisis_total_stock_idp_figures(self):
-        return TotalIDPFigureByCrisisLoader()
-
-    @cached_property
-    def crisis_crisis_total_flow_nd_figures(self):
-        return TotalNDFigureByCrisisLoader()
+    def crisis_total_figure_disaggregation_loader(self):
+        return CrisisTotalFigureDisaggregationLoader()
 
     @cached_property
     def crisis_stock_idp_figures_max_end_date(self):
         return MaxStockIDPFigureEndDateByCrisisLoader()
 
     @cached_property
-    def event_event_total_stock_idp_figures(self):
-        return TotalIDPFigureByEventLoader()
-
-    @cached_property
-    def event_event_total_flow_nd_figures(self):
-        return TotalNDFigureByEventLoader()
+    def event_total_figure_disaggregation_loader(self):
+        return EventTotalFigureDisaggregationLoader()
 
     @cached_property
     def event_stock_idp_figures_max_end_date(self):
         return MaxStockIDPFigureEndDateByEventLoader()
 
     @cached_property
-    def country_country_this_year_figures_loader(self):
+    def country_total_figure_disaggregation_loader(self):
         # One loader for the four (category, event type) totals: they share a query, so
         # they must share the batch that runs it.
-        return TotalFigureThisYearByCountryLoader()
+        return CountryTotalFigureDisaggregationLoader()
 
     @cached_property
     def monitoring_sub_region_country_count_loader(self):
