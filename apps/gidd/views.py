@@ -36,6 +36,7 @@ from utils.streaming import stream_json_object_with_array
 from .cache import GiddExportCache
 from .models import Conflict, Disaster, DisplacementData, GiddFigure, IdpsSaddEstimate, PublicFigureAnalysis, StatusLog
 from .paginations import GiddLimitOffsetPagination
+from .readme_revisions import REVISIONS_SEPTEMBER_2026, SEPTEMBER_2026_NOTE, revision_block
 from .rest_filters import (
     DisaggregationFilterSet,
     DisaggregationPublicFigureAnalysisFilterSet,
@@ -491,6 +492,13 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             ["PHL", "Philippines", "East Asia and Pacific", "2024", "Disaster", "Internal Displacements"],
             ["ZAF", "South Africa", "Sub-Saharan Africa", "2024", "Disaster", "Internal Displacements"],
             ["USA", "United States", "The Americas", "2024", "Disaster", "Internal Displacements"],
+            *revision_block(
+                "FIGURES REVIEWED IN SEPTEMBER 2026",
+                REVISIONS_SEPTEMBER_2026,
+                cause="Disaster",
+                category="Internal Displacements",
+                note=SEPTEMBER_2026_NOTE,
+            ),
         ]
 
         for item in readme_text_3:
@@ -722,7 +730,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             [],
             [f"LAST UPDATE: {StatusLog.last_release_date()}"],
             [],
-            ["README VERSION: 3.1"],
+            ["README VERSION: 4"],
             [],
             ["DESCRIPTION:"],
             [],
@@ -1070,6 +1078,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             ["USA", "United States", "The Americas", "2024", "Disaster", "IDPs"],
             ["LBR", "Liberia", "Sub-Saharan Africa", "2017", "Disaster", "Internal Displacements"],
             ["CRI", "Costa Rica", "The Americas", "2017", "Disaster", "Internal Displacements"],
+            *revision_block("FIGURES REVIEWED IN SEPTEMBER 2026", REVISIONS_SEPTEMBER_2026, note=SEPTEMBER_2026_NOTE),
         ]
         ws4.append([])
         for item in readme_text_6:
@@ -1080,6 +1089,13 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             ["CHANGELOG"],
             [],
             ["Version", "Date", "Notes"],
+            [
+                "4",
+                "September 1, 2026",
+                "This release includes updates from the Historical data revision project. All IDP stock figures "
+                "for 2008–2016 have been updated in the September 2026 release. Because every IDPs figure was "
+                "updated, only Internal Displacements changes are listed in Figures reviewed.",
+            ],
             [
                 "3.1",
                 "May 12, 2026",
@@ -2011,6 +2027,7 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             ["USA", "United States", "The Americas", "2024", "Disaster", "IDPs"],
             ["LBR", "Liberia", "Sub-Saharan Africa", "2017", "Disaster", "Internal Displacements"],
             ["CRI", "Costa Rica", "The Americas", "2017", "Disaster", "Internal Displacements"],
+            *revision_block("FIGURES REVIEWED IN SEPTEMBER 2026", REVISIONS_SEPTEMBER_2026, note=SEPTEMBER_2026_NOTE),
         ]
 
         for item in data_description_3:
@@ -2108,14 +2125,10 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             ExternalApiDump.ExternalApiType.GIDD_DISAGGREGATION_EXPORT_GEOJSON,
             viewset=self,
         )
-        queryset = (
-            GiddFigure.objects.select_related("gidd_event")
-            .order_by(
-                "-year",
-                "iso3",
-                "id",
-            )
-            .filter(year__gte=2023)
+        queryset = GiddFigure.objects.select_related("gidd_event").order_by(
+            "-year",
+            "iso3",
+            "id",
         )
         qs = self.filter_queryset(queryset)
 
@@ -2160,19 +2173,15 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             ExternalApiDump.ExternalApiType.GIDD_DISAGGREGATION_EXPORT_EXCEL,
             viewset=self,
         )
-        queryset = (
-            GiddFigure.objects.select_related("gidd_event")
-            .order_by(
-                "-year",
-                "iso3",
-                "id",
-            )
-            .filter(year__gte=2023)
+        queryset = GiddFigure.objects.select_related("gidd_event").order_by(
+            "-year",
+            "iso3",
+            "id",
         )
         qs: models.QuerySet[GiddFigure] = self.filter_queryset(queryset)
 
         pfa_qs: models.QuerySet[PublicFigureAnalysis] = DisaggregationPublicFigureAnalysisFilterSet(
-            data=self.request.query_params, queryset=PublicFigureAnalysis.objects.filter(year__gte=2023)
+            data=self.request.query_params
         ).qs.order_by("iso3", "year", "id")
 
         filename = self._generate_export_filename()
