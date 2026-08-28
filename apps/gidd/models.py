@@ -223,7 +223,7 @@ class IdpsSaddEstimate(models.Model):
 
 
 class GiddEvent(MetaInformationAbstractModel):
-    name = models.CharField(verbose_name=_("Event Name"), max_length=256)
+    name = models.TextField(verbose_name=_("Event Name"))
     event_raw_id = models.IntegerField(null=True, blank=True)
     event = models.ForeignKey(
         "event.Event", verbose_name=_("Event"), related_name="+", on_delete=models.SET_NULL, null=True, blank=True
@@ -252,7 +252,7 @@ class GiddEvent(MetaInformationAbstractModel):
         default=list,
     )
     event_codes = ArrayField(
-        models.CharField(verbose_name=_("Event Codes"), max_length=256),
+        models.TextField(verbose_name=_("Event Codes")),
         default=list,
     )
     event_codes_type = ArrayField(
@@ -262,7 +262,7 @@ class GiddEvent(MetaInformationAbstractModel):
         default=list,
     )
     event_codes_iso3 = ArrayField(
-        models.CharField(verbose_name=_("Event Code ISO3"), max_length=256),
+        models.TextField(verbose_name=_("Event Code ISO3")),
         default=list,
     )
     event_codes_ids = ArrayField(
@@ -408,7 +408,7 @@ class GiddFigure(MetaInformationAbstractModel):
     )
     source_excerpt = UnbleachedTextField(verbose_name=_("Excerpt from Source"), blank=True, null=True)
     sources = ArrayField(
-        models.CharField(verbose_name=_("Sources"), max_length=256),
+        models.TextField(verbose_name=_("Sources")),
         default=list,
     )
     sources_ids = ArrayField(
@@ -418,7 +418,7 @@ class GiddFigure(MetaInformationAbstractModel):
         default=list,
     )
     sources_type = ArrayField(
-        models.CharField(verbose_name=_("Sources Type"), max_length=256),
+        models.TextField(verbose_name=_("Sources Type")),
         default=list,
     )
     publishers_ids = ArrayField(
@@ -428,11 +428,11 @@ class GiddFigure(MetaInformationAbstractModel):
         default=list,
     )
     publishers = ArrayField(
-        models.CharField(verbose_name=_("Publishers"), max_length=256),
+        models.TextField(verbose_name=_("Publishers")),
         default=list,
     )
     publishers_type = ArrayField(
-        models.CharField(verbose_name=_("Publishers Type"), max_length=256),
+        models.TextField(verbose_name=_("Publishers Type")),
         default=list,
     )
 
@@ -448,7 +448,7 @@ class GiddFigure(MetaInformationAbstractModel):
         null=True,
     )
     entry_raw_id = models.IntegerField(null=True, blank=True)
-    entry_name = models.CharField(max_length=512, verbose_name=_("Entry Title"), blank=True, null=True)
+    entry_name = models.TextField(verbose_name=_("Entry Title"), blank=True, null=True)
     context_of_violence = ArrayField(
         models.CharField(verbose_name=_("Context of Violences"), max_length=256),
         default=list,
@@ -486,11 +486,11 @@ class GiddFigure(MetaInformationAbstractModel):
     )
 
     locations_coordinates = ArrayField(
-        models.CharField(verbose_name=_("Location Coordinates"), max_length=256),
+        models.TextField(verbose_name=_("Location Coordinates")),
         default=list,
     )
     locations_names = ArrayField(
-        models.CharField(verbose_name=_("Location Names"), max_length=256),
+        models.TextField(verbose_name=_("Location Names")),
         default=list,
     )
     locations_accuracy = ArrayField(
@@ -506,7 +506,7 @@ class GiddFigure(MetaInformationAbstractModel):
         default=list,
     )
     locations_pcode = ArrayField(
-        models.CharField(verbose_name=_("Location P-Code"), max_length=64, null=True),
+        models.TextField(verbose_name=_("Location P-Code"), null=True),
         default=list,
     )
     locations_pcode_accuracy = ArrayField(
@@ -517,7 +517,7 @@ class GiddFigure(MetaInformationAbstractModel):
         default=list,
     )
     locations_pcode_source = ArrayField(
-        models.CharField(verbose_name=_("Location P-Code Source"), max_length=256, null=True),
+        models.TextField(verbose_name=_("Location P-Code Source"), null=True),
         default=list,
     )
     displacement_occurred = enum.EnumField(
@@ -690,7 +690,7 @@ class GiddEventDisplacement(models.Model):
 
     event = models.ForeignKey("event.Event", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
     event_raw_id = models.IntegerField(null=True, blank=True)
-    event_name = models.CharField(verbose_name=_("Event name"), max_length=256)
+    event_name = models.TextField(verbose_name=_("Event name"))
 
     country = models.ForeignKey("country.Country", related_name="gidd_event_displacements", on_delete=models.PROTECT)
     iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
@@ -701,20 +701,18 @@ class GiddEventDisplacement(models.Model):
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
 
-    event_codes = ArrayField(models.CharField(verbose_name=_("Event Codes"), max_length=256), default=list)
+    event_codes = ArrayField(models.TextField(verbose_name=_("Event Codes")), default=list)
     # Published by /gidd/disasters/ only; not exposed in GraphQL.
     start_date_accuracy = models.TextField(blank=True, null=True)
     end_date_accuracy = models.TextField(blank=True, null=True)
-    event_codes_type = ArrayField(models.CharField(verbose_name=_("Event Code Types"), max_length=256), default=list)
+    event_codes_type = ArrayField(models.TextField(verbose_name=_("Event Code Types")), default=list)
     # /gidd/disasters/ publishes an event's codes across ALL its countries, not just this row's.
     # Stored rather than derived per request: a released dump must not change because EventCode
     # moved on, and reading a column keeps the export a streamable queryset. `event_codes` above
     # stays country-correct, for GraphQL.
-    all_country_event_codes = ArrayField(
-        models.CharField(verbose_name=_("Event Codes (all countries)"), max_length=256), default=list
-    )
+    all_country_event_codes = ArrayField(models.TextField(verbose_name=_("Event Codes (all countries)")), default=list)
     all_country_event_codes_type = ArrayField(
-        models.CharField(verbose_name=_("Event Code Types (all countries)"), max_length=256), default=list
+        models.TextField(verbose_name=_("Event Code Types (all countries)")), default=list
     )
     displacement_occurred = ArrayField(
         base_field=enum.EnumField(Figure.DISPLACEMENT_OCCURRED, verbose_name=_("Displacement occurred")),
