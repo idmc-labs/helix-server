@@ -25,6 +25,38 @@ from apps.report.models import (
 )
 from apps.users.enums import USER_ROLE
 
+PFA_ALLOWED_FILTERS = frozenset(
+    {
+        "filter_figure_start_after",
+        "filter_figure_end_before",
+        "filter_figure_countries",
+        "filter_figure_crisis_types",
+        "filter_figure_categories",
+        "filter_figure_roles",
+    }
+)
+
+
+def pfa_disallowed_filters(report):
+    """Filter dimensions set on `report` that a PFA report may not carry.
+
+    Derived from the model rather than enumerated, so a filter added later is disallowed until it
+    is allowlisted: a PFA total is defined by year, country, cause and category, and any further
+    restriction silently narrows a figure published on an unauthenticated endpoint.
+    """
+    found = []
+    for field in report._meta.get_fields():
+        name = getattr(field, "name", "")
+        if not name.startswith("filter_") or name in PFA_ALLOWED_FILTERS:
+            continue
+        value = getattr(report, name, None)
+        if hasattr(value, "exists"):
+            if value.exists():
+                found.append(name)
+        elif value:
+            found.append(name)
+    return sorted(found)
+
 
 def check_is_pfa_visible_in_gidd(report):
     errors = []
@@ -79,6 +111,10 @@ def check_is_pfa_visible_in_gidd(report):
         != 1
     ):
         errors.append("Report should have IDPs or Internal Displacements category.")
+
+    disallowed = pfa_disallowed_filters(report)
+    if disallowed:
+        errors.append("Report should not filter on: %s." % ", ".join(disallowed))
     return errors
 
 
