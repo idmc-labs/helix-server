@@ -30,6 +30,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APPS_DIRNAME = "apps"
 APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
 
+# The page bound both public GIDD surfaces enforce. GraphQL reads it through
+# GRAPHENE_DJANGO_EXTRAS; the REST lists read GIDD_REST_MAX_PAGE_SIZE, which defaults to it. One
+# literal so the two cannot drift apart.
+GIDD_MAX_PAGE_SIZE = 100
+
 DEVELOPMENT_ENV = "development"
 
 env = environ.Env(
@@ -104,6 +109,7 @@ env = environ.Env(
     # Exports
     EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT=(int, 10),
     GIDD_EXPORT_CACHE_DISABLED=(bool, False),
+    GIDD_REST_MAX_PAGE_SIZE=(int, GIDD_MAX_PAGE_SIZE),
     GOOGLE_ANALYTICS_ID=(str, None),
 )
 
@@ -407,7 +413,7 @@ GRAPHENE = {
 GRAPHENE_DJANGO_EXTRAS = {
     "DEFAULT_PAGINATION_CLASS": "utils.pagination.PageGraphqlPaginationWithoutCount",
     "DEFAULT_PAGE_SIZE": 20,
-    "MAX_PAGE_SIZE": 100,
+    "MAX_PAGE_SIZE": GIDD_MAX_PAGE_SIZE,
     # 'CACHE_ACTIVE': True,
     # 'CACHE_TIMEOUT': 300    # seconds
 }
@@ -415,6 +421,11 @@ if not DEBUG:
     GRAPHENE["MIDDLEWARE"].append("utils.middleware.DisableIntrospectionSchemaMiddleware")
 
 GRAPHENE_BATCH_DEFAULT_MAX_LIMIT = 50
+
+# Upper bound on `?limit=` for the paginated GIDD REST lists. Defaults to GIDD_MAX_PAGE_SIZE, the
+# same bound the GraphQL fields enforce, so the same data pages the same way whichever surface
+# serves it. Export actions set `pagination_class = None` and never reach the paginator.
+GIDD_REST_MAX_PAGE_SIZE = env("GIDD_REST_MAX_PAGE_SIZE")
 
 AUTHENTICATION_BACKEND = [
     "django.contrib.auth.backends.ModelBackend",

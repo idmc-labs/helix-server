@@ -37,6 +37,20 @@ from .models import (
 )
 
 
+def default_end_year(kwargs):
+    """IDPs are a stock: without an explicit endYear the snapshot year must default
+    to the (pre-)release year, so `no year filter` returns the same response as
+    `startYear=<first year>, endYear=<release year>` instead of summing every
+    yearly snapshot."""
+    release_meta_data = ReleaseMetadata.objects.last()
+    if release_meta_data is None:
+        return None
+    environment = kwargs.get("release_environment") or ReleaseMetadata.ReleaseEnvironment.RELEASE.name
+    if environment.lower() == ReleaseMetadata.ReleaseEnvironment.PRE_RELEASE.name.lower():
+        return release_meta_data.pre_release_year
+    return release_meta_data.release_year
+
+
 def custom_date_filters(start_year, end_year):
     filters = {
         "idps_date_filters": {},
@@ -213,6 +227,10 @@ class GiddDisasterListType(CustomDjangoListObjectType):
 class GiddStatusLogType(RelationBatchedDjangoObjectType):
     class Meta:
         model = StatusLog
+        # Pinned, not excluded, so a column added to StatusLog later does not join the payload on
+        # its own. `triggered_by` is listed deliberately: the admin client renders it, and this
+        # type is not whitelisted, so it never reaches an unauthenticated caller.
+        fields = ("id", "triggered_at", "completed_at", "status", "triggered_by")
 
     status = graphene.Field(GiddStatusLogEnum)
     status_display = EnumDescription(source="get_status_display")
@@ -251,6 +269,16 @@ class GiddPublicFigureAnalysisListType(CustomDjangoListObjectType):
 class GiddReleaseMetadataType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReleaseMetadata
+        # giddPublicReleaseMetaData is whitelisted and WhiteListMiddleware checks only the root
+        # node, so everything this type reaches is readable unauthenticated -- `modified_by` led to
+        # UserType, and from there to username, last_login and createdEntry. `fields` is pinned
+        # rather than excluded so a column added to the model stays invisible until named here.
+        # TODO(frontend): read this for the maximum allowed year; no client consumes it yet.
+        fields = (
+            "id",
+            "release_year",
+            "pre_release_year",
+        )
 
 
 class GiddPublicCountryRegionType(graphene.ObjectType):
@@ -445,7 +473,7 @@ class Query(graphene.ObjectType):
 
         conflict_qs = ConflictStatisticsFilter(data=kwargs).qs
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None)
+        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
         filters = custom_date_filters(start_year, end_year)
 
         conflict_total_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
@@ -550,7 +578,7 @@ class Query(graphene.ObjectType):
 
         disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None)
+        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
         filters = custom_date_filters(start_year, end_year)
 
         disaster_total_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
@@ -593,7 +621,7 @@ class Query(graphene.ObjectType):
             .annotate(
                 total=Coalesce(models.Sum("new_displacement", output_field=models.IntegerField()), 0),
                 label=models.Case(
-                    models.When(hazard_sub_category=None, then=models.Value("Not labeled")),
+                    models.When(hazard_type=None, then=models.Value("Not labeled")),
                     default=models.F("hazard_type_name"),
                     output_field=models.CharField(),
                 ),
@@ -778,7 +806,7 @@ class Query(graphene.ObjectType):
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_COMBINED_STAT_GRAPHQL)
 
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None)
+        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
 
         filters = custom_date_filters(start_year, end_year)
 
@@ -799,10 +827,8 @@ class Query(graphene.ObjectType):
             disaster_internal_displacement_qs.order_by().values_list("iso3", flat=True).distinct()
         )
 
-        # Conflict doesn't has hazard_type
-        if kwargs.get("hazard_type"):
-            kwargs = kwargs.pop("hazard_type")
-
+        # ConflictStatisticsFilter declares no hazard filter, and django-filter drops keys it
+        # does not declare, so the disaster-only `hazard_types` passes through harmlessly.
         conflict_total_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
         conflict_internal_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
 

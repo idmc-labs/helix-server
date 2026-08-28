@@ -449,7 +449,7 @@ input CommunicationUpdateInputType {
 }
 
 input ConflictFilterDataInputType {
-  id_Iexact: Float
+  id: Float
   releaseEnvironment: String
 }
 
@@ -1287,7 +1287,7 @@ type DisasterCategoryType {
 }
 
 input DisasterFilterDataInputType {
-  id_Iexact: Float
+  id: Float
   releaseEnvironment: String
   hazardTypes: [ID!]
   eventName: String
@@ -2621,8 +2621,6 @@ type GiddReleaseMetadataType {
   id: ID!
   releaseYear: Int!
   preReleaseYear: Int!
-  modifiedBy: UserType!
-  modifiedAt: DateTime!
 }
 
 input GiddStatusLogFilterDataInputType {

@@ -8,7 +8,6 @@ from .models import (
     Conflict,
     Disaster,
     DisplacementData,
-    GiddFigure,
     IdpsSaddEstimate,
     PublicFigureAnalysis,
     ReleaseMetadata,
@@ -278,7 +277,6 @@ class PublicFigureAnalysisSerializer(serializers.ModelSerializer):
             "figure_cause",
             "figure_cause_name",
             "figure_category",
-            "figure_category",
             "figure_category_name",
             "description",
             "figures",
@@ -291,7 +289,7 @@ class PublicFigureAnalysisSerializer(serializers.ModelSerializer):
 class StatusLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = StatusLog
-        fields = "__all__"
+        fields = ("id", "triggered_by", "triggered_at", "completed_at", "status")
 
 
 class ReleaseMetadataSerializer(serializers.ModelSerializer):
@@ -303,41 +301,6 @@ class ReleaseMetadataSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         validated_data["modified_by"] = user
         return ReleaseMetadata.objects.create(**validated_data)
-
-
-class DisaggregationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = GiddFigure
-        fields = (
-            "iso3",
-            "figure_raw_id",
-            "country_name",
-            "geographical_region_name",
-            "year",
-            "locations_coordinates",
-            "unit",
-            "category",
-            "cause",
-            "term",
-            "total_figures",
-            "household_size",
-            "reported",
-            "start_date",
-            "end_date",
-            "start_date_accuracy",
-            "end_date_accuracy",
-            "stock_date",
-            "stock_date_accuracy",
-            "stock_reporting_date",
-            "sources",
-            "publishers",
-            "gidd_event",
-            "is_housing_destruction",
-            "locations_names",
-            "locations_accuracy",
-            "locations_type",
-            "displacement_occurred",
-        )
 
 
 class IdpsSaddEstimateSerializer(serializers.ModelSerializer):

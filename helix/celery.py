@@ -48,6 +48,11 @@ app.conf.beat_schedule = {
         "args": [],
         **_every_minutes(15),
     },
+    "kill-stale-gidd-generations": {
+        "task": "apps.gidd.tasks.kill_all_stale_gidd_generations",
+        "args": [],
+        **_every_minutes(15),
+    },
     "kill-previews": {
         "task": "apps.contrib.tasks.kill_all_long_running_previews",
         "args": [],

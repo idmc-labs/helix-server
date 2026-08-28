@@ -1,8 +1,9 @@
 from datetime import timedelta
 
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 
-from apps.contrib.models import ClientTrackInfo
+from apps.contrib.models import Client, ClientTrackInfo
 from apps.contrib.tasks import (
     generate_idus_all_disaster_dump_file,
     generate_idus_all_dump_file,
@@ -11,6 +12,7 @@ from apps.contrib.tasks import (
 )
 from apps.entry.models import ExternalApiDump
 from helix.caches import external_api_cache
+from utils.common import track_gidd
 from utils.factories import ClientFactory
 from utils.tests import HelixAPITestCase
 
@@ -191,3 +193,56 @@ class TestExternalClientTrack(HelixAPITestCase):
         # For each client track info requests per day should be 1 for each api type
         for obj in ClientTrackInfo.objects.all():
             self.assertEqual(obj.requests_per_day, 3)
+
+
+class TestTrackGiddWithMissingClientRow(HelixAPITestCase):
+    """A code that is in the redis registry but whose `Client` row is gone.
+
+    `track_gidd` gates every external endpoint. It checks the code against the `client_ids`
+    redis registry first, then loads the row -- and the two can disagree, because only
+    `Client.save()`/`Client.delete()` refresh the registry. A queryset or admin bulk delete
+    bypasses both, leaving codes in redis with no row behind them; `client.is_active` then
+    raised `AttributeError` on a public unauthenticated endpoint (a 500 where 403 is the
+    correct and already-implemented answer).
+
+    A code that was never registered stops at the registry check and never loads a row, so
+    only a registered-then-orphaned code reaches this branch.
+    """
+
+    MISSING_CODE = "registered-but-deleted"
+    LIVE_CODE = "registered-and-present"
+    INACTIVE_CODE = "registered-but-inactive"
+
+    def setUp(self):
+        super().setUp()
+        # ClientFactory.create() -> Client.save() -> the registry is rewritten from the
+        # table, so all three codes are registered at this point.
+        deleted = ClientFactory.create(code=self.MISSING_CODE, is_active=True)
+        self.live_client = ClientFactory.create(code=self.LIVE_CODE, is_active=True)
+        ClientFactory.create(code=self.INACTIVE_CODE, is_active=False)
+        # A queryset delete does NOT go through Client.delete(), so the registry keeps the
+        # code. This is exactly how the rows disappear in production.
+        Client.objects.filter(pk=deleted.pk).delete()
+        self.assertIn(self.MISSING_CODE, external_api_cache.get("client_ids"))
+        self.assertFalse(Client.objects.filter(code=self.MISSING_CODE).exists())
+
+    def test_track_gidd_raises_permission_denied_not_attribute_error(self):
+        with self.assertRaises(PermissionDenied) as caught:
+            track_gidd(self.MISSING_CODE, ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST)
+        self.assertEqual(str(caught.exception.detail), "Client is not registered.")
+
+    def test_every_external_endpoint_answers_403_rather_than_raising(self):
+        for endpoint in EXTERNAL_API_URLS:
+            with self.subTest(endpoint=endpoint):
+                response = self.client.get(f"{endpoint}?client_id={self.MISSING_CODE}")
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.content)
+
+    def test_a_live_client_row_is_still_accepted(self):
+        # Counter-case: without it an unconditional `raise PermissionDenied` would pass too.
+        self.assertEqual(track_gidd(self.LIVE_CODE, ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST), self.live_client)
+
+    def test_a_deactivated_client_is_still_told_apart_from_a_missing_one(self):
+        # Counter-case: the missing-row guard must not shadow the is_active check.
+        with self.assertRaises(PermissionDenied) as caught:
+            track_gidd(self.INACTIVE_CODE, ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST)
+        self.assertEqual(str(caught.exception.detail), "Client is deactivated.")

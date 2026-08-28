@@ -23,8 +23,7 @@ class GiddUpdateData(graphene.Mutation):
     def mutate(root, info):
         user = info.context.user
         # Check if any pending updates
-        status_log = StatusLog.objects.last()
-        if status_log and status_log.status == StatusLog.Status.PENDING:
+        if StatusLog.has_active_run():
             return GiddUpdateData(
                 errors=[
                     dict(
@@ -68,9 +67,10 @@ class GiddUpdateReleaseMetaData(graphene.Mutation):
         if errors := mutation_is_not_valid(serializer):
             return GiddUpdateReleaseMetaData(errors=errors, ok=False)
         instance = serializer.save()
-        # FIXME: We should not call update_gidd_data when setting metadata
-        # NOTE: Update date in background
-        transaction.on_commit(lambda: update_gidd_data.delay(log_id=instance.id))
+        # No regeneration: the release metadata is a filter applied over already-generated
+        # data, and nothing in the generation path reads it. The saved row is the active one
+        # immediately, which is why it is edited after a release has been generated and its
+        # status log recorded, not before.
         return GiddUpdateReleaseMetaData(result=instance, errors=None, ok=True)
 
 
