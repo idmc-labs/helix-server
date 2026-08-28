@@ -22,7 +22,7 @@ from django_cte import With
 from apps.common.utils import EXTERNAL_TUPLE_SEPARATOR
 from apps.country.models import Country
 from apps.entry.models import Figure
-from apps.event.models import Crisis, Event, EventCode
+from apps.event.models import Event, EventCode
 from apps.report.models import Report
 from helix.celery import app as celery_app
 from utils.common import redis_lock, round_and_remove_zero
@@ -579,7 +579,7 @@ def _displacement_sums():
 def update_new_gidd_tables():
     """Populate GiddEventDisplacement, then derive GiddDisplacement from it.
 
-    Two INSERT..SELECTs per GIDD year plus one rollup: no row round-trips through the worker, and
+    One INSERT..SELECT per GIDD year plus one rollup: no row round-trips through the worker, and
     the rollup is a plain GROUP BY over rows written earlier in the same transaction -- which is
     why the two must not be split across transactions.
     """
@@ -622,42 +622,11 @@ def update_new_gidd_tables():
         )
 
     for year in get_gidd_years():
-        conflict_figure_qs = figures_in_year_window(year, Crisis.CRISIS_TYPE.CONFLICT)
-        conflict_base = (
-            Figure.objects.filter(id__in=conflict_figure_qs.values("id"))
-            .order_by()
-            .values(
-                "event__id",
-                "event__event_type",
-                "event__name",
-                "event__start_date",
-                "event__end_date",
-                "event__violence",
-                "event__violence__name",
-                "event__violence_sub_type",
-                "event__violence_sub_type__name",
-                "country",
-                "country__iso3",
-                "country__idmc_short_name",
-            )
-            .annotate(**_displacement_sums())
-        )
-        bulk_insert_from_queryset(
-            GiddEventDisplacement,
-            _with_country_codes(conflict_base),
-            dict(
-                _shared_columns(year),
-                violence_id=F("event__violence"),
-                violence_name=F("event__violence__name"),
-                violence_sub_type_id=F("event__violence_sub_type"),
-                violence_sub_type_name=F("event__violence_sub_type__name"),
-                displacement_occurred=empty_int_array(),
-            ),
-        )
-
-        disaster_figure_qs = figures_in_year_window(year, Crisis.CRISIS_TYPE.DISASTER)
-        disaster_base = (
-            Figure.objects.filter(id__in=disaster_figure_qs.values("id"))
+        # Both causes in one pass: `event__id` is a group key, so every typology column is
+        # functionally dependent on it and widening the GROUP BY cannot change the row set. A
+        # cause simply leaves the other cause's columns NULL.
+        base = (
+            Figure.objects.filter(id__in=figures_in_year_window(year).values("id"))
             .order_by()
             .values(
                 "event__id",
@@ -667,6 +636,10 @@ def update_new_gidd_tables():
                 "event__end_date",
                 "event__start_date_accuracy",
                 "event__end_date_accuracy",
+                "event__violence",
+                "event__violence__name",
+                "event__violence_sub_type",
+                "event__violence_sub_type__name",
                 "event__disaster_category",
                 "event__disaster_category__name",
                 "event__disaster_sub_category",
@@ -683,7 +656,7 @@ def update_new_gidd_tables():
         )
         bulk_insert_from_queryset(
             GiddEventDisplacement,
-            _with_country_codes(disaster_base),
+            _with_country_codes(base),
             dict(
                 _shared_columns(year),
                 # CASE-mapped, not F(): a bare F() publishes the enum's digits, not its label.
@@ -701,6 +674,10 @@ def update_new_gidd_tables():
                     ),
                     empty_int_array(),
                 ),
+                violence_id=F("event__violence"),
+                violence_name=F("event__violence__name"),
+                violence_sub_type_id=F("event__violence_sub_type"),
+                violence_sub_type_name=F("event__violence_sub_type__name"),
                 hazard_category_id=F("event__disaster_category"),
                 hazard_category_name=F("event__disaster_category__name"),
                 hazard_sub_category_id=F("event__disaster_sub_category"),
@@ -712,8 +689,9 @@ def update_new_gidd_tables():
             ),
         )
 
-    # One pass covers both causes: `cause` is a group key, conflict rows carry NULL in every hazard
-    # column and disaster rows NULL in both violence columns, and PG groups NULLs as equal.
+    # The rollup takes both causes at once: `cause` is a group key, conflict rows carry NULL in
+    # every hazard column and disaster rows NULL in both violence columns, and PG groups NULLs
+    # as equal.
     # `nd`/`td`, not the field names -- annotate() refuses a name that collides with a model field.
     rollup = (
         GiddEventDisplacement.objects.order_by()
