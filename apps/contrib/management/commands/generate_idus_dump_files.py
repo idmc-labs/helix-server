@@ -6,6 +6,7 @@ from apps.contrib.tasks import (
     generate_idus_all_disaster_dump_file,
     generate_idus_all_dump_file,
     generate_idus_dump_file,
+    generate_idus_references_dump_file,
 )
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
+            generate_idus_references_dump_file()
             generate_idus_dump_file()
             generate_idus_all_dump_file()
             generate_idus_all_disaster_dump_file()

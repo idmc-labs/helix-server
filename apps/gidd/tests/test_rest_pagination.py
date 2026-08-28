@@ -29,7 +29,6 @@ from utils.tests import HelixAPITestCase
 
 from .test_rest_api import COUNTRIES_URL, GiddRestApiMixin
 
-# The five list endpoints share one paginator; the export actions set `pagination_class = None`.
 PAGINATED_VIEWSETS = (
     CountryViewSet,
     ConflictViewSet,
@@ -38,7 +37,7 @@ PAGINATED_VIEWSETS = (
     PublicFigureAnalysisViewSet,
 )
 
-# (viewset, action method name) for every export action, which must stay uncapped.
+# Export actions must stay uncapped.
 EXPORT_ACTIONS = (
     (DisasterViewSet, "export"),
     (DisplacementDataViewSet, "export"),
@@ -86,6 +85,7 @@ class TestGiddRestPaginationCap(GiddRestApiMixin, HelixAPITestCase):
         rest = response.json()
         seen = [row["iso3"] for row in first["results"]] + [row["iso3"] for row in rest["results"]]
         self.assertCountEqual(seen, ["AFG", "NPL", "IND"])
+        self.assertIsNone(rest["next"], "the last page must not advertise another one")
 
     @override_settings(GIDD_REST_MAX_PAGE_SIZE=1_000)
     def test_a_limit_below_the_cap_is_honoured(self):

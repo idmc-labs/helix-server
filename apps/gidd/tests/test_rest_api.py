@@ -13,10 +13,10 @@ from unittest.mock import patch
 from apps.contrib.redis_client_track import create_client_track_cache_key
 from apps.crisis.models import Crisis
 from apps.entry.models import ExternalApiDump, Figure
+from apps.event.models import EventCode
 from apps.gidd.models import (
-    Conflict,
-    Disaster,
-    DisplacementData,
+    GiddDisplacement,
+    GiddEventDisplacement,
     PublicFigureAnalysis,
     ReleaseMetadata,
     StatusLog,
@@ -29,6 +29,7 @@ from apps.gidd.views import (
     PublicFigureAnalysisViewSet,
 )
 from helix.caches import external_api_cache
+from utils.common import round_and_remove_zero
 from utils.factories import (
     ClientFactory,
     CountryFactory,
@@ -36,6 +37,8 @@ from utils.factories import (
     DisasterSubCategoryFactory,
     DisasterSubTypeFactory,
     DisasterTypeFactory,
+    EventCodeFactory,
+    EventFactory,
 )
 from utils.tests import HelixAPITestCase
 
@@ -97,14 +100,14 @@ DISPLACEMENT_FIELDS = [
     "iso3",
     "country_name",
     "year",
-    "conflict_new_displacement",
-    "conflict_new_displacement_rounded",
-    "conflict_total_displacement",
     "conflict_total_displacement_rounded",
-    "disaster_new_displacement",
+    "conflict_total_displacement",
+    "conflict_new_displacement_rounded",
+    "conflict_new_displacement",
     "disaster_new_displacement_rounded",
-    "disaster_total_displacement",
+    "disaster_new_displacement",
     "disaster_total_displacement_rounded",
+    "disaster_total_displacement",
 ]
 
 # NOTE: `figure_category` is listed twice in PublicFigureAnalysisSerializer.Meta.fields;
@@ -194,23 +197,27 @@ class TestGiddCountryRestApi(GiddRestApiMixin, HelixAPITestCase):
 class TestGiddConflictRestApi(GiddRestApiMixin, HelixAPITestCase):
     def setUp(self):
         super().setUp()
-        Conflict.objects.create(
+        # The endpoint recomputes the rounded figures from the summed raw values, so the stored
+        # `*_rounded` columns are never read: they are seeded wrong to prove it.
+        GiddDisplacement.objects.create(
             country=self.country_afg,
             iso3="AFG",
             country_name="Afghanistan",
             year=DATA_YEAR,
+            cause=Crisis.CRISIS_TYPE.CONFLICT,
             new_displacement=12345,
-            new_displacement_rounded=12000,
+            new_displacement_rounded=999,
             total_displacement=54321,
-            total_displacement_rounded=54000,
+            total_displacement_rounded=999,
         )
         # Every displacement figure NULL: rows are not filtered out by the
         # conflict filterset, so the NULLs must survive serialization.
-        Conflict.objects.create(
+        GiddDisplacement.objects.create(
             country=self.country_npl,
             iso3="NPL",
             country_name="Nepal",
             year=DATA_YEAR,
+            cause=Crisis.CRISIS_TYPE.CONFLICT,
             new_displacement=None,
             new_displacement_rounded=None,
             total_displacement=None,
@@ -230,8 +237,8 @@ class TestGiddConflictRestApi(GiddRestApiMixin, HelixAPITestCase):
                 "country_name": "Afghanistan",
                 "year": DATA_YEAR,
                 "new_displacement": 12345,
-                "new_displacement_rounded": 12000,
-                "total_displacement_rounded": 54000,
+                "new_displacement_rounded": round_and_remove_zero(12345),
+                "total_displacement_rounded": round_and_remove_zero(54321),
                 "total_displacement": 54321,
             },
         )
@@ -249,11 +256,12 @@ class TestGiddConflictRestApi(GiddRestApiMixin, HelixAPITestCase):
         )
 
     def test_release_environment_filter_drops_future_years(self):
-        Conflict.objects.create(
+        GiddDisplacement.objects.create(
             country=self.country_afg,
             iso3="AFG",
             country_name="Afghanistan",
             year=RELEASE_YEAR + 1,
+            cause=Crisis.CRISIS_TYPE.CONFLICT,
             new_displacement=1,
         )
         self.assertEqual(self.get_list(CONFLICTS_URL)["count"], 2)
@@ -272,14 +280,32 @@ class TestGiddDisasterRestApi(GiddRestApiMixin, HelixAPITestCase):
         self.hazard_type = DisasterTypeFactory.create(name="Earthquake", disaster_sub_category=self.hazard_sub_category)
         self.hazard_sub_type = DisasterSubTypeFactory.create(name="Ground shaking", type=self.hazard_type)
 
+        # The event table holds both causes, so every disaster row must say so: the endpoint
+        # filters on it, and the column is NOT NULL.
         self.hazard_kwargs = dict(
+            cause=Crisis.CRISIS_TYPE.DISASTER,
             hazard_category=self.hazard_category,
             hazard_sub_category=self.hazard_sub_category,
             hazard_type=self.hazard_type,
             hazard_sub_type=self.hazard_sub_type,
         )
 
-        Disaster.objects.create(
+        # The dump publishes the stored `all_country_event_codes` columns, frozen at generation
+        # time. The `EventCode` rows below carry DIFFERENT codes from those columns, so an endpoint
+        # that derived them live would fail here -- that is the release-snapshot property.
+        self.event = EventFactory.create(
+            name="Afghanistan: Earthquake - Herat - June 2020",
+            event_type=Crisis.CRISIS_TYPE.DISASTER,
+        )
+        for code, code_type in (
+            ("LIVE-EDIT-1", EventCode.EVENT_CODE_TYPE.GLIDE_NUMBER),
+            ("LIVE-EDIT-2", EventCode.EVENT_CODE_TYPE.GOV_ASSIGNED_IDENTIFIER),
+        ):
+            EventCodeFactory.create(event=self.event, country=self.country_afg, event_code=code, event_code_type=code_type)
+
+        GiddEventDisplacement.objects.create(
+            event=self.event,
+            event_raw_id=self.event.id,
             country=self.country_afg,
             iso3="AFG",
             country_name="Afghanistan",
@@ -297,15 +323,19 @@ class TestGiddDisasterRestApi(GiddRestApiMixin, HelixAPITestCase):
             hazard_sub_category_name="Geophysical",
             hazard_type_name="Earthquake",
             hazard_sub_type_name="Ground shaking",
-            event_codes=["GLIDE-1", "GLIDE-2"],
-            event_codes_type=["Glide Number", "Government Assigned Identifier"],
+            # The per-country columns hold different values from the all-country ones, so the
+            # assertion below can only pass if the serializer reads `all_country_event_codes*`.
+            event_codes=["PER-COUNTRY-1"],
+            event_codes_type=["Government Assigned Identifier"],
+            all_country_event_codes=["GLIDE-1", "GLIDE-2"],
+            all_country_event_codes_type=["Glide Number", "Government Assigned Identifier"],
             displacement_occurred=[Figure.DISPLACEMENT_OCCURRED.BEFORE.value],
             **self.hazard_kwargs,
         )
         # Awkward row: NULL dates, NULL accuracies, empty array fields, NULL
         # `new_displacement` (kept in the list only because total_displacement > 0),
         # blank cached hazard names.
-        Disaster.objects.create(
+        GiddEventDisplacement.objects.create(
             country=self.country_npl,
             iso3="NPL",
             country_name="Nepal",
@@ -392,7 +422,7 @@ class TestGiddDisasterRestApi(GiddRestApiMixin, HelixAPITestCase):
 
     def test_rows_without_any_displacement_are_excluded(self):
         # RestDisasterFilterSet keeps only rows reporting new OR total displacement.
-        Disaster.objects.create(
+        GiddEventDisplacement.objects.create(
             country=self.country_afg,
             iso3="AFG",
             country_name="Afghanistan",
@@ -415,36 +445,25 @@ class TestGiddDisasterRestApi(GiddRestApiMixin, HelixAPITestCase):
 class TestGiddDisplacementDataRestApi(GiddRestApiMixin, HelixAPITestCase):
     def setUp(self):
         super().setUp()
-        DisplacementData.objects.create(
-            country=self.country_afg,
-            iso3="AFG",
-            country_name="Afghanistan",
-            year=DATA_YEAR,
-            conflict_new_displacement=11,
-            conflict_new_displacement_rounded=10,
-            conflict_total_displacement=2222,
-            conflict_total_displacement_rounded=2000,
-            disaster_new_displacement=33333,
-            disaster_new_displacement_rounded=33000,
-            disaster_total_displacement=444444,
-            disaster_total_displacement_rounded=444000,
-        )
-        # Only one non-NULL figure, so the row survives the filterset while every
-        # other field exercises the NULL path.
-        DisplacementData.objects.create(
-            country=self.country_npl,
-            iso3="NPL",
-            country_name="Nepal",
-            year=DATA_YEAR,
-            conflict_new_displacement=None,
-            conflict_new_displacement_rounded=None,
-            conflict_total_displacement=9,
-            conflict_total_displacement_rounded=None,
-            disaster_new_displacement=None,
-            disaster_new_displacement_rounded=None,
-            disaster_total_displacement=None,
-            disaster_total_displacement_rounded=None,
-        )
+
+        # The endpoint conditional-sums the cause-tagged rollup, so the split it publishes needs
+        # one row per cause. A cause with no row at all must still serialize as NULL, not 0.
+        def seed(country, cause, nd, idps):
+            GiddDisplacement.objects.create(
+                country=country,
+                iso3=country.iso3,
+                country_name=country.idmc_short_name,
+                year=DATA_YEAR,
+                cause=cause,
+                new_displacement=nd,
+                total_displacement=idps,
+            )
+
+        seed(self.country_afg, Crisis.CRISIS_TYPE.CONFLICT, 11, 2222)
+        seed(self.country_afg, Crisis.CRISIS_TYPE.DISASTER, 33333, 444444)
+        # Only one non-NULL figure, so the row survives the filterset while every other field
+        # exercises the NULL path -- and NPL has no disaster row at all.
+        seed(self.country_npl, Crisis.CRISIS_TYPE.CONFLICT, None, 9)
 
     def test_contract_and_values(self):
         payload = self.get_list(DISPLACEMENTS_URL)
@@ -459,13 +478,13 @@ class TestGiddDisplacementDataRestApi(GiddRestApiMixin, HelixAPITestCase):
                 "country_name": "Afghanistan",
                 "year": DATA_YEAR,
                 "conflict_new_displacement": 11,
-                "conflict_new_displacement_rounded": 10,
+                "conflict_new_displacement_rounded": round_and_remove_zero(11),
                 "conflict_total_displacement": 2222,
-                "conflict_total_displacement_rounded": 2000,
+                "conflict_total_displacement_rounded": round_and_remove_zero(2222),
                 "disaster_new_displacement": 33333,
-                "disaster_new_displacement_rounded": 33000,
+                "disaster_new_displacement_rounded": round_and_remove_zero(33333),
                 "disaster_total_displacement": 444444,
-                "disaster_total_displacement_rounded": 444000,
+                "disaster_total_displacement_rounded": round_and_remove_zero(444444),
             },
         )
         self.assertEqual(
@@ -477,7 +496,7 @@ class TestGiddDisplacementDataRestApi(GiddRestApiMixin, HelixAPITestCase):
                 "conflict_new_displacement": None,
                 "conflict_new_displacement_rounded": None,
                 "conflict_total_displacement": 9,
-                "conflict_total_displacement_rounded": None,
+                "conflict_total_displacement_rounded": round_and_remove_zero(9),
                 "disaster_new_displacement": None,
                 "disaster_new_displacement_rounded": None,
                 "disaster_total_displacement": None,
@@ -486,11 +505,12 @@ class TestGiddDisplacementDataRestApi(GiddRestApiMixin, HelixAPITestCase):
         )
 
     def test_all_null_row_is_excluded(self):
-        DisplacementData.objects.create(
+        GiddDisplacement.objects.create(
             country=self.country_afg,
             iso3="AFG",
             country_name="Afghanistan",
             year=DATA_YEAR + 1,
+            cause=Crisis.CRISIS_TYPE.CONFLICT,
         )
         self.assertEqual(self.get_list(DISPLACEMENTS_URL)["count"], 2)
 

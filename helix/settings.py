@@ -30,9 +30,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APPS_DIRNAME = "apps"
 APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
 
-# The page bound both public GIDD surfaces enforce. GraphQL reads it through
-# GRAPHENE_DJANGO_EXTRAS; the REST lists read GIDD_REST_MAX_PAGE_SIZE, which defaults to it. One
-# literal so the two cannot drift apart.
+# One literal for the page bound of both public GIDD surfaces, so the GRAPHENE_DJANGO_EXTRAS
+# bound and GIDD_REST_MAX_PAGE_SIZE cannot drift apart.
 GIDD_MAX_PAGE_SIZE = 100
 
 DEVELOPMENT_ENV = "development"
@@ -422,9 +421,9 @@ if not DEBUG:
 
 GRAPHENE_BATCH_DEFAULT_MAX_LIMIT = 50
 
-# Upper bound on `?limit=` for the paginated GIDD REST lists. Defaults to GIDD_MAX_PAGE_SIZE, the
-# same bound the GraphQL fields enforce, so the same data pages the same way whichever surface
-# serves it. Export actions set `pagination_class = None` and never reach the paginator.
+# Bounds `?limit=` on the paginated GIDD REST lists, defaulting to the GraphQL bound so the same
+# data pages the same way whichever surface serves it. Export actions set `pagination_class = None`
+# and never reach the paginator.
 GIDD_REST_MAX_PAGE_SIZE = env("GIDD_REST_MAX_PAGE_SIZE")
 
 AUTHENTICATION_BACKEND = [
@@ -601,16 +600,16 @@ GRAPHENE_NODES_WHITELIST = (
     # Gidd external queries
     "giddPublicCombinedStatistics",
     "giddPublicConflictStatistics",
-    "giddPublicConflicts",
-    "giddPublicDisasterStatistics",
-    "giddPublicDisasters",
-    "giddPublicDisplacements",
-    "giddPublicEvent",
-    "giddPublicHazardTypes",
     "giddPublicCountries",
+    "giddPublicCountryDisplacements",
+    "giddPublicCountryYearDisplacements",
+    "giddPublicDisasterStatistics",
+    "giddPublicEvent",
+    "giddPublicDisplacementEvents",
     "giddPublicFigureAnalysisList",
+    "giddPublicHazardTypes",
+    "giddPublicViolenceSubTypes",
     "giddPublicYear",
-    "giddPublicReleaseMetaData",
     # __ double underscore nodes
     "__schema",
     "__type",

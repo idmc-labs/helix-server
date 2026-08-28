@@ -448,11 +448,6 @@ input CommunicationUpdateInputType {
   attachment: ID
 }
 
-input ConflictFilterDataInputType {
-  id: Float
-  releaseEnvironment: String
-}
-
 input ContactCreateInputType {
   oldId: String
   versionId: String
@@ -1283,17 +1278,6 @@ type DisasterCategoryType {
   id: ID!
   name: String!
   subCategories(filters: DisasterSubCategoryFilterDataInputType, ordering: String): DisasterSubCategoryListType
-  disasters: [GiddDisasterType!]!
-}
-
-input DisasterFilterDataInputType {
-  id: Float
-  releaseEnvironment: String
-  hazardTypes: [ID!]
-  eventName: String
-  startYear: Float
-  endYear: Float
-  countriesIso3: [String!]
 }
 
 input DisasterSubCategoryFilterDataInputType {
@@ -1311,7 +1295,6 @@ type DisasterSubCategoryType {
   id: ID!
   name: String!
   types(filters: DisasterTypeFilterDataInputType, ordering: String): DisasterTypeObjectListType
-  disasters: [GiddDisasterType!]!
 }
 
 type DisasterSubObjectListType {
@@ -1325,7 +1308,6 @@ type DisasterSubObjectType {
   id: ID!
   name: String!
   iduName: String
-  disasters: [GiddDisasterType!]!
 }
 
 input DisasterSubTypeFilterDataInputType {
@@ -1347,7 +1329,6 @@ type DisasterTypeObjectType {
   id: ID!
   name: String!
   subTypes(filters: DisasterSubTypeFilterDataInputType, ordering: String): DisasterSubObjectListType
-  disasters: [GiddDisasterType!]!
 }
 
 type DisplacementByHazardType {
@@ -1355,14 +1336,17 @@ type DisplacementByHazardType {
   label: String!
   newDisplacements: Int
   newDisplacementsRounded: Int
+  totalDisplacements: Int
+  totalDisplacementsRounded: Int
 }
 
-input DisplacementDataFilterDataInputType {
-  releaseEnvironment: String
-  startYear: Float
-  endYear: Float
-  countriesIso3: [String!]
-  cause: String
+type DisplacementByViolenceType {
+  id: ID!
+  label: String!
+  newDisplacements: Int
+  newDisplacementsRounded: Int
+  totalDisplacements: Int
+  totalDisplacementsRounded: Int
 }
 
 type DjangoDebug {
@@ -1831,6 +1815,7 @@ enum ExternalApiType {
   IDUS_ALL_DISASTER
   IDUS_ALL_DISASTER_EXCEL
   IDUS_ALL_DISASTER_GEOJSON
+  IDU_REFERENCES
   GIDD_COUNTRY_REST
   GIDD_CONFLICT_REST
   GIDD_DISASTER_REST
@@ -1852,6 +1837,10 @@ enum ExternalApiType {
   GIDD_COMBINED_STAT_GRAPHQL
   GIDD_RELEASE_META_DATA_GRAPHQL
   GIDD_PUBLIC_COUNTRIES_GRAPHQL
+  GIDD_NEW_EVENTS_GRAPHQL
+  GIDD_COUNTRY_DISPLACEMENT_GRAPHQL
+  GIDD_COUNTRY_YEAR_DISPLACEMENT_GRAPHQL
+  GIDD_VIOLENCE_SUB_TYPES_GRAPHQL
 }
 
 input ExtractionQueryFilterDataInputType {
@@ -2446,13 +2435,6 @@ type GiddCombinedStatisticsType {
   totalDisplacementCountries: Int
 }
 
-type GiddConflictListType {
-  results: [GiddConflictType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
 type GiddConflictStatisticsType {
   newDisplacements: Int
   newDisplacementsRounded: Int
@@ -2460,35 +2442,53 @@ type GiddConflictStatisticsType {
   totalDisplacementsRounded: Int
   totalDisplacementCountries: Int
   internalDisplacementCountries: Int
+  displacementsByViolenceSubType: [DisplacementByViolenceType!]
   newDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
   newDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
   totalDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
   totalDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
 }
 
-type GiddConflictType {
-  id: ID!
-  totalDisplacement: Int
-  newDisplacement: Int
-  totalDisplacementRounded: Int
-  newDisplacementRounded: Int
-  year: Int!
-  countryName: String!
+type GiddCountryDisplacementType {
   iso3: String!
+  countryName: String!
   countryId: ID!
+  conflictNewDisplacement: Int
+  conflictNewDisplacementRounded: Int
+  conflictTotalDisplacement: Int
+  conflictTotalDisplacementRounded: Int
+  disasterNewDisplacement: Int
+  disasterNewDisplacementRounded: Int
+  disasterTotalDisplacement: Int
+  disasterTotalDisplacementRounded: Int
+}
+
+type GiddCountryYearDisplacementListType {
+  results: [GiddCountryYearDisplacementType!]!
+  totalCount: Int!
+  page: Int!
+  pageSize: Int!
+}
+
+type GiddCountryYearDisplacementType {
+  iso3: String!
+  countryName: String!
+  countryId: ID!
+  year: Int!
+  conflictNewDisplacement: Int
+  conflictNewDisplacementRounded: Int
+  conflictTotalDisplacement: Int
+  conflictTotalDisplacementRounded: Int
+  disasterNewDisplacement: Int
+  disasterNewDisplacementRounded: Int
+  disasterTotalDisplacement: Int
+  disasterTotalDisplacementRounded: Int
 }
 
 type GiddDisasterCountryType {
   id: Int!
   iso3: String!
   countryName: String!
-}
-
-type GiddDisasterListType {
-  results: [GiddDisasterType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
 }
 
 type GiddDisasterStatisticsType {
@@ -2506,61 +2506,65 @@ type GiddDisasterStatisticsType {
   totalDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
 }
 
-type GiddDisasterType {
-  id: ID!
-  year: Int!
-  startDate: Date
-  startDateAccuracy: String
-  endDate: Date
-  endDateAccuracy: String
-  newDisplacement: Int
-  totalDisplacement: Int
-  totalDisplacementRounded: Int
-  newDisplacementRounded: Int
-  eventName: String!
-  iso3: String!
-  countryName: String!
-  hazardCategoryName: String!
-  hazardSubCategoryName: String!
-  hazardSubTypeName: String!
-  hazardTypeName: String!
-  eventCodes: [String!]!
-  eventCodesType: [String!]!
-  countryId: ID!
-  eventId: ID
-  hazardCategoryId: ID
-  hazardSubCategoryId: ID
-  hazardTypeId: ID
-  hazardSubTypeId: ID
-}
-
-type GiddDisplacementDataListType {
-  results: [GiddDisplacementDataType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
-type GiddDisplacementDataType {
-  id: ID!
-  iso3: String!
-  countryName: String!
-  conflictTotalDisplacement: Int
-  conflictNewDisplacement: Int
-  disasterTotalDisplacement: Int
-  disasterNewDisplacement: Int
-  year: Int!
-  conflictTotalDisplacementRounded: Int
-  conflictNewDisplacementRounded: Int
-  disasterTotalDisplacementRounded: Int
-  disasterNewDisplacementRounded: Int
-}
-
 type GiddEventAffectedCountryType {
   iso3: String!
   countryName: String!
   newDisplacement: Int
   newDisplacementRounded: Int
+}
+
+input GiddEventDisplacementFilterDataInputType {
+  releaseEnvironment: String
+  cause: CRISIS_TYPE
+  countriesIso3: [String!]
+  startYear: Float
+  endYear: Float
+  hazardCategories: [ID!]
+  hazardSubCategories: [ID!]
+  hazardTypes: [ID!]
+  hazardSubTypes: [ID!]
+  violenceTypes: [ID!]
+  violenceSubTypes: [ID!]
+  eventName: String
+  events: [ID!]
+}
+
+type GiddEventDisplacementListType {
+  results: [GiddEventDisplacementType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type GiddEventDisplacementType {
+  id: ID!
+  eventName: String!
+  iso3: String!
+  countryName: String!
+  year: Int!
+  startDate: Date
+  endDate: Date
+  eventCodes: [String!]!
+  violenceName: String
+  violenceSubTypeName: String
+  hazardCategoryName: String
+  hazardSubCategoryName: String
+  hazardTypeName: String
+  hazardSubTypeName: String
+  newDisplacement: Int
+  newDisplacementRounded: Int
+  totalDisplacement: Int
+  totalDisplacementRounded: Int
+  countryId: ID!
+  eventId: ID
+  cause: CRISIS_TYPE
+  causeDisplay: EnumDescription
+  violenceId: ID
+  violenceSubTypeId: ID
+  hazardCategoryId: ID
+  hazardSubCategoryId: ID
+  hazardTypeId: ID
+  hazardSubTypeId: ID
 }
 
 type GiddEventType {
@@ -2580,6 +2584,11 @@ type GiddHazardType {
   name: String!
 }
 
+type GiddPublicCountryGeographicalGroupType {
+  id: ID!
+  name: String!
+}
+
 type GiddPublicCountryRegionType {
   id: ID!
   name: String!
@@ -2590,6 +2599,8 @@ type GiddPublicCountryType {
   iso3: String!
   idmcShortName: String!
   region: GiddPublicCountryRegionType
+  geographicalGroup: GiddPublicCountryGeographicalGroupType
+  centroid: [Float]
 }
 
 type GiddPublicFigureAnalysisListType {
@@ -2672,6 +2683,11 @@ type GiddUpdateReleaseMetaData {
   errors: [GenericScalar!]
   ok: Boolean
   result: GiddReleaseMetadataType
+}
+
+type GiddViolenceSubType {
+  id: ID!
+  name: String!
 }
 
 type GiddYearType {
@@ -3325,6 +3341,8 @@ input PublicFigureAnalysisFilterDataInputType {
   iso3: String
   year: Int
   releaseEnvironment: String
+  figureCause: CRISIS_TYPE
+  figureCategory: FIGURE_CATEGORY_TYPES
 }
 
 enum QA_RULE_TYPE {
@@ -3342,21 +3360,20 @@ enum QUANTIFIER {
 type Query {
   hulkBulkImport(id: ID!): HulkBulkImportType
   hulkBulkImports(filters: HulkBulkImportFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): HulkBulkImportListType
-  giddPublicConflicts(filters: ConflictFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
-  giddPublicDisasters(filters: DisasterFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
-  giddPublicConflictStatistics(releaseEnvironment: String, countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddConflictStatisticsType!
-  giddPublicDisasterStatistics(releaseEnvironment: String, hazardTypes: [ID!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddDisasterStatisticsType!
-  giddLog(id: ID!): GiddStatusLogType
+  giddPublicConflictStatistics(releaseEnvironment: String, startYear: Float, endYear: Float, countriesIso3: [String!], violenceTypes: [ID!], violenceSubTypes: [ID!], clientId: String!): GiddConflictStatisticsType!
+  giddPublicDisasterStatistics(releaseEnvironment: String, hazardCategories: [ID!], hazardSubCategories: [ID!], hazardTypes: [ID!], hazardSubTypes: [ID!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddDisasterStatisticsType!
   giddLogs(filters: GiddStatusLogFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
-  giddPublicReleaseMetaData(clientId: String!): GiddReleaseMetadataType
   giddReleaseMetaData: GiddReleaseMetadataType
   giddPublicCountries(clientId: String!): [GiddPublicCountryType!]
   giddPublicHazardTypes(clientId: String!): [GiddHazardType]
+  giddPublicViolenceSubTypes(clientId: String!): [GiddViolenceSubType]
   giddPublicFigureAnalysisList(filters: PublicFigureAnalysisFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
-  giddPublicDisplacements(filters: DisplacementDataFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
   giddPublicYear(releaseEnvironment: String!, clientId: String!): GiddYearType!
   giddPublicEvent(eventId: ID!, releaseEnvironment: String, clientId: String!): GiddEventType
-  giddPublicCombinedStatistics(releaseEnvironment: String, hazardTypes: [ID!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddCombinedStatisticsType!
+  giddPublicCombinedStatistics(releaseEnvironment: String, hazardCategories: [ID!], hazardSubCategories: [ID!], hazardTypes: [ID!], hazardSubTypes: [ID!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddCombinedStatisticsType!
+  giddPublicDisplacementEvents(filters: GiddEventDisplacementFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddEventDisplacementListType
+  giddPublicCountryDisplacements(releaseEnvironment: String, countriesIso3: [String!], startYear: Float, endYear: Float, hazardCategories: [ID!], hazardSubCategories: [ID!], hazardTypes: [ID!], hazardSubTypes: [ID!], violenceTypes: [ID!], violenceSubTypes: [ID!], clientId: String!): [GiddCountryDisplacementType!]
+  giddPublicCountryYearDisplacements(releaseEnvironment: String, countriesIso3: [String!], startYear: Float, endYear: Float, hazardCategories: [ID!], hazardSubCategories: [ID!], hazardTypes: [ID!], hazardSubTypes: [ID!], violenceTypes: [ID!], violenceSubTypes: [ID!], page: Int, pageSize: Int, ordering: String, clientId: String!): GiddCountryYearDisplacementListType
   notification(id: ID!): GenericNotificationType
   notifications(filters: NotificationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType

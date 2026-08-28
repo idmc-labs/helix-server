@@ -1750,22 +1750,18 @@ class TestCoreData(HelixGraphQLTestCase):
 
         query = """
             query DisplacementData($clientId: String!){
-                giddPublicDisplacements(
-                    filters: {},
+                giddPublicCountryYearDisplacements(
                     clientId: $clientId,
+                    pageSize: 100,
                 ){
                     results {
                         conflictNewDisplacement
                         conflictTotalDisplacement
                         disasterNewDisplacement
                         disasterTotalDisplacement
-                        id
                         iso3
                         year
                     }
-                    totalCount
-                    page
-                    pageSize
                 }
                 giddPublicConflictStatistics(
                     clientId: $clientId,
@@ -1788,7 +1784,7 @@ class TestCoreData(HelixGraphQLTestCase):
             }
         """
         response = self.query_json(query, variables={"clientId": self.gidd_client.code})
-        r_data = response["data"]["giddPublicDisplacements"]["results"]
+        r_data = response["data"]["giddPublicCountryYearDisplacements"]["results"]
         system_data = [
             {
                 "iso3": i["iso3"],
@@ -1800,7 +1796,10 @@ class TestCoreData(HelixGraphQLTestCase):
             }
             for i in r_data
         ]
-        assert displacement_data == system_data
+        # With no `ordering` argument the field sorts by (iso3, year) while the expected rows are
+        # built year-major, so compare order-independently.
+        _key = lambda d: (d["iso3"], d["year"])  # noqa: E731
+        assert sorted(displacement_data, key=_key) == sorted(system_data, key=_key)
 
         conflict_stats_r_data = response["data"]["giddPublicConflictStatistics"]
         disaster_stats_r_data = response["data"]["giddPublicDisasterStatistics"]
@@ -1914,9 +1913,10 @@ class TestCoreData(HelixGraphQLTestCase):
 
         query = """
             query DisasterData($clientId: String!){
-                giddPublicDisasters(
-                    filters: {},
+                giddPublicDisplacementEvents(
+                    filters: {cause: DISASTER},
                     clientId: $clientId,
+                    pageSize: 10000,
                 ){
                     results {
                         id
@@ -1933,7 +1933,7 @@ class TestCoreData(HelixGraphQLTestCase):
             }
         """
         response = self.query_json(query, variables={"clientId": self.gidd_client.code})
-        r_data = response["data"]["giddPublicDisasters"]["results"]
+        r_data = response["data"]["giddPublicDisplacementEvents"]["results"]
         system_data = [
             {
                 "id": i["eventId"],
@@ -1947,8 +1947,11 @@ class TestCoreData(HelixGraphQLTestCase):
             }
             for i in r_data
         ]
-        # NOTE: Removing idps as it's not generated in GIDD right now
-        assert [{**row, "disaster_idps": None} for row in disaster_data] == system_data
+        # NOTE: Removing idps as it's not generated in GIDD right now. The field is unordered, so
+        # compare order-independently.
+        expected = [{**row, "disaster_idps": None} for row in disaster_data]
+        _key = lambda d: (d["iso3"], d["year"], str(d["id"]))  # noqa: E731
+        assert sorted(expected, key=_key) == sorted(system_data, key=_key)
 
     @RuntimeProfile()
     def test_chart_aggregations(self):

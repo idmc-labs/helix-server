@@ -11,6 +11,7 @@ from django.db.models.sql.constants import LOUTER
 from django.shortcuts import redirect
 from django.utils import timezone
 from django_cte import With
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from openpyxl import Workbook
 from rest_framework import status, viewsets
@@ -25,6 +26,7 @@ from apps.common.utils import (
     extract_event_code_data,
     extract_location_data,
 )
+from apps.crisis.models import Crisis
 from apps.entry.models import ExternalApiDump, Figure
 from apps.entry.serializers import FigureReadOnlySerializer
 from apps.gidd.views import client_id
@@ -169,8 +171,16 @@ def get_idu_data(filters=None):
             event_end_date=F("event__end_date"),
             disaster_category_name=F("disaster_category__name"),
             disaster_sub_category_name=F("disaster_sub_category__name"),
-            disaster_type_name=F("disaster_sub_type__type__name"),
-            disaster_sub_type_name=F("disaster_sub_type__name"),
+            type_name=Case(
+                When(figure_cause=Crisis.CRISIS_TYPE.CONFLICT, then=F("violence__name")),
+                default=F("disaster_sub_type__type__name"),
+                output_field=CharField(),
+            ),
+            subtype_name=Case(
+                When(figure_cause=Crisis.CRISIS_TYPE.CONFLICT, then=F("violence_sub_type__name")),
+                default=F("disaster_sub_type__name"),
+                output_field=CharField(),
+            ),
             figure_term_label=Case(
                 When(term=0, then=Lower(Value(Figure.FIGURE_TERMS.EVACUATED.label))),
                 When(term=1, then=Lower(Value(Figure.FIGURE_TERMS.DISPLACED.label))),
@@ -617,6 +627,11 @@ class ExternalEndpointBaseCachedViewMixin:
 
         return redirect(url)
 
+    # The IDU dumps are generated both with and without sources, and a client's `share_source`
+    # flag selects which it may read. An endpoint generated only one way must not key the lookup on
+    # that flag, or every client with `share_source` set gets a 404 for a dump that exists.
+    DUMP_VARIES_BY_CLIENT = True
+
     @client_id
     def get(self, request, data_format):
         # Check if request is comming from valid client
@@ -636,7 +651,7 @@ class ExternalEndpointBaseCachedViewMixin:
         try:
             api_dump = ExternalApiDump.objects.get(
                 api_type=self.ENDPOINT_TYPE,
-                include_sources=client.share_source,
+                include_sources=client.share_source if self.DUMP_VARIES_BY_CLIENT else False,
                 format=data_format,
             )
         except ExternalApiDump.DoesNotExist:
@@ -691,3 +706,23 @@ class IdusAllFlatCachedView(BaseIdusCachedView):
 
 class IdusAllDisasterCachedView(BaseIdusCachedView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER
+
+
+@extend_schema(
+    description=(
+        "The reference lists the IDU feeds are keyed against: disaster and violence typologies, "
+        "geographical groups, and countries with their bounding boxes. Answers with a redirect to "
+        "the generated dump, as the other IDU endpoints do."
+    ),
+    responses={(302, "application/json"): OpenApiTypes.STR},
+    tags=["IDU"],
+)
+class IduReferencesCachedView(ExternalEndpointBaseCachedViewMixin, ViewSet):
+    ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDU_REFERENCES
+    # One dump serves every client: the references carry no source information to withhold.
+    DUMP_VARIES_BY_CLIENT = False
+
+    @client_id
+    @action(detail=False, methods=["get"], url_path="export-json")
+    def export_json(self, request):
+        return super().get(request, data_format=ExternalApiDump.Format.JSON)

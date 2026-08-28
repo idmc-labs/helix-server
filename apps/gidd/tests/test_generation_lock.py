@@ -1,9 +1,11 @@
+import contextlib
 import datetime
 from unittest import mock
 
 from django.utils import timezone
 
-from apps.gidd.models import Conflict, StatusLog
+from apps.crisis.models import Crisis
+from apps.gidd.models import GiddDisplacement, StatusLog
 from apps.gidd.tasks import (
     GIDD_GENERATION_LOCK_KEY,
     GIDD_GENERATION_LOCK_TTL,
@@ -15,23 +17,28 @@ from helix import redis
 from utils.factories import CountryFactory, UserFactory
 from utils.tests import HelixTestCase
 
+# Listed first because it is the injection point below, not in pipeline order. It writes the
+# table whose delete-before-insert property is asserted.
 GENERATION_STEPS = [
-    "apps.gidd.tasks.update_conflict_and_disaster_data",
+    "apps.gidd.tasks.update_new_gidd_tables",
     "apps.gidd.tasks.update_public_figure_analysis",
-    "apps.gidd.tasks.update_displacement_data",
     "apps.gidd.tasks.update_idps_sadd_estimates_country_names",
     "apps.gidd.tasks.update_gidd_event_and_gidd_figure_data",
 ]
 
 
-def run_generation(log_id, insert_conflict=None):
+def run_generation(log_id, insert_row=None):
     """Run the task synchronously with the heavy generation steps mocked; the
-    delete + insert + status handling under test stay real."""
-    with mock.patch(GENERATION_STEPS[0], side_effect=insert_conflict or (lambda: None)):
-        with mock.patch(GENERATION_STEPS[1]), mock.patch(GENERATION_STEPS[2]), mock.patch(GENERATION_STEPS[3]), mock.patch(
-            GENERATION_STEPS[4]
-        ):
-            update_gidd_data(log_id)
+    delete + insert + status handling under test stay real.
+
+    The step list is iterated rather than patched one index at a time, so adding or removing a
+    generation step cannot leave one running for real unnoticed.
+    """
+    with contextlib.ExitStack() as patches:
+        patches.enter_context(mock.patch(GENERATION_STEPS[0], side_effect=insert_row or (lambda: None)))
+        for step in GENERATION_STEPS[1:]:
+            patches.enter_context(mock.patch(step))
+        update_gidd_data(log_id)
 
 
 class TestGiddGenerationLock(HelixTestCase):
@@ -46,20 +53,21 @@ class TestGiddGenerationLock(HelixTestCase):
         # generation twice yields ONE data set rather than two appended ones.
         country = CountryFactory.create(name="Nepal", iso3="NPL")
 
-        def insert_conflict():
-            Conflict.objects.create(
+        def insert_row():
+            GiddDisplacement.objects.create(
                 country=country,
                 iso3="NPL",
                 country_name="Nepal",
                 year=2023,
+                cause=Crisis.CRISIS_TYPE.CONFLICT,
                 new_displacement=100,
                 total_displacement=100,
             )
 
         for _ in range(2):
-            run_generation(self.make_log().id, insert_conflict)
+            run_generation(self.make_log().id, insert_row)
 
-        self.assertEqual(Conflict.objects.count(), 1)
+        self.assertEqual(GiddDisplacement.objects.count(), 1)
         self.assertEqual(StatusLog.objects.filter(status=StatusLog.Status.SUCCESS).count(), 2)
 
     def test_concurrent_generation_is_refused(self):

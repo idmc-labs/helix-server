@@ -1,36 +1,39 @@
 # types.py
 import graphene
+from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.db.models.functions import Coalesce
+from graphene.utils.str_converters import to_snake_case
 from graphene_django.filter.utils import get_filtering_args_from_filterset
-from graphene_django_extras import DjangoObjectField
 
 from apps.country.models import Country
 from apps.crisis.enums import CrisisTypeGrapheneEnum
+from apps.crisis.models import Crisis
 from apps.entry.enums import FigureCategoryTypeEnum
 from apps.entry.models import ExternalApiDump
 from utils.common import round_and_remove_zero, track_gidd
+from utils.db import tiebreak_fields
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
-from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.ordering import strip_direction
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount, get_page_size
 from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 from .enums import GiddStatusLogEnum
 from .filters import (
-    ConflictFilter,
     ConflictStatisticsFilter,
-    DisasterFilter,
     DisasterStatisticsFilter,
-    DisplacementDataFilter,
+    GiddCountryDisplacementFilter,
+    GiddEventDisplacementFilter,
     GiddStatusLogFilter,
     PublicFigureAnalysisFilter,
     ReleaseMetadataFilter,
 )
 from .models import (
-    Conflict,
-    Disaster,
-    DisplacementData,
+    GiddDisplacement,
+    GiddEventDisplacement,
     PublicFigureAnalysis,
     ReleaseMetadata,
     StatusLog,
@@ -51,22 +54,82 @@ def default_end_year(kwargs):
     return release_meta_data.release_year
 
 
-def custom_date_filters(start_year, end_year):
-    filters = {
-        "idps_date_filters": {},
-        "nd_date_filters": {},
-    }
+def resolve_stock_year(kwargs, requested_end_year):
+    """The year an IDP stock is read from, refusing a request beyond the published release.
 
-    filters["idps_date_filters"].update({"total_displacement__gt": 0})
-    filters["nd_date_filters"].update({"new_displacement__gt": 0})
+    Rows stop at the (pre-)release year, so a later `endYear` would otherwise return a full
+    new-displacement figure beside a zero stock -- a wrong answer that reads like a real one.
+    """
+    release_year = default_end_year(kwargs)
+    if requested_end_year and release_year and requested_end_year > release_year:
+        raise ValueError(f"endYear cannot be greater than the release year: {release_year}")
+    return requested_end_year or release_year
 
+
+def _displacement_year_range(start_year, end_year):
+    """The year window both figures scope rows by, before either narrows it further."""
+    q = models.Q()
     if start_year:
-        filters["nd_date_filters"].update({"year__gte": start_year})
+        q &= models.Q(year__gte=start_year)
     if end_year:
-        filters["nd_date_filters"].update({"year__lte": end_year})
-        filters["idps_date_filters"].update({"year__gte": end_year})
-        filters["idps_date_filters"].update({"year__lte": end_year})
-    return filters
+        q &= models.Q(year__lte=end_year)
+    return q
+
+
+def displacement_q_for_listing(start_year, end_year):
+    """Rows in the window that carry a figure at all: either new displacement or IDP stock.
+
+    A row with both at zero says nothing, and counting it inflates every list and count that does
+    not go on to sum a column. Listing keeps the whole window for both figures -- only an aggregate
+    that collapses years has to choose between them.
+    """
+    return _displacement_year_range(start_year, end_year) & (
+        models.Q(new_displacement__gt=0) | models.Q(total_displacement__gt=0)
+    )
+
+
+def new_displacement_q_for_aggregate(start_year, end_year):
+    """Rows summed for new displacement: a flow, so the whole window adds up."""
+    return models.Q(new_displacement__gt=0) & _displacement_year_range(start_year, end_year)
+
+
+def idp_stock_q_for_aggregate(stock_year):
+    """Rows summed for IDP stock: point-in-time, so one year, never summed across years."""
+    return models.Q(total_displacement__gt=0, year=stock_year)
+
+
+def cause_typology_filters(kwargs):
+    """The conflict and disaster filters the country queries scope their sums with.
+
+    Consumes the typology arguments from `kwargs` so what remains is the filterset's own. Both
+    causes are bounded in one call because a request may narrow the disaster side by hazard and the
+    conflict side by violence at once, and the two queries would otherwise drift apart -- they are
+    the same filter written twice.
+
+    All four hazard levels are accepted, matching the statistics and event queries; a caller
+    bounding by category should not have to enumerate its types.
+    """
+    conflict_filter = Q(cause=Crisis.CRISIS_TYPE.CONFLICT)
+    for argument, column in (
+        ("violence_types", "violence"),
+        ("violence_sub_types", "violence_sub_type"),
+    ):
+        value = kwargs.pop(argument, None)
+        if value:
+            conflict_filter &= Q(**{f"{column}__in": value})
+
+    disaster_filter = Q(cause=Crisis.CRISIS_TYPE.DISASTER)
+    for argument, column in (
+        ("hazard_categories", "hazard_category"),
+        ("hazard_sub_categories", "hazard_sub_category"),
+        ("hazard_types", "hazard_type"),
+        ("hazard_sub_types", "hazard_sub_type"),
+    ):
+        value = kwargs.pop(argument, None)
+        if value:
+            disaster_filter &= Q(**{f"{column}__in": value})
+
+    return conflict_filter, disaster_filter
 
 
 class GiddDisasterCountryType(graphene.ObjectType):
@@ -93,6 +156,17 @@ class DisplacementByHazardType(graphene.ObjectType):
     label = graphene.String(required=True)
     new_displacements = graphene.Int()
     new_displacements_rounded = graphene.Int()
+    total_displacements = graphene.Int()
+    total_displacements_rounded = graphene.Int()
+
+
+class DisplacementByViolenceType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    label = graphene.String(required=True)
+    new_displacements = graphene.Int()
+    new_displacements_rounded = graphene.Int()
+    total_displacements = graphene.Int()
+    total_displacements_rounded = graphene.Int()
 
 
 class GiddConflictStatisticsType(graphene.ObjectType):
@@ -102,6 +176,7 @@ class GiddConflictStatisticsType(graphene.ObjectType):
     total_displacements_rounded = graphene.Int()
     total_displacement_countries = graphene.Int()
     internal_displacement_countries = graphene.Int()
+    displacements_by_violence_sub_type = graphene.List(graphene.NonNull(DisplacementByViolenceType))
     new_displacement_timeseries_by_year = graphene.List(graphene.NonNull(GiddTimeSeriesStatisticsByYearType))
     new_displacement_timeseries_by_country = graphene.List(graphene.NonNull(GiddTimeSeriesStatisticsByCountryType))
     total_displacement_timeseries_by_year = graphene.List(graphene.NonNull(GiddTimeSeriesStatisticsByYearType))
@@ -132,96 +207,6 @@ class GiddCombinedStatisticsType(graphene.ObjectType):
     total_displacements_rounded = graphene.Int()
     internal_displacement_countries = graphene.Int()
     total_displacement_countries = graphene.Int()
-
-
-class GiddConflictType(RelationBatchedDjangoObjectType):
-    country_id = graphene.ID(required=True)
-
-    class Meta:
-        model = Conflict
-        fields = (
-            "id",
-            "iso3",
-            "country_name",
-            "year",
-            "new_displacement",
-            "total_displacement",
-            "new_displacement_rounded",
-            "total_displacement_rounded",
-        )
-
-    @staticmethod
-    def resolve_country_id(root, info, **kwargs):
-        return root.country_id
-
-
-class GiddConflictListType(CustomDjangoListObjectType):
-    class Meta:
-        model = Conflict
-        filterset_class = ConflictFilter
-
-
-class GiddDisasterType(RelationBatchedDjangoObjectType):
-    country_id = graphene.ID(required=True)
-    event_id = graphene.ID()
-    hazard_category_id = graphene.ID()
-    hazard_sub_category_id = graphene.ID()
-    hazard_type_id = graphene.ID()
-    hazard_sub_type_id = graphene.ID()
-
-    class Meta:
-        model = Disaster
-        fields = (
-            "id",
-            "year",
-            "start_date",
-            "start_date_accuracy",
-            "end_date",
-            "end_date_accuracy",
-            "new_displacement",
-            "total_displacement",
-            "new_displacement_rounded",
-            "total_displacement_rounded",
-            "event_name",
-            "iso3",
-            "country_name",
-            "hazard_category_name",
-            "hazard_sub_category_name",
-            "hazard_type_name",
-            "hazard_sub_type_name",
-            "event_codes",
-            "event_codes_type",
-        )
-
-    @staticmethod
-    def resolve_country_id(root, info, **kwargs):
-        return root.country_id
-
-    @staticmethod
-    def resolve_event_id(root, info, **kwargs):
-        return root.event_raw_id
-
-    @staticmethod
-    def resolve_hazard_category_id(root, info, **kwargs):
-        return root.hazard_category_id
-
-    @staticmethod
-    def resolve_hazard_sub_category_id(root, info, **kwargs):
-        return root.hazard_sub_category_id
-
-    @staticmethod
-    def resolve_hazard_type_id(root, info, **kwargs):
-        return root.hazard_type_id
-
-    @staticmethod
-    def resolve_hazard_sub_type_id(root, info, **kwargs):
-        return root.hazard_sub_type_id
-
-
-class GiddDisasterListType(CustomDjangoListObjectType):
-    class Meta:
-        model = Disaster
-        filterset_class = DisasterFilter
 
 
 class GiddStatusLogType(RelationBatchedDjangoObjectType):
@@ -266,13 +251,58 @@ class GiddPublicFigureAnalysisListType(CustomDjangoListObjectType):
         filterset_class = PublicFigureAnalysisFilter
 
 
+class GiddEventDisplacementType(RelationBatchedDjangoObjectType):
+    country_id = graphene.ID(required=True)
+    event_id = graphene.ID()
+    cause = graphene.Field(CrisisTypeGrapheneEnum)
+    cause_display = EnumDescription(source="get_cause_display")
+    violence_id = graphene.ID()
+    violence_sub_type_id = graphene.ID()
+    hazard_category_id = graphene.ID()
+    hazard_sub_category_id = graphene.ID()
+    hazard_type_id = graphene.ID()
+    hazard_sub_type_id = graphene.ID()
+
+    class Meta:
+        model = GiddEventDisplacement
+        fields = (
+            "id",
+            "event_name",
+            "iso3",
+            "country_name",
+            "year",
+            "start_date",
+            "end_date",
+            "event_codes",
+            "violence_name",
+            "violence_sub_type_name",
+            "hazard_category_name",
+            "hazard_sub_category_name",
+            "hazard_type_name",
+            "hazard_sub_type_name",
+            "new_displacement",
+            "new_displacement_rounded",
+            "total_displacement",
+            "total_displacement_rounded",
+        )
+
+    @staticmethod
+    def resolve_event_id(root, info, **kwargs):
+        return root.event_raw_id
+
+
+class GiddEventDisplacementListType(CustomDjangoListObjectType):
+    class Meta:
+        model = GiddEventDisplacement
+        filterset_class = GiddEventDisplacementFilter
+
+
 class GiddReleaseMetadataType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReleaseMetadata
         # giddPublicReleaseMetaData is whitelisted and WhiteListMiddleware checks only the root
-        # node, so everything this type reaches is readable unauthenticated -- `modified_by` led to
-        # UserType, and from there to username, last_login and createdEntry. `fields` is pinned
-        # rather than excluded so a column added to the model stays invisible until named here.
+        # node, so anything this type reaches is readable unauthenticated -- `modified_by` would
+        # expose UserType. Pinned rather than excluded so a new model column stays invisible.
         # TODO(frontend): read this for the maximum allowed year; no client consumes it yet.
         fields = (
             "id",
@@ -286,11 +316,18 @@ class GiddPublicCountryRegionType(graphene.ObjectType):
     name = graphene.String(required=True)
 
 
+class GiddPublicCountryGeographicalGroupType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
 class GiddPublicCountryType(graphene.ObjectType):
     id = graphene.ID(required=True)
     iso3 = graphene.String(required=True)
     idmc_short_name = graphene.String(required=True)
     region = graphene.Field(GiddPublicCountryRegionType)
+    geographical_group = graphene.Field(GiddPublicCountryGeographicalGroupType)
+    centroid = graphene.List(graphene.Float)
 
 
 class GiddHazardType(graphene.ObjectType):
@@ -303,29 +340,9 @@ class GiddHazardSubCategoryType(graphene.ObjectType):
     name = graphene.String(required=True)
 
 
-class GiddDisplacementDataType(RelationBatchedDjangoObjectType):
-    class Meta:
-        model = DisplacementData
-        fields = (
-            "id",
-            "iso3",
-            "country_name",
-            "year",
-            "conflict_total_displacement",
-            "conflict_new_displacement",
-            "disaster_new_displacement",
-            "disaster_total_displacement",
-            "conflict_total_displacement_rounded",
-            "conflict_new_displacement_rounded",
-            "disaster_new_displacement_rounded",
-            "disaster_total_displacement_rounded",
-        )
-
-
-class GiddDisplacementDataListType(CustomDjangoListObjectType):
-    class Meta:
-        model = DisplacementData
-        filterset_class = DisplacementDataFilter
+class GiddViolenceSubType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
 
 
 class GiddYearType(graphene.ObjectType):
@@ -361,17 +378,62 @@ class GiddEventType(graphene.ObjectType):
     )
 
 
+class GiddCountryDisplacementType(graphene.ObjectType):
+    iso3 = graphene.String(required=True)
+    country_name = graphene.String(required=True)
+    country_id = graphene.ID(required=True)
+    conflict_new_displacement = graphene.Int()
+    conflict_new_displacement_rounded = graphene.Int()
+    conflict_total_displacement = graphene.Int()
+    conflict_total_displacement_rounded = graphene.Int()
+    disaster_new_displacement = graphene.Int()
+    disaster_new_displacement_rounded = graphene.Int()
+    disaster_total_displacement = graphene.Int()
+    disaster_total_displacement_rounded = graphene.Int()
+
+
+class GiddCountryYearDisplacementType(graphene.ObjectType):
+    iso3 = graphene.String(required=True)
+    country_name = graphene.String(required=True)
+    country_id = graphene.ID(required=True)
+    year = graphene.Int(required=True)
+    conflict_new_displacement = graphene.Int()
+    conflict_new_displacement_rounded = graphene.Int()
+    conflict_total_displacement = graphene.Int()
+    conflict_total_displacement_rounded = graphene.Int()
+    disaster_new_displacement = graphene.Int()
+    disaster_new_displacement_rounded = graphene.Int()
+    disaster_total_displacement = graphene.Int()
+    disaster_total_displacement_rounded = graphene.Int()
+
+
+GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE = 50
+# `get_page_size` rejects an over-large value rather than quietly serving fewer rows.
+GIDD_COUNTRY_YEAR_MAX_PAGE_SIZE = settings.GRAPHENE_DJANGO_EXTRAS["MAX_PAGE_SIZE"]
+
+# Kept in step with GiddDisplacement.ORDERING_ALLOWLIST, which the allowlist registry test
+# enumerates. Every key is a column this query also returns, so a client sorts by what it reads.
+GIDD_COUNTRY_YEAR_SORTABLE = frozenset(
+    {
+        "conflict_new_displacement",
+        "conflict_total_displacement",
+        "country_name",
+        "disaster_new_displacement",
+        "disaster_total_displacement",
+        "iso3",
+        "year",
+    }
+)
+
+
+class GiddCountryYearDisplacementListType(graphene.ObjectType):
+    results = graphene.List(graphene.NonNull(GiddCountryYearDisplacementType), required=True)
+    total_count = graphene.Int(required=True)
+    page = graphene.Int(required=True)
+    page_size = graphene.Int(required=True)
+
+
 class Query(graphene.ObjectType):
-    gidd_public_conflicts = DjangoPaginatedListObjectField(
-        GiddConflictListType,
-        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
-        client_id=graphene.String(required=True),
-    )
-    gidd_public_disasters = DjangoPaginatedListObjectField(
-        GiddDisasterListType,
-        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
-        client_id=graphene.String(required=True),
-    )
     gidd_public_conflict_statistics = graphene.Field(
         GiddConflictStatisticsType,
         **get_filtering_args_from_filterset(ConflictStatisticsFilter, GiddConflictStatisticsType),
@@ -384,16 +446,9 @@ class Query(graphene.ObjectType):
         required=True,
         client_id=graphene.String(required=True),
     )
-    gidd_log = DjangoObjectField(
-        GiddStatusLogType,
-    )
     gidd_logs = DjangoPaginatedListObjectField(
         GiddStatusLogListType,
         pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
-    )
-    gidd_public_release_meta_data = graphene.Field(
-        GiddReleaseMetadataType,
-        client_id=graphene.String(required=True),
     )
     gidd_release_meta_data = graphene.Field(
         GiddReleaseMetadataType,
@@ -406,13 +461,12 @@ class Query(graphene.ObjectType):
         GiddHazardType,
         client_id=graphene.String(required=True),
     )
-    gidd_public_figure_analysis_list = DjangoPaginatedListObjectField(
-        GiddPublicFigureAnalysisListType,
-        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
+    gidd_public_violence_sub_types = graphene.List(
+        GiddViolenceSubType,
         client_id=graphene.String(required=True),
     )
-    gidd_public_displacements = DjangoPaginatedListObjectField(
-        GiddDisplacementDataListType,
+    gidd_public_figure_analysis_list = DjangoPaginatedListObjectField(
+        GiddPublicFigureAnalysisListType,
         pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
         client_id=graphene.String(required=True),
     )
@@ -433,14 +487,47 @@ class Query(graphene.ObjectType):
         required=True,
         client_id=graphene.String(required=True),
     )
-
-    @staticmethod
-    def resolve_gidd_public_release_meta_data(parent, info, **kwargs):
-        # Track
-        client_id = kwargs.pop("client_id")
-        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_RELEASE_META_DATA_GRAPHQL)
-
-        return ReleaseMetadata.objects.last()
+    gidd_public_displacement_events = DjangoPaginatedListObjectField(
+        GiddEventDisplacementListType,
+        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize", page_size=50),
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_country_displacements = graphene.Field(
+        graphene.List(graphene.NonNull(GiddCountryDisplacementType)),
+        **get_filtering_args_from_filterset(GiddCountryDisplacementFilter, GiddCountryDisplacementType),
+        hazard_categories=graphene.List(graphene.NonNull(graphene.ID)),
+        hazard_sub_categories=graphene.List(graphene.NonNull(graphene.ID)),
+        hazard_types=graphene.List(graphene.NonNull(graphene.ID)),
+        hazard_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
+        violence_types=graphene.List(graphene.NonNull(graphene.ID)),
+        violence_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_country_year_displacements = graphene.Field(
+        GiddCountryYearDisplacementListType,
+        **get_filtering_args_from_filterset(GiddCountryDisplacementFilter, GiddCountryYearDisplacementType),
+        hazard_categories=graphene.List(graphene.NonNull(graphene.ID)),
+        hazard_sub_categories=graphene.List(graphene.NonNull(graphene.ID)),
+        hazard_types=graphene.List(graphene.NonNull(graphene.ID)),
+        hazard_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
+        violence_types=graphene.List(graphene.NonNull(graphene.ID)),
+        violence_sub_types=graphene.List(graphene.NonNull(graphene.ID)),
+        page=graphene.Int(description="1-indexed page number (default 1)."),
+        page_size=graphene.Int(
+            description=(
+                f"Rows per page (default {GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE}, max {GIDD_COUNTRY_YEAR_MAX_PAGE_SIZE})."
+            )
+        ),
+        ordering=graphene.String(
+            description=(
+                "Comma-separated sort keys, prefix with '-' for descending "
+                "(e.g. '-conflictTotalDisplacement,iso3'). Allowed: iso3, countryName, year, "
+                "conflictNewDisplacement, conflictTotalDisplacement, disasterNewDisplacement, "
+                "disasterTotalDisplacement. Defaults to iso3, year."
+            ),
+        ),
+        client_id=graphene.String(required=True),
+    )
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
@@ -457,12 +544,30 @@ class Query(graphene.ObjectType):
                 id=country["id"],
                 iso3=country["iso3"],
                 idmc_short_name=country["idmc_short_name"],
+                centroid=country["centroid"],
                 region=GiddPublicCountryRegionType(
                     id=country["region__id"],
                     name=country["region__name"],
                 ),
+                geographical_group=(
+                    GiddPublicCountryGeographicalGroupType(
+                        id=country["geographical_group__id"],
+                        name=country["geographical_group__name"],
+                    )
+                    if country["geographical_group__id"] is not None
+                    else None
+                ),
             )
-            for country in Country.objects.values("id", "idmc_short_name", "iso3", "region__id", "region__name")
+            for country in Country.objects.values(
+                "id",
+                "idmc_short_name",
+                "iso3",
+                "centroid",
+                "region__id",
+                "region__name",
+                "geographical_group__id",
+                "geographical_group__name",
+            )
         ]
 
     @staticmethod
@@ -473,11 +578,12 @@ class Query(graphene.ObjectType):
 
         conflict_qs = ConflictStatisticsFilter(data=kwargs).qs
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
-        filters = custom_date_filters(start_year, end_year)
+        end_year = resolve_stock_year(kwargs, kwargs.pop("end_year", None))
+        new_displacement_q = new_displacement_q_for_aggregate(start_year, end_year)
 
-        conflict_total_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
-        conflict_new_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
+        conflict_stock_year = end_year
+        conflict_total_displacement_qs = conflict_qs.filter(idp_stock_q_for_aggregate(conflict_stock_year))
+        conflict_new_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(new_displacement_q)
 
         new_displacement_timeseries_by_year_qs = (
             conflict_qs.filter(new_displacement__gt=0)
@@ -491,7 +597,9 @@ class Query(graphene.ObjectType):
             conflict_qs.filter(new_displacement__gt=0)
             .values("year")
             .annotate(total=Coalesce(models.Sum("new_displacement", output_field=models.IntegerField()), 0))
-            .order_by("year")
+            # `year` alone is a partial sort -- a year holds one row per country -- so the
+            # order of a year's countries would otherwise follow the plan and differ per run.
+            .order_by("year", "iso3")
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
@@ -507,8 +615,32 @@ class Query(graphene.ObjectType):
             conflict_qs.filter(total_displacement__gt=0)
             .values("year")
             .annotate(total=Coalesce(models.Sum("total_displacement", output_field=models.IntegerField()), 0))
-            .order_by("year")
+            # `year` alone is a partial sort -- a year holds one row per country -- so the
+            # order of a year's countries would otherwise follow the plan and differ per run.
+            .order_by("year", "iso3")
             .values("year", "total", "country_id", "country_name", "iso3")
+        )
+
+        # IDP stock is point-in-time, so the per-category total stays inside the one year.
+        violence_categories_qs = (
+            conflict_qs.values("violence_sub_type", "violence_sub_type__id")
+            .annotate(
+                total=Coalesce(models.Sum("new_displacement", output_field=models.IntegerField()), 0),
+                total_idp=Coalesce(
+                    models.Sum(
+                        "total_displacement",
+                        filter=idp_stock_q_for_aggregate(conflict_stock_year),
+                        output_field=models.IntegerField(),
+                    ),
+                    0,
+                ),
+                label=models.Case(
+                    models.When(violence_sub_type=None, then=models.Value("Not labeled")),
+                    default=models.F("violence_sub_type_name"),
+                    output_field=models.CharField(),
+                ),
+            )
+            .filter(total__gt=0)
         )
 
         return GiddConflictStatisticsType(
@@ -530,6 +662,17 @@ class Query(graphene.ObjectType):
             )["total"],
             total_displacement_countries=conflict_total_displacement_qs.distinct("iso3").count(),
             internal_displacement_countries=conflict_new_displacement_qs.distinct("iso3").count(),
+            displacements_by_violence_sub_type=[
+                DisplacementByViolenceType(
+                    id=item["violence_sub_type__id"],
+                    label=item["label"],
+                    new_displacements=item["total"],
+                    new_displacements_rounded=round_and_remove_zero(item["total"]),
+                    total_displacements=item["total_idp"],
+                    total_displacements_rounded=round_and_remove_zero(item["total_idp"]),
+                )
+                for item in violence_categories_qs
+            ],
             new_displacement_timeseries_by_year=[
                 GiddTimeSeriesStatisticsByYearType(
                     year=item["year"],
@@ -577,12 +720,15 @@ class Query(graphene.ObjectType):
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL)
 
         disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
+        # Copied before the pops below, which mutate kwargs.
+        event_filter_data = dict(kwargs)
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
-        filters = custom_date_filters(start_year, end_year)
+        end_year = resolve_stock_year(kwargs, kwargs.pop("end_year", None))
+        new_displacement_q = new_displacement_q_for_aggregate(start_year, end_year)
 
-        disaster_total_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
-        disaster_new_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
+        disaster_stock_year = end_year
+        disaster_total_displacement_qs = disaster_qs.filter(idp_stock_q_for_aggregate(disaster_stock_year))
+        disaster_new_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(new_displacement_q)
 
         new_displacement_timeseries_by_year_qs = (
             disaster_qs.filter(new_displacement__gt=0)
@@ -596,7 +742,9 @@ class Query(graphene.ObjectType):
             disaster_qs.filter(new_displacement__gt=0)
             .values("year")
             .annotate(total=Coalesce(models.Sum("new_displacement", output_field=models.IntegerField()), 0))
-            .order_by("year")
+            # `year` alone is a partial sort -- a year holds one row per country -- so the
+            # order of a year's countries would otherwise follow the plan and differ per run.
+            .order_by("year", "iso3")
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
@@ -612,14 +760,25 @@ class Query(graphene.ObjectType):
             disaster_qs.filter(total_displacement__gt=0)
             .values("year")
             .annotate(total=Coalesce(models.Sum("total_displacement", output_field=models.IntegerField()), 0))
-            .order_by("year")
+            # `year` alone is a partial sort -- a year holds one row per country -- so the
+            # order of a year's countries would otherwise follow the plan and differ per run.
+            .order_by("year", "iso3")
             .values("year", "total", "country_id", "country_name", "iso3")
         )
 
+        # IDP stock is point-in-time, so the per-category total stays inside the one year.
         categories_qs = (
             disaster_qs.values("hazard_type", "hazard_type__id")
             .annotate(
                 total=Coalesce(models.Sum("new_displacement", output_field=models.IntegerField()), 0),
+                total_idp=Coalesce(
+                    models.Sum(
+                        "total_displacement",
+                        filter=idp_stock_q_for_aggregate(disaster_stock_year),
+                        output_field=models.IntegerField(),
+                    ),
+                    0,
+                ),
                 label=models.Case(
                     models.When(hazard_type=None, then=models.Value("Not labeled")),
                     default=models.F("hazard_type_name"),
@@ -646,12 +805,13 @@ class Query(graphene.ObjectType):
             total_displacements=disaster_total_displacement_qs.aggregate(
                 total=Coalesce(models.Sum("total_displacement", output_field=models.IntegerField()), 0)
             )["total"],
-            total_events=disaster_new_displacement_qs.filter(
-                models.Q(new_displacement__gt=0) | models.Q(total_displacement__gt=0)
+            # Rows are per (event, country, year), so a count of them would report one event as
+            # many. `event_raw_id` survives the event's deletion, unlike `event_id`.
+            total_events=GiddEventDisplacementFilter(data=event_filter_data)
+            .qs.filter(
+                models.Q(cause=Crisis.CRISIS_TYPE.DISASTER) & displacement_q_for_listing(start_year, end_year),
             )
-            .values("event__name")
-            .annotate(events=models.Count("id"))
-            .aggregate(total_events=Coalesce(models.Sum("events", output_field=models.IntegerField()), 0))["total_events"],
+            .aggregate(total=models.Count("event_raw_id", distinct=True))["total"],
             total_displacement_countries=disaster_total_displacement_qs.distinct("iso3").count(),
             internal_displacement_countries=disaster_new_displacement_qs.distinct("iso3").count(),
             new_displacement_timeseries_by_year=[
@@ -698,6 +858,8 @@ class Query(graphene.ObjectType):
                     label=item["label"],
                     new_displacements=item["total"],
                     new_displacements_rounded=round_and_remove_zero(item["total"]),
+                    total_displacements=item["total_idp"],
+                    total_displacements_rounded=round_and_remove_zero(item["total_idp"]),
                 )
                 for item in categories_qs
             ],
@@ -714,9 +876,30 @@ class Query(graphene.ObjectType):
                 id=hazard["hazard_type__id"],
                 name=hazard["hazard_type__name"],
             )
-            for hazard in Disaster.objects.values("hazard_type__id", "hazard_type__name").distinct(
-                "hazard_type__id", "hazard_type__name"
+            for hazard in GiddDisplacement.objects.filter(
+                cause=Crisis.CRISIS_TYPE.DISASTER,
+                hazard_type__isnull=False,
             )
+            .values("hazard_type__id", "hazard_type__name")
+            .distinct("hazard_type__id", "hazard_type__name")
+        ]
+
+    @staticmethod
+    def resolve_gidd_public_violence_sub_types(parent, info, **kwargs):
+        client_id = kwargs.pop("client_id")
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_VIOLENCE_SUB_TYPES_GRAPHQL)
+
+        return [
+            GiddViolenceSubType(
+                id=row["violence_sub_type__id"],
+                name=row["violence_sub_type_name"],
+            )
+            for row in GiddDisplacement.objects.filter(
+                cause=Crisis.CRISIS_TYPE.CONFLICT,
+                violence_sub_type__isnull=False,
+            )
+            .values("violence_sub_type__id", "violence_sub_type_name")
+            .distinct("violence_sub_type__id", "violence_sub_type_name")
         ]
 
     @staticmethod
@@ -738,29 +921,29 @@ class Query(graphene.ObjectType):
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_EVENT_GRAPHQL)
 
         event_id = kwargs["event_id"]
-        disaster_qs = DisasterFilter(data=kwargs).qs.filter(event_raw_id=event_id)
+        # Not cause-scoped: an event is resolved across conflict and disaster rows alike, and
+        # carries one row per country it touched.
+        event_qs = GiddEventDisplacementFilter(data=kwargs).qs.filter(event_raw_id=event_id)
 
-        if not disaster_qs.exists():
+        if not event_qs.exists():
             return None
 
-        # NOTE:- There is always one object after group by event_name attrs
-        # so first objects is taken directly from queryset instead of iterating
-        event_data = (
-            disaster_qs.values(
-                "event_name",
-                "start_date",
-                "end_date",
-                "event_codes",
-                "event_codes_type",
-            )
-            .order_by()
-            .annotate(
-                total_new_displacement=models.Sum("new_displacement"),
-            )[0]
-        )
+        base = event_qs.values(
+            "event_name",
+            "start_date",
+            "end_date",
+            "all_country_event_codes",
+            "all_country_event_codes_type",
+        ).first()
+        total_new_displacement = event_qs.aggregate(total=models.Sum("new_displacement"))["total"]
+
+        # The all-country columns, not the row-scoped `event_codes`: a country that registered a
+        # code but produced no figures has no row here, so aggregating rows would drop its code.
+        event_codes = (base or {}).get("all_country_event_codes") or []
+        event_codes_type = (base or {}).get("all_country_event_codes_type") or []
 
         affected_countries_qs = (
-            disaster_qs.values(
+            event_qs.values(
                 "country_name",
                 "iso3",
             )
@@ -770,17 +953,21 @@ class Query(graphene.ObjectType):
             )
         )
 
-        hazard_types_qs = disaster_qs.values("hazard_type_id", "hazard_type__name").distinct(
-            "hazard_type_id", "hazard_type__name"
+        hazard_types_qs = (
+            event_qs.filter(hazard_type__isnull=False)
+            # hazard_type_name is denormalised onto the row, so the published name is the one the
+            # release captured rather than the live table's current value.
+            .values("hazard_type_id", "hazard_type_name")
+            .distinct("hazard_type_id", "hazard_type_name")
         )
         return GiddEventType(
-            event_name=event_data.get("event_name"),
-            new_displacement_rounded=round_and_remove_zero(event_data.get("total_new_displacement")),
-            new_displacement=event_data.get("total_new_displacement"),
-            start_date=event_data.get("start_date"),
-            end_date=event_data.get("end_date"),
-            event_codes=event_data.get("event_codes"),
-            event_codes_type=event_data.get("event_codes_type"),
+            event_name=base.get("event_name"),
+            new_displacement_rounded=round_and_remove_zero(total_new_displacement),
+            new_displacement=total_new_displacement,
+            start_date=base.get("start_date"),
+            end_date=base.get("end_date"),
+            event_codes=event_codes,
+            event_codes_type=event_codes_type,
             affected_countries=[
                 GiddEventAffectedCountryType(
                     iso3=country_data["iso3"],
@@ -793,7 +980,7 @@ class Query(graphene.ObjectType):
             hazard_types=[
                 GiddHazardType(
                     id=hazard_type["hazard_type_id"],
-                    name=hazard_type["hazard_type__name"],
+                    name=hazard_type["hazard_type_name"],
                 )
                 for hazard_type in hazard_types_qs
             ],
@@ -806,12 +993,13 @@ class Query(graphene.ObjectType):
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_COMBINED_STAT_GRAPHQL)
 
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
+        end_year = resolve_stock_year(kwargs, kwargs.pop("end_year", None))
 
-        filters = custom_date_filters(start_year, end_year)
+        new_displacement_q = new_displacement_q_for_aggregate(start_year, end_year)
 
-        disaster_total_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
-        disaster_internal_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
+        disaster_base = DisasterStatisticsFilter(data=kwargs).qs
+        disaster_total_displacement_qs = disaster_base.filter(idp_stock_q_for_aggregate(end_year))
+        disaster_internal_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(new_displacement_q)
 
         disaster_total_displacement_stats = disaster_total_displacement_qs.aggregate(
             models.Sum("total_displacement"),
@@ -827,10 +1015,19 @@ class Query(graphene.ObjectType):
             disaster_internal_displacement_qs.order_by().values_list("iso3", flat=True).distinct()
         )
 
-        # ConflictStatisticsFilter declares no hazard filter, and django-filter drops keys it
-        # does not declare, so the disaster-only `hazard_types` passes through harmlessly.
-        conflict_total_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("idps_date_filters"))
-        conflict_internal_displacement_qs = ConflictStatisticsFilter(data=kwargs).qs.filter(**filters.get("nd_date_filters"))
+        # Hazard filters scope the disaster side only, so the combined figure stays every conflict
+        # row plus the matching disaster rows -- a true total for the scope asked about rather than
+        # a disaster-only figure under a combined name. ConflictStatisticsFilter would ignore these
+        # keys anyway; dropping them keeps both call sites' inputs explicit.
+        conflict_kwargs = {
+            key: value
+            for key, value in kwargs.items()
+            if key not in ("hazard_types", "hazard_sub_types", "hazard_categories", "hazard_sub_categories")
+        }
+
+        conflict_base = ConflictStatisticsFilter(data=conflict_kwargs).qs
+        conflict_total_displacement_qs = conflict_base.filter(idp_stock_q_for_aggregate(end_year))
+        conflict_internal_displacement_qs = ConflictStatisticsFilter(data=conflict_kwargs).qs.filter(new_displacement_q)
 
         conflict_total_displacement_stats = conflict_total_displacement_qs.aggregate(
             models.Sum("total_displacement"),
@@ -874,4 +1071,133 @@ class Query(graphene.ObjectType):
                     ]
                 )
             ),
+        )
+
+    @staticmethod
+    def resolve_gidd_public_country_displacements(parent, info, **kwargs):
+        client_id = kwargs.pop("client_id")
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_COUNTRY_DISPLACEMENT_GRAPHQL)
+
+        conflict_filter, disaster_filter = cause_typology_filters(kwargs)
+
+        qs = GiddCountryDisplacementFilter(data=kwargs).qs
+
+        # new_displacement is a flow, so it sums across the whole window. total_displacement is
+        # IDP stock (point-in-time), so it is confined to a single year: end_year, or the
+        # (pre-)release year when end_year is omitted.
+        end_year = resolve_stock_year(kwargs, kwargs.get("end_year"))
+        conflict_stock_year = end_year
+        disaster_stock_year = end_year
+
+        rows = (
+            qs.values("iso3", "country_name", "country_id")
+            .annotate(
+                conflict_new_displacement=Coalesce(models.Sum("new_displacement", filter=conflict_filter), 0),
+                conflict_total_displacement=Coalesce(
+                    models.Sum(
+                        "total_displacement", filter=conflict_filter & idp_stock_q_for_aggregate(conflict_stock_year)
+                    ),
+                    0,
+                ),
+                disaster_new_displacement=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
+                disaster_total_displacement=Coalesce(
+                    models.Sum(
+                        "total_displacement", filter=disaster_filter & idp_stock_q_for_aggregate(disaster_stock_year)
+                    ),
+                    0,
+                ),
+            )
+            .filter(
+                Q(conflict_new_displacement__gt=0)
+                | Q(conflict_total_displacement__gt=0)
+                | Q(disaster_new_displacement__gt=0)
+                | Q(disaster_total_displacement__gt=0)
+            )
+            .order_by("iso3")
+        )
+
+        return [
+            GiddCountryDisplacementType(
+                iso3=row["iso3"],
+                country_name=row["country_name"],
+                country_id=row["country_id"],
+                conflict_new_displacement=row["conflict_new_displacement"] or None,
+                conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_new_displacement"]),
+                conflict_total_displacement=row["conflict_total_displacement"] or None,
+                conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_total_displacement"]),
+                disaster_new_displacement=row["disaster_new_displacement"] or None,
+                disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_new_displacement"]),
+                disaster_total_displacement=row["disaster_total_displacement"] or None,
+                disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_total_displacement"]),
+            )
+            for row in rows
+        ]
+
+    @staticmethod
+    def resolve_gidd_public_country_year_displacements(parent, info, **kwargs):
+        client_id = kwargs.pop("client_id")
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_COUNTRY_YEAR_DISPLACEMENT_GRAPHQL)
+
+        conflict_filter, disaster_filter = cause_typology_filters(kwargs)
+        page = max(1, kwargs.pop("page", None) or 1)
+        page_size = get_page_size(kwargs.pop("page_size", None) or GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE)
+        ordering = kwargs.pop("ordering", None)
+
+        # NULLS LAST throughout. The tiebreak is appended below instead, once the grouped queryset
+        # exists for `tiebreak_fields` to derive it from.
+        order_by = []
+        ordered_columns = []
+        for token in (ordering or "").replace(" ", "").split(","):
+            if not token:
+                continue
+            descending = token.startswith("-")
+            key = to_snake_case(strip_direction(token))
+            if key not in GIDD_COUNTRY_YEAR_SORTABLE:
+                raise ValueError(f"Invalid ordering field: {key}")
+            ordered_columns.append(key)
+            order_by.append(models.F(key).desc(nulls_last=True) if descending else models.F(key).asc(nulls_last=True))
+        qs = GiddCountryDisplacementFilter(data=kwargs).qs
+
+        rows = (
+            qs.values("iso3", "country_name", "country_id", "year")
+            .annotate(
+                conflict_new_displacement=Coalesce(models.Sum("new_displacement", filter=conflict_filter), 0),
+                conflict_total_displacement=Coalesce(models.Sum("total_displacement", filter=conflict_filter), 0),
+                disaster_new_displacement=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
+                disaster_total_displacement=Coalesce(models.Sum("total_displacement", filter=disaster_filter), 0),
+            )
+            .filter(
+                Q(conflict_new_displacement__gt=0)
+                | Q(conflict_total_displacement__gt=0)
+                | Q(disaster_new_displacement__gt=0)
+                | Q(disaster_total_displacement__gt=0)
+            )
+        )
+
+        for tiebreak in tiebreak_fields(rows, ordered_columns):
+            order_by.append(models.F(tiebreak).asc(nulls_last=True))
+        rows = rows.order_by(*order_by)
+
+        offset = (page - 1) * page_size
+        return GiddCountryYearDisplacementListType(
+            total_count=rows.count(),
+            page=page,
+            page_size=page_size,
+            results=[
+                GiddCountryYearDisplacementType(
+                    iso3=row["iso3"],
+                    country_name=row["country_name"],
+                    country_id=row["country_id"],
+                    year=row["year"],
+                    conflict_new_displacement=row["conflict_new_displacement"] or None,
+                    conflict_new_displacement_rounded=round_and_remove_zero(row["conflict_new_displacement"]),
+                    conflict_total_displacement=row["conflict_total_displacement"] or None,
+                    conflict_total_displacement_rounded=round_and_remove_zero(row["conflict_total_displacement"]),
+                    disaster_new_displacement=row["disaster_new_displacement"] or None,
+                    disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_new_displacement"]),
+                    disaster_total_displacement=row["disaster_total_displacement"] or None,
+                    disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_total_displacement"]),
+                )
+                for row in rows[offset : offset + page_size]
+            ],
         )

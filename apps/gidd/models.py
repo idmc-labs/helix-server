@@ -14,162 +14,8 @@ from apps.entry.models import Entry, Figure
 from utils.fields import UnbleachedTextField
 
 
-class Conflict(models.Model):
-    # Bounded to what GiddConflictType exposes: these lists are unauthenticated, and a column a
-    # caller cannot read back buys it nothing while widening what it can make the database do.
-    # To-many paths stay out because they fan the parent list out
-    # (apps/contrib/tests/test_to_many_ordering_fanout.py).
-    ORDERING_ALLOWLIST = frozenset(
-        {
-            "country_name",
-            "id",
-            "iso3",
-            "new_displacement",
-            "new_displacement_rounded",
-            "total_displacement",
-            "total_displacement_rounded",
-            "year",
-        }
-    )
-
-    country = models.ForeignKey(
-        "country.Country", related_name="country_conflict", on_delete=models.PROTECT, verbose_name=_("Country")
-    )
-    total_displacement = models.BigIntegerField(blank=True, null=True)
-    new_displacement = models.BigIntegerField(blank=True, null=True)
-
-    # Don't use these rounded fields to aggregate, just used to display and sort
-    total_displacement_rounded = models.BigIntegerField(blank=True, null=True)
-    new_displacement_rounded = models.BigIntegerField(blank=True, null=True)
-
-    year = models.IntegerField()
-
-    # Cached/Snapshot values
-    country_name = models.CharField(verbose_name=_("Name"), max_length=256)
-    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
-
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = _("Conflict")
-        verbose_name_plural = _("Conflicts")
-
-    def __str__(self):
-        return str(self.id)
-
-
-class Disaster(models.Model):
-    # See Conflict. The type exposes the `*_name` denormalisations and not the hazard FKs, so the
-    # REST serializer -- which exposes both -- ends up with a wider set than this.
-    ORDERING_ALLOWLIST = frozenset(
-        {
-            "country_name",
-            "end_date",
-            "end_date_accuracy",
-            "event_codes",
-            "event_codes_type",
-            "event_name",
-            "hazard_category_name",
-            "hazard_sub_category_name",
-            "hazard_sub_type_name",
-            "hazard_type_name",
-            "id",
-            "iso3",
-            "new_displacement",
-            "new_displacement_rounded",
-            "start_date",
-            "start_date_accuracy",
-            "total_displacement",
-            "total_displacement_rounded",
-            "year",
-        }
-    )
-
-    event = models.ForeignKey(
-        "event.Event", verbose_name=_("Event"), related_name="gidd_events", on_delete=models.SET_NULL, null=True, blank=True
-    )
-    event_raw_id = models.IntegerField(null=True, blank=True)
-    year = models.IntegerField()
-    country = models.ForeignKey(
-        "country.Country", related_name="country_disaster", on_delete=models.PROTECT, verbose_name=_("Country")
-    )
-
-    # Dates
-    start_date = models.DateField(blank=True, null=True)
-    start_date_accuracy = UnbleachedTextField(blank=True, null=True)
-    end_date = models.DateField(blank=True, null=True)
-    end_date_accuracy = UnbleachedTextField(blank=True, null=True)
-
-    hazard_category = models.ForeignKey(
-        "event.DisasterCategory", verbose_name=_("Hazard Category"), related_name="disasters", on_delete=models.PROTECT
-    )
-    hazard_sub_category = models.ForeignKey(
-        "event.DisasterSubCategory",
-        verbose_name=_("Hazard Sub Category"),
-        related_name="disasters",
-        on_delete=models.PROTECT,
-    )
-    hazard_type = models.ForeignKey(
-        "event.DisasterType", verbose_name=_("Hazard Type"), related_name="disasters", on_delete=models.PROTECT
-    )
-    hazard_sub_type = models.ForeignKey(
-        "event.DisasterSubType", verbose_name=_("Hazard Sub Type"), related_name="disasters", on_delete=models.PROTECT
-    )
-
-    new_displacement = models.BigIntegerField(blank=True, null=True)
-    total_displacement = models.BigIntegerField(blank=True, null=True)
-
-    # Don't use these rounded fields to aggregate, just used to display and sort
-    total_displacement_rounded = models.BigIntegerField(blank=True, null=True)
-    new_displacement_rounded = models.BigIntegerField(blank=True, null=True)
-
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    # Cached/Snapshot values
-    event_name = models.CharField(verbose_name=_("Event name"), max_length=256)
-    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
-    country_name = models.CharField(verbose_name=_("Name"), max_length=256)
-    hazard_category_name = models.CharField(max_length=256, blank=True)
-    hazard_sub_category_name = models.CharField(max_length=256, blank=True)
-    hazard_sub_type_name = models.CharField(max_length=256, blank=True)
-    hazard_type_name = models.CharField(max_length=256, blank=True)
-
-    displacement_occurred = ArrayField(
-        base_field=enum.EnumField(
-            Figure.DISPLACEMENT_OCCURRED,
-            verbose_name=_("Displacement occurred"),
-        ),
-        default=list,
-    )
-
-    # Deprecated
-    glide_numbers = ArrayField(
-        models.CharField(verbose_name=_("Event Codes"), max_length=256),
-        default=list,
-    )
-    event_codes = ArrayField(
-        models.CharField(verbose_name=_("Event Codes"), max_length=256),
-        default=list,
-    )
-    event_codes_type = ArrayField(
-        models.CharField(verbose_name=_("Event Code Types"), max_length=256),
-        default=list,
-    )
-
-    class Meta:
-        verbose_name = _("Disaster")
-        verbose_name_plural = _("Disasters")
-
-    def __str__(self):
-        return str(self.id)
-
-
 class StatusLog(models.Model):
-    # See Conflict, though this list is authenticated and small.
+    # See GiddEventDisplacement.ORDERING_ALLOWLIST, though this list is authenticated and small.
     ORDERING_ALLOWLIST = frozenset(
         {
             "completed_at",
@@ -230,6 +76,13 @@ class StatusLog(models.Model):
 
 
 class ConflictLegacy(models.Model):
+    """Pre-2016 conflict displacement, imported once from CSV.
+
+    Nothing writes this table: the importer that populated it is gone and the generation derives
+    every year it covers from `Figure`. It is retained because those rows are the only copy of the
+    pre-2016 series in the system -- they are not derivable from Helix data.
+    """
+
     total_displacement = models.BigIntegerField(blank=True, null=True)
     new_displacement = models.BigIntegerField(blank=True, null=True)
     year = models.IntegerField()
@@ -248,6 +101,8 @@ class ConflictLegacy(models.Model):
 
 
 class DisasterLegacy(models.Model):
+    """Pre-2016 disaster displacement, imported once from CSV. See ConflictLegacy."""
+
     year = models.IntegerField()
     iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
     event_name = models.CharField(verbose_name=_("Event name"), max_length=256)
@@ -315,7 +170,8 @@ class ReleaseMetadata(models.Model):
 
 
 class PublicFigureAnalysis(models.Model):
-    # See Conflict. `description` is a TextField, so it is the most expensive key here.
+    # See GiddEventDisplacement.ORDERING_ALLOWLIST. `description` is a TextField, so it is the
+    # most expensive key here.
     ORDERING_ALLOWLIST = frozenset(
         {
             "description",
@@ -345,51 +201,6 @@ class PublicFigureAnalysis(models.Model):
     report_raw_id = models.IntegerField()
 
 
-class DisplacementData(models.Model):
-    # See Conflict. Unrounded figures are included so a caller can sort by the value it aggregates
-    # on, not only the display value.
-    ORDERING_ALLOWLIST = frozenset(
-        {
-            "conflict_new_displacement",
-            "conflict_new_displacement_rounded",
-            "conflict_total_displacement",
-            "conflict_total_displacement_rounded",
-            "country_name",
-            "disaster_new_displacement",
-            "disaster_new_displacement_rounded",
-            "disaster_total_displacement",
-            "disaster_total_displacement_rounded",
-            "id",
-            "iso3",
-            "year",
-        }
-    )
-
-    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
-    country_name = models.CharField(verbose_name=_("Country name"), max_length=256)
-    country = models.ForeignKey(
-        "country.Country", related_name="displacements", on_delete=models.PROTECT, verbose_name=_("Country")
-    )
-
-    conflict_total_displacement = models.BigIntegerField(null=True, verbose_name=_("Conflict total idps"))
-    conflict_new_displacement = models.BigIntegerField(null=True, verbose_name=_("Conflict total nd"))
-
-    disaster_total_displacement = models.BigIntegerField(null=True, verbose_name=_("Disaster total nds"))
-    disaster_new_displacement = models.BigIntegerField(null=True, verbose_name=_("Disaster total nd"))
-
-    year = models.IntegerField(verbose_name=_("Year"))
-
-    # Don't use these rounded fields to aggregate, just used to display and sort
-    conflict_total_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Conflict total idps"))
-    conflict_new_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Conflict total nd"))
-
-    disaster_total_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Disaster total nds"))
-    disaster_new_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_("Disaster total nd"))
-
-    def __str__(self):
-        return self.iso3
-
-
 class IdpsSaddEstimate(models.Model):
     iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
     country_name = models.CharField(verbose_name=_("Country name"), max_length=256)
@@ -412,7 +223,7 @@ class IdpsSaddEstimate(models.Model):
 
 
 class GiddEvent(MetaInformationAbstractModel):
-    name = models.CharField(verbose_name=_("Event Name"), max_length=256)
+    name = models.TextField(verbose_name=_("Event Name"))
     event_raw_id = models.IntegerField(null=True, blank=True)
     event = models.ForeignKey(
         "event.Event", verbose_name=_("Event"), related_name="+", on_delete=models.SET_NULL, null=True, blank=True
@@ -441,7 +252,7 @@ class GiddEvent(MetaInformationAbstractModel):
         default=list,
     )
     event_codes = ArrayField(
-        models.CharField(verbose_name=_("Event Codes"), max_length=256),
+        models.TextField(verbose_name=_("Event Codes")),
         default=list,
     )
     event_codes_type = ArrayField(
@@ -451,7 +262,7 @@ class GiddEvent(MetaInformationAbstractModel):
         default=list,
     )
     event_codes_iso3 = ArrayField(
-        models.CharField(verbose_name=_("Event Code ISO3"), max_length=256),
+        models.TextField(verbose_name=_("Event Code ISO3")),
         default=list,
     )
     event_codes_ids = ArrayField(
@@ -597,7 +408,7 @@ class GiddFigure(MetaInformationAbstractModel):
     )
     source_excerpt = UnbleachedTextField(verbose_name=_("Excerpt from Source"), blank=True, null=True)
     sources = ArrayField(
-        models.CharField(verbose_name=_("Sources"), max_length=256),
+        models.TextField(verbose_name=_("Sources")),
         default=list,
     )
     sources_ids = ArrayField(
@@ -607,7 +418,7 @@ class GiddFigure(MetaInformationAbstractModel):
         default=list,
     )
     sources_type = ArrayField(
-        models.CharField(verbose_name=_("Sources Type"), max_length=256),
+        models.TextField(verbose_name=_("Sources Type")),
         default=list,
     )
     publishers_ids = ArrayField(
@@ -617,11 +428,11 @@ class GiddFigure(MetaInformationAbstractModel):
         default=list,
     )
     publishers = ArrayField(
-        models.CharField(verbose_name=_("Publishers"), max_length=256),
+        models.TextField(verbose_name=_("Publishers")),
         default=list,
     )
     publishers_type = ArrayField(
-        models.CharField(verbose_name=_("Publishers Type"), max_length=256),
+        models.TextField(verbose_name=_("Publishers Type")),
         default=list,
     )
 
@@ -637,7 +448,7 @@ class GiddFigure(MetaInformationAbstractModel):
         null=True,
     )
     entry_raw_id = models.IntegerField(null=True, blank=True)
-    entry_name = models.CharField(max_length=512, verbose_name=_("Entry Title"), blank=True, null=True)
+    entry_name = models.TextField(verbose_name=_("Entry Title"), blank=True, null=True)
     context_of_violence = ArrayField(
         models.CharField(verbose_name=_("Context of Violences"), max_length=256),
         default=list,
@@ -675,11 +486,11 @@ class GiddFigure(MetaInformationAbstractModel):
     )
 
     locations_coordinates = ArrayField(
-        models.CharField(verbose_name=_("Location Coordinates"), max_length=256),
+        models.TextField(verbose_name=_("Location Coordinates")),
         default=list,
     )
     locations_names = ArrayField(
-        models.CharField(verbose_name=_("Location Names"), max_length=256),
+        models.TextField(verbose_name=_("Location Names")),
         default=list,
     )
     locations_accuracy = ArrayField(
@@ -692,6 +503,21 @@ class GiddFigure(MetaInformationAbstractModel):
         models.IntegerField(
             verbose_name=_("Location Type"),
         ),
+        default=list,
+    )
+    locations_pcode = ArrayField(
+        models.TextField(verbose_name=_("Location P-Code"), null=True),
+        default=list,
+    )
+    locations_pcode_accuracy = ArrayField(
+        models.IntegerField(
+            verbose_name=_("Location P-Code Accuracy"),
+            null=True,
+        ),
+        default=list,
+    )
+    locations_pcode_source = ArrayField(
+        models.TextField(verbose_name=_("Location P-Code Source"), null=True),
         default=list,
     )
     displacement_occurred = enum.EnumField(
@@ -773,3 +599,165 @@ class GiddFigure(MetaInformationAbstractModel):
 
     def __str__(self):
         return self.iso3
+
+
+class GiddDisplacement(models.Model):
+    """
+    Displacement figures aggregated by country + year + cause + violence/hazard subtype.
+    Conflict rows: violence + violence_sub_type set; hazard fields null.
+    Disaster rows: hazard_type + hazard_sub_type set; violence fields null.
+    """
+
+    country = models.ForeignKey("country.Country", related_name="gidd_displacements", on_delete=models.PROTECT)
+    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
+    country_name = models.CharField(verbose_name=_("Country name"), max_length=256)
+    year = models.IntegerField()
+    cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_("Cause"))
+
+    # Conflict fields (null for disaster rows)
+    violence = models.ForeignKey("event.Violence", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
+    violence_name = models.CharField(max_length=256, blank=True, null=True)
+    violence_sub_type = models.ForeignKey(
+        "event.ViolenceSubType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    violence_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
+
+    # Disaster fields (null for conflict rows)
+    hazard_category = models.ForeignKey(
+        "event.DisasterCategory", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    hazard_category_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_sub_category = models.ForeignKey(
+        "event.DisasterSubCategory", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    hazard_sub_category_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_type = models.ForeignKey("event.DisasterType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
+    hazard_type_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_sub_type = models.ForeignKey(
+        "event.DisasterSubType", null=True, blank=True, related_name="+", on_delete=models.SET_NULL
+    )
+    hazard_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
+
+    new_displacement = models.BigIntegerField(blank=True, null=True)
+    new_displacement_rounded = models.BigIntegerField(blank=True, null=True)
+    total_displacement = models.BigIntegerField(blank=True, null=True)
+    total_displacement_rounded = models.BigIntegerField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("GIDD Disaggregated Displacement")
+        verbose_name_plural = _("GIDD Disaggregated Displacements")
+
+    def __str__(self):
+        return f"{self.iso3} - {self.year} - {self.cause}"
+
+
+class GiddEventDisplacement(models.Model):
+    """
+    Displacement figures per event + country + year + cause + violence/hazard subtype.
+    Unified event-level table for both conflict and disaster.
+    Conflict rows: violence + violence_sub_type set; hazard fields null.
+    Disaster rows: hazard_type + hazard_sub_type set; violence fields null.
+    """
+
+    # Every scalar column `giddPublicDisplacementEvents` publishes, and nothing else: a sort key a caller
+    # cannot read back only widens what an unauthenticated request can make the database do.
+    # REST ordering is bounded separately, by the serializer's own fields.
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "cause",
+            "country_name",
+            "end_date",
+            "event_name",
+            "hazard_category_name",
+            "hazard_sub_category_name",
+            "hazard_sub_type_name",
+            "hazard_type_name",
+            "id",
+            "iso3",
+            "new_displacement",
+            "new_displacement_rounded",
+            "start_date",
+            "total_displacement",
+            "total_displacement_rounded",
+            "violence_name",
+            "violence_sub_type_name",
+            "year",
+        }
+    )
+
+    event = models.ForeignKey("event.Event", null=True, blank=True, related_name="+", on_delete=models.SET_NULL)
+    event_raw_id = models.IntegerField(null=True, blank=True)
+    event_name = models.TextField(verbose_name=_("Event name"))
+
+    country = models.ForeignKey("country.Country", related_name="gidd_event_displacements", on_delete=models.PROTECT)
+    iso3 = models.CharField(verbose_name=_("ISO3"), max_length=5)
+    country_name = models.CharField(verbose_name=_("Country name"), max_length=256)
+    year = models.IntegerField()
+    cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_("Cause"))
+
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
+
+    event_codes = ArrayField(models.TextField(verbose_name=_("Event Codes")), default=list)
+    # Published by /gidd/disasters/ only; not exposed in GraphQL.
+    start_date_accuracy = models.TextField(blank=True, null=True)
+    end_date_accuracy = models.TextField(blank=True, null=True)
+    event_codes_type = ArrayField(models.TextField(verbose_name=_("Event Code Types")), default=list)
+    # /gidd/disasters/ publishes an event's codes across ALL its countries, not just this row's.
+    # Stored rather than derived per request: a released dump must not change because EventCode
+    # moved on, and reading a column keeps the export a streamable queryset. `event_codes` above
+    # stays country-correct, for GraphQL.
+    all_country_event_codes = ArrayField(models.TextField(verbose_name=_("Event Codes (all countries)")), default=list)
+    all_country_event_codes_type = ArrayField(
+        models.TextField(verbose_name=_("Event Code Types (all countries)")), default=list
+    )
+    displacement_occurred = ArrayField(
+        base_field=enum.EnumField(Figure.DISPLACEMENT_OCCURRED, verbose_name=_("Displacement occurred")),
+        default=list,
+    )
+
+    # Conflict fields (null for disaster rows)
+    # PROTECT, not SET_NULL: these ids are published (the typology *Id fields on
+    # GiddEventDisplacementType, and the hazard fields DisasterSerializer renders as pks), so a
+    # deletion in Helix would rewrite what an already-published release says. `event` stays
+    # SET_NULL because event_raw_id carries the published id instead.
+    violence = models.ForeignKey("event.Violence", null=True, blank=True, related_name="+", on_delete=models.PROTECT)
+    violence_name = models.CharField(max_length=256, blank=True, null=True)
+    violence_sub_type = models.ForeignKey(
+        "event.ViolenceSubType", null=True, blank=True, related_name="+", on_delete=models.PROTECT
+    )
+    violence_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
+
+    # Disaster fields (null for conflict rows)
+    hazard_category = models.ForeignKey(
+        "event.DisasterCategory", null=True, blank=True, related_name="+", on_delete=models.PROTECT
+    )
+    hazard_category_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_sub_category = models.ForeignKey(
+        "event.DisasterSubCategory", null=True, blank=True, related_name="+", on_delete=models.PROTECT
+    )
+    hazard_sub_category_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_type = models.ForeignKey("event.DisasterType", null=True, blank=True, related_name="+", on_delete=models.PROTECT)
+    hazard_type_name = models.CharField(max_length=256, blank=True, null=True)
+    hazard_sub_type = models.ForeignKey(
+        "event.DisasterSubType", null=True, blank=True, related_name="+", on_delete=models.PROTECT
+    )
+    hazard_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
+
+    new_displacement = models.BigIntegerField(blank=True, null=True)
+    new_displacement_rounded = models.BigIntegerField(blank=True, null=True)
+    total_displacement = models.BigIntegerField(blank=True, null=True)
+    total_displacement_rounded = models.BigIntegerField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("GIDD Event Displacement")
+        verbose_name_plural = _("GIDD Event Displacements")
+
+    def __str__(self):
+        return f"{self.event_name} - {self.iso3} - {self.year}"

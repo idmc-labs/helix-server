@@ -4,7 +4,7 @@ from pathlib import Path
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from django.db.models import Case, F, Q, When
+from django.db.models import Case, F, Q, Sum, When
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
@@ -30,11 +30,18 @@ from apps.crisis.models import Crisis
 from apps.entry.models import ExternalApiDump, Figure, FigureLocation
 from apps.event.models import EventCode
 from utils.common import client_id, get_valid_xml_string, track_gidd
-from utils.graphene.ordering import leads_descending, orders_by_pk
+from utils.db import rounded_figure_expr, tiebreak_fields
 from utils.streaming import stream_json_object_with_array
 
 from .cache import GiddExportCache
-from .models import Conflict, Disaster, DisplacementData, GiddFigure, IdpsSaddEstimate, PublicFigureAnalysis, StatusLog
+from .models import (
+    GiddDisplacement,
+    GiddEventDisplacement,
+    GiddFigure,
+    IdpsSaddEstimate,
+    PublicFigureAnalysis,
+    StatusLog,
+)
 from .paginations import GiddLimitOffsetPagination
 from .readme_revisions import REVISIONS_SEPTEMBER_2026, SEPTEMBER_2026_NOTE, revision_block
 from .rest_filters import (
@@ -71,6 +78,12 @@ def _get_location_accuracy_label(accuracy):
     return get_enum_label(FigureLocation.ACCURACY.get(accuracy))
 
 
+def _get_pcode_accuracy_label(accuracy):
+    if accuracy is None:
+        return None
+    return get_enum_label(FigureLocation.PCODE_ACCURACY.get(accuracy))
+
+
 def _get_location_type_label(type):
     if type is None:
         return None
@@ -84,11 +97,25 @@ def _get_event_code_label(key: str):
 
 
 def _get_location_accuracy_labels(location_accuracy: typing.List[typing.Tuple[int]]) -> str:
-    return string_join(EXTERNAL_ARRAY_SEPARATOR, [_get_location_accuracy_label(accuracy) for accuracy in location_accuracy])
+    return _join_keeping_gaps([_get_location_accuracy_label(accuracy) for accuracy in location_accuracy])
+
+
+def _join_keeping_gaps(values) -> str:
+    """Join with a slot for every element, so each value stays under its own location.
+
+    The location columns are positionally paired, and `string_join` drops `None`: one missing
+    p-code would shift every later value one position left, silently pairing it with the wrong
+    location.
+    """
+    return EXTERNAL_ARRAY_SEPARATOR.join("" if value is None else str(value) for value in values or [])
+
+
+def _get_pcode_accuracy_labels(pcode_accuracy) -> str:
+    return _join_keeping_gaps([_get_pcode_accuracy_label(accuracy) for accuracy in pcode_accuracy or []])
 
 
 def _get_location_type_labels(location_type: typing.List[typing.Tuple[int]]) -> str:
-    return string_join(EXTERNAL_ARRAY_SEPARATOR, [_get_location_type_label(type) for type in location_type])
+    return _join_keeping_gaps([_get_location_type_label(type) for type in location_type])
 
 
 def get_hyperlink(ws, url, text):
@@ -124,16 +151,17 @@ class GiddOrderingFilter(filters.OrderingFilter):
 
     def get_ordering(self, request, queryset, view):
         ordering = super().get_ordering(request, queryset, view)
-        pk_name = queryset.model._meta.pk.name
         if not ordering:
             # Exports iterate the queryset whole, so sorting one here would reorder a file nobody
             # asked to be sorted.
-            return [pk_name] if getattr(view, "paginator", None) is not None else ordering
-        if orders_by_pk(ordering, pk_name):
-            return ordering
-        # Direction follows the leading key, as `nulls_last_order_queryset` does: a fixed ASC
-        # tiebreak reads a bulk-created batch backwards under a descending sort.
-        return [*ordering, f"-{pk_name}" if leads_descending(ordering) else pk_name]
+            if getattr(view, "paginator", None) is None:
+                return ordering
+            # `filter_queryset` applies this through `order_by()`, which REPLACES whatever the
+            # queryset carries, so an endpoint's own default ordering is restated to survive.
+            ordering = [key for key in queryset.query.order_by if isinstance(key, str)]
+            if not ordering:
+                return tiebreak_fields(queryset)
+        return [*ordering, *tiebreak_fields(queryset, ordering)]
 
     def get_valid_fields(self, queryset, view, context={}):
         return [(term, term) for term in self._term_to_source(queryset, view, context)]
@@ -159,6 +187,13 @@ class GiddOrderingFilter(filters.OrderingFilter):
                     continue
             mapping[source] = source
             mapping.setdefault(field_name, source)
+        for term, source in getattr(serializer_class, "ORDERING_SOURCES", {}).items():
+            try:
+                queryset.model._meta.get_field(source)
+            except FieldDoesNotExist:
+                if source not in queryset.query.annotations:
+                    continue
+            mapping.setdefault(term, source)
         return mapping
 
     def remove_invalid_fields(self, queryset, fields, view, request):
@@ -236,7 +271,16 @@ class ConflictViewSet(ListOnlyViewSetMixin):
             ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST,
             viewset=self,
         )
-        return Conflict.objects.all()
+        # Rounded figures are not summable: the serializer recomputes them from these raw sums.
+        return (
+            GiddDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.CONFLICT)
+            .values("iso3", "country_name", "year")
+            .annotate(
+                new_displacement=Sum("new_displacement"),
+                total_displacement=Sum("total_displacement"),
+            )
+            .order_by("iso3", "year")
+        )
 
 
 @extend_schema_view(
@@ -261,12 +305,9 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             api_type,
             viewset=self,
         )
-        qs = Disaster.objects.all()
-        if self.action == "export":
-            # Only the xlsx export dereferences disaster.country; the list serializer
-            # reads the denormalised iso3/country_name columns, so joining there just
-            # instantiates one throwaway Country per row.
-            qs = qs.select_related("country")
+        # The cross-country event codes this dump publishes are read from stored columns rather
+        # than aggregated per request, which keeps this a plain streamable queryset.
+        qs = GiddEventDisplacement.objects.filter(cause=Crisis.CRISIS_TYPE.DISASTER).order_by("iso3", "year", "event_raw_id")
         return qs
 
     @staticmethod
@@ -304,8 +345,8 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         for disaster in qs.iterator(chunk_size=2000):
             ws.append(
                 [
-                    disaster.country.iso3,
-                    disaster.country.name,
+                    disaster.iso3,
+                    disaster.country_name,
                     disaster.year,
                     disaster.event_name,
                     disaster.start_date,
@@ -317,7 +358,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                     EXTERNAL_ARRAY_SEPARATOR.join(
                         [
                             f"{key}{EXTERNAL_FIELD_SEPARATOR}{value}"
-                            for key, value in zip(disaster.event_codes, disaster.event_codes_type)
+                            for key, value in zip(disaster.all_country_event_codes, disaster.all_country_event_codes_type)
                         ]
                     ),
                     disaster.event_raw_id,
@@ -524,6 +565,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
     def export(self, request):
         qs = self.filter_queryset(self.get_queryset())
         filename = "IDMC_GIDD_Disasters_Internal_Displacement_Data.xlsx"
+
         return GiddExportCache.get_or_create(
             filename,
             request,
@@ -559,7 +601,19 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             api_type,
             viewset=self,
         )
-        return DisplacementData.objects.all()
+        # A cause with no rows sums to NULL, not 0, which is what this endpoint publishes.
+        # Rounded figures are not summable: the serializer recomputes them for the list endpoint,
+        # and `export()` derives them in SQL.
+        return (
+            GiddDisplacement.objects.values("iso3", "country_name", "year")
+            .annotate(
+                conflict_new_displacement=Sum("new_displacement", filter=Q(cause=Crisis.CRISIS_TYPE.CONFLICT)),
+                conflict_total_displacement=Sum("total_displacement", filter=Q(cause=Crisis.CRISIS_TYPE.CONFLICT)),
+                disaster_new_displacement=Sum("new_displacement", filter=Q(cause=Crisis.CRISIS_TYPE.DISASTER)),
+                disaster_total_displacement=Sum("total_displacement", filter=Q(cause=Crisis.CRISIS_TYPE.DISASTER)),
+            )
+            .order_by("iso3", "year")
+        )
 
     def export_conflicts(self, ws, qs):
         ws.append(
@@ -576,13 +630,13 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         for item in qs.iterator(chunk_size=2000):
             ws.append(
                 [
-                    item.iso3,
-                    item.country_name,
-                    item.year,
-                    item.conflict_total_displacement_rounded,
-                    item.conflict_total_displacement,
-                    item.conflict_new_displacement_rounded,
-                    item.conflict_new_displacement,
+                    item["iso3"],
+                    item["country_name"],
+                    item["year"],
+                    item["conflict_total_displacement_rounded"],
+                    item["conflict_total_displacement"],
+                    item["conflict_new_displacement_rounded"],
+                    item["conflict_new_displacement"],
                 ]
             )
 
@@ -601,13 +655,13 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         for item in qs.iterator(chunk_size=2000):
             ws.append(
                 [
-                    item.iso3,
-                    item.country_name,
-                    item.year,
-                    item.disaster_new_displacement_rounded,
-                    item.disaster_new_displacement,
-                    item.disaster_total_displacement_rounded,
-                    item.disaster_total_displacement,
+                    item["iso3"],
+                    item["country_name"],
+                    item["year"],
+                    item["disaster_new_displacement_rounded"],
+                    item["disaster_new_displacement"],
+                    item["disaster_total_displacement_rounded"],
+                    item["disaster_total_displacement"],
                 ]
             )
 
@@ -630,17 +684,17 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         for item in qs.iterator(chunk_size=2000):
             ws.append(
                 [
-                    item.iso3,
-                    item.country_name,
-                    item.year,
-                    item.conflict_total_displacement_rounded,
-                    item.conflict_total_displacement,
-                    item.conflict_new_displacement_rounded,
-                    item.conflict_new_displacement,
-                    item.disaster_new_displacement_rounded,
-                    item.disaster_new_displacement,
-                    item.disaster_total_displacement_rounded,
-                    item.disaster_total_displacement,
+                    item["iso3"],
+                    item["country_name"],
+                    item["year"],
+                    item["conflict_total_displacement_rounded"],
+                    item["conflict_total_displacement"],
+                    item["conflict_new_displacement_rounded"],
+                    item["conflict_new_displacement"],
+                    item["disaster_new_displacement_rounded"],
+                    item["disaster_new_displacement"],
+                    item["disaster_total_displacement_rounded"],
+                    item["disaster_total_displacement"],
                 ]
             )
 
@@ -1127,9 +1181,17 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     )
     def export(self, request):
         # Track export
-        qs = self.filter_queryset(self.get_queryset()).order_by(
-            "-year",
-            "iso3",
+        # Rounded in SQL rather than in python: the sheet builders stream this with `.iterator()`,
+        # which needs it to stay a queryset.
+        qs = (
+            self.filter_queryset(self.get_queryset())
+            .annotate(
+                conflict_new_displacement_rounded=rounded_figure_expr("conflict_new_displacement"),
+                conflict_total_displacement_rounded=rounded_figure_expr("conflict_total_displacement"),
+                disaster_new_displacement_rounded=rounded_figure_expr("disaster_new_displacement"),
+                disaster_total_displacement_rounded=rounded_figure_expr("disaster_total_displacement"),
+            )
+            .order_by("-year", "iso3")
         )
 
         request_cause = request.GET.get("cause")
@@ -1192,6 +1254,9 @@ DISAGGREGATION_EXPORT_VALUES = (
     "locations_names",
     "locations_accuracy",
     "locations_type",
+    "locations_pcode",
+    "locations_pcode_accuracy",
+    "locations_pcode_source",
     "displacement_occurred",
     "event_main_trigger",
     "gidd_event__event_raw_id",
@@ -1218,9 +1283,8 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
     # ListOnlyViewSetMixin with pagination_class = None — an UNPAGINATED list over the whole
     # GiddFigure table, unrouted but one router.register away from shipping; drop the list
     # action instead of leaving the footgun.
-    # Ordered, with the pk as the tiebreak: the exports stream this queryset whole, and an
-    # unordered scan hands back rows in whatever order the plan chose, so the same data published
-    # twice differs by thousands of moved rows.
+    # Ordered with the pk as tiebreak: the exports stream this queryset whole, and an unordered
+    # scan hands back rows in plan order, so the same data published twice differs by moved rows.
     queryset = GiddFigure.objects.all().order_by("iso3", "year", "id")
     filter_backends = (DjangoFilterBackend,)
     filterset_class = DisaggregationFilterSet
@@ -1536,6 +1600,9 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                             "Locations name": item["locations_names"],
                             "Locations accuracy": [_get_location_accuracy_label(x) for x in item["locations_accuracy"]],
                             "Locations type": [_get_location_type_label(x) for x in item["locations_type"]],
+                            "Pcode": item["locations_pcode"],
+                            "Pcode accuracy": [_get_pcode_accuracy_label(x) for x in item["locations_pcode_accuracy"]],
+                            "Pcode source": item["locations_pcode_source"],
                             "Displacement occurred": self._get_displacement_occurred(item["displacement_occurred"]),
                         }
                     ),
@@ -1594,6 +1661,9 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                 "Locations name",
                 "Locations accuracy",
                 "Locations type",
+                "Pcode",
+                "Pcode accuracy",
+                "Pcode source",
                 "Displacement occurred",
             ]
         )
@@ -2089,10 +2159,13 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                         item["gidd_event__event_codes_iso3"],
                         item["iso3"],
                     ),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item["locations_coordinates"]),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item["locations_names"]),
+                    _join_keeping_gaps(item["locations_coordinates"]),
+                    _join_keeping_gaps(item["locations_names"]),
                     _get_location_accuracy_labels(item["locations_accuracy"]),
                     _get_location_type_labels(item["locations_type"]),
+                    _join_keeping_gaps(item["locations_pcode"]),
+                    _get_pcode_accuracy_labels(item["locations_pcode_accuracy"]),
+                    _join_keeping_gaps(item["locations_pcode_source"]),
                     self._get_displacement_occurred(item["displacement_occurred"]),
                 ]
             )

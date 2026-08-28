@@ -1845,26 +1845,34 @@ class ExternalApiDump(models.Model):
         IDUS_ALL_DISASTER = "idus-all-disaster", _("/external-api/idus/all/disaster/")
         IDUS_ALL_DISASTER_EXCEL = "idus-all-disaster-excel", _("/external-api/idus/all/disaster-excel/")
         IDUS_ALL_DISASTER_GEOJSON = "idus-all-disaster-geojson", _("/external-api/idus/all/disaster-geojson/")
+        IDU_REFERENCES = "idu-references", _("/external-api/idus/references/")
 
         GIDD_COUNTRY_REST = "gidd-country-rest", _("/external-api/gidd/countries/")
         GIDD_CONFLICT_REST = "gidd-conflict-rest", _("/external-api/gidd/conflicts/")
         GIDD_DISASTER_REST = "gidd-disaster-rest", _("/external-api/gidd/disasters/")
         GIDD_DISPLACEMENT_REST = "gidd-displacement-rest", _("/external-api/gidd/displacements/")
-        GIDD_DISASTER_EXPORT_REST = "gidd-disaster-export-rest", _("/external-api/gidd/disasters/export/")
-        GIDD_DISPLACEMENT_EXPORT_REST = "gidd-displacement-export-rest", _("/external-api/gidd/displacements/export/")
+        GIDD_DISASTER_EXPORT_REST = "gidd-disaster-export-rest", _("/external-api/gidd/disasters/disaster-export/")
+        GIDD_DISPLACEMENT_EXPORT_REST = (
+            "gidd-displacement-export-rest",
+            _("/external-api/gidd/displacements/displacement-export/"),
+        )
         GIDD_PUBLIC_FIGURE_ANALYSIS_REST = (
             "gidd-public-figure-analysis-rest",
             _("/external-api/gidd/public-figure-analyses/"),
         )
         GIDD_DISAGGREGATION_EXPORT_GEOJSON = (
             "gidd-disaggregation-export-geojson-rest",
-            _("/external-api/gidd/disaggregations/disaggregated-geojson/"),
+            _("/external-api/gidd/disaggregations/disaggregation-geojson/"),
         )
         GIDD_DISAGGREGATION_EXPORT_EXCEL = (
             "gidd-disaggregation-export-xlsx-rest",
-            _("/external-api/gidd/disaggregations/disaggregated-export/"),
+            _("/external-api/gidd/disaggregations/disaggregation-export/"),
         )
 
+        # No query resolves to these: the labels name fields the GraphQL schema does not define.
+        # They are `TextChoices` values already written into `api_type` columns, so the rows
+        # tracked under them stay readable; dropping them would cost a migration and orphan those
+        # rows for nothing.
         GIDD_CONFLICT_GRAPHQL = "gidd-conflict-graphql", _("query.giddPublicConflicts")
         GIDD_DISASTER_GRAPHQL = "gidd-disaster-graphql", _("query.giddPublicDisasters")
         GIDD_DISPLACEMENT_DATA_GRAPHQL = "gidd-displacement-data-graphql", _("query.giddPublicDisplacements")
@@ -1877,6 +1885,15 @@ class ExternalApiDump(models.Model):
         GIDD_COMBINED_STAT_GRAPHQL = "gidd-combined-stat-graphql", _("query.giddPublicCombinedStatistics")
         GIDD_RELEASE_META_DATA_GRAPHQL = "gidd-release-meta-data-graphql", _("query.giddPublicReleaseMetaData")
         GIDD_PUBLIC_COUNTRIES_GRAPHQL = "gidd-public-countries-graphql", _("query.giddPublicCountries")
+        # `giddPublicDisplacements` is not a schema field either; kept for the reason above.
+        GIDD_NEW_EVENTS_GRAPHQL = "gidd-new-events-graphql", _("query.giddPublicDisplacementEvents")
+        GIDD_COUNTRY_DISPLACEMENT_GRAPHQL = "gidd-country-displacement-graphql", _("query.giddPublicCountryDisplacements")
+        GIDD_COUNTRY_YEAR_DISPLACEMENT_GRAPHQL = (
+            "gidd-country-year-displacement-graphql",
+            _("query.giddPublicCountryYearDisplacements"),
+        )
+        # `giddPublicViolenceTypes` is not a schema field either; kept for the reason above.
+        GIDD_VIOLENCE_SUB_TYPES_GRAPHQL = "gidd-violence-sub-types-graphql", _("query.giddPublicViolenceSubTypes")
 
     class Status(models.IntegerChoices):
         PENDING = 0, "Pending"
@@ -2045,7 +2062,7 @@ class ExternalApiDump(models.Model):
             description="Conflict and disaster data aggregated by country and year",
             example_request=(
                 lambda request, client_code: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.GIDD_DISASTER_REST.label + f"?client_id={client_code}"
+                    ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_REST.label + f"?client_id={client_code}"
                 )
             ),
         ),
@@ -2170,6 +2187,43 @@ class ExternalApiDump(models.Model):
                     ExternalApiDump.ExternalApiType.GIDD_DISAGGREGATION_EXPORT_EXCEL.label + f"?client_id={client_code}"
                 )
             ),
+        ),
+        ExternalApiType.IDU_REFERENCES: Metadata(
+            response_type="JSON",
+            usage="External",
+            description=(
+                "Reference data for IDU filters: disaster types, violence types, "
+                "geographical groups and countries, updated every 2 hours"
+            ),
+            example_request=(
+                lambda request, client_code: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDU_REFERENCES.label + f"?client_id={client_code}"
+                )
+            ),
+        ),
+        ExternalApiType.GIDD_NEW_EVENTS_GRAPHQL: Metadata(
+            response_type="GraphQL - JSON",
+            usage=(lambda _, client_code: "IDMC Website" if client_code == IDMC_WEBSITE_CLIENT_CODE else "IDMC Widgets"),
+            description="",
+            example_request="",
+        ),
+        ExternalApiType.GIDD_COUNTRY_DISPLACEMENT_GRAPHQL: Metadata(
+            response_type="GraphQL - JSON",
+            usage=(lambda _, client_code: "IDMC Website" if client_code == IDMC_WEBSITE_CLIENT_CODE else "IDMC Widgets"),
+            description="",
+            example_request="",
+        ),
+        ExternalApiType.GIDD_COUNTRY_YEAR_DISPLACEMENT_GRAPHQL: Metadata(
+            response_type="GraphQL - JSON",
+            usage=(lambda _, client_code: "IDMC Website" if client_code == IDMC_WEBSITE_CLIENT_CODE else "IDMC Widgets"),
+            description="",
+            example_request="",
+        ),
+        ExternalApiType.GIDD_VIOLENCE_SUB_TYPES_GRAPHQL: Metadata(
+            response_type="GraphQL - JSON",
+            usage=(lambda _, client_code: "IDMC Website" if client_code == IDMC_WEBSITE_CLIENT_CODE else "IDMC Widgets"),
+            description="",
+            example_request="",
         ),
     }
 

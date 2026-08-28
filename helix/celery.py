@@ -80,6 +80,11 @@ app.conf.beat_schedule = {
         "args": [],
         **_every_hours(2),
     },
+    "generate-idus-references-dump-file": {
+        "task": "apps.contrib.tasks.generate_idus_references_dump_file",
+        "args": [],
+        **_every_hours(2),
+    },
     "save_and_delete_tracked_data_from_redis_to_db": {
         "task": "apps.contrib.tasks.save_and_delete_tracked_data_from_redis_to_db",
         "args": [],

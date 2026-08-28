@@ -25,7 +25,9 @@ from utils.graphene.ordering import get_ordering_allowlist
 from utils.graphene.pagination import GatedPageGraphqlPagination, nulls_last_order_queryset
 
 # Measured, not guessed: see test_no_list_field_uses_an_unguarded_pagination_class.
-SEEN_FLOOR = 71
+# Dropped by one when the gidd Conflict/Disaster models (and their Country reverse-relation list
+# fields) were removed, and by one more when giddPublicDisplacements was.
+SEEN_FLOOR = 69
 DYNAMIC_FLOOR = 6
 
 EXPECTED = {
@@ -300,22 +302,10 @@ EXPECTED = {
         "id",
         "modified_at",
     ],
-    "gidd.Conflict": [
-        "country_name",
-        "id",
-        "iso3",
-        "new_displacement",
-        "new_displacement_rounded",
-        "total_displacement",
-        "total_displacement_rounded",
-        "year",
-    ],
-    "gidd.Disaster": [
+    "gidd.GiddEventDisplacement": [
+        "cause",
         "country_name",
         "end_date",
-        "end_date_accuracy",
-        "event_codes",
-        "event_codes_type",
         "event_name",
         "hazard_category_name",
         "hazard_sub_category_name",
@@ -326,23 +316,10 @@ EXPECTED = {
         "new_displacement",
         "new_displacement_rounded",
         "start_date",
-        "start_date_accuracy",
         "total_displacement",
         "total_displacement_rounded",
-        "year",
-    ],
-    "gidd.DisplacementData": [
-        "conflict_new_displacement",
-        "conflict_new_displacement_rounded",
-        "conflict_total_displacement",
-        "conflict_total_displacement_rounded",
-        "country_name",
-        "disaster_new_displacement",
-        "disaster_new_displacement_rounded",
-        "disaster_total_displacement",
-        "disaster_total_displacement_rounded",
-        "id",
-        "iso3",
+        "violence_name",
+        "violence_sub_type_name",
         "year",
     ],
     "gidd.PublicFigureAnalysis": [

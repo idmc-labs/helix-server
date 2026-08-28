@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
@@ -452,6 +453,59 @@ def generate_idus_all_disaster_dump_file():
     from apps.entry.models import ExternalApiDump
 
     return _generate_idus_dump_file(ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER)
+
+
+@celery_app.task
+def generate_idus_references_dump_file():
+    from apps.country.models import Country, GeographicalGroup
+    from apps.entry.models import ExternalApiDump
+    from apps.event.models import DisasterSubType, DisasterType, Violence, ViolenceSubType
+
+    external_api_dump, _ = ExternalApiDump.objects.get_or_create(
+        api_type=ExternalApiDump.ExternalApiType.IDU_REFERENCES,
+        format=ExternalApiDump.Format.JSON,
+        include_sources=False,
+    )
+
+    try:
+        # snake_case throughout, matching the rest of the IDU family: FigureReadOnlySerializer,
+        # which every /idus/ dump is built from, publishes snake_case and no camelCase at all.
+        disaster_types = list(DisasterType.objects.values("id", "name").order_by("name"))
+        disaster_sub_types = list(DisasterSubType.objects.values("id", "name", "type_id").order_by("name"))
+        violence_types = list(Violence.objects.values("id", "name").order_by("name"))
+        violence_sub_types = list(ViolenceSubType.objects.values("id", "name", type_id=F("violence_id")).order_by("name"))
+        regions = list(GeographicalGroup.objects.values("id", "name").order_by("name"))
+        countries = list(
+            Country.objects.values(
+                "id",
+                "iso3",
+                "geographical_group_id",
+                "idmc_short_name",
+                bbox=F("bounding_box"),
+            ).order_by("idmc_short_name")
+        )
+
+        data = {
+            "disaster_types": disaster_types,
+            "disaster_sub_types": disaster_sub_types,
+            "violence_types": violence_types,
+            "violence_sub_types": violence_sub_types,
+            "geographical_groups": regions,
+            "countries": countries,
+        }
+
+        with get_temp_file(mode="w+") as tmp:
+            json.dump(data, tmp)
+            external_api_dump.dump_file.save("idu_references.json", File(tmp), save=False)
+
+        external_api_dump.status = ExternalApiDump.Status.COMPLETED
+        logger.info("IDU references dump file created")
+    except Exception:
+        external_api_dump.status = ExternalApiDump.Status.FAILED
+        logger.error("IDU references dump file generation failed", exc_info=True)
+
+    external_api_dump.save()
+    return True
 
 
 @celery_app.task
