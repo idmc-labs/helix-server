@@ -76,6 +76,18 @@ def _displacement_year_range(start_year, end_year):
     return q
 
 
+def displacement_q_for_listing(start_year, end_year):
+    """Rows in the window that carry a figure at all: either new displacement or IDP stock.
+
+    A row with both at zero says nothing, and counting it inflates every list and count that does
+    not go on to sum a column. Listing keeps the whole window for both figures -- only an aggregate
+    that collapses years has to choose between them.
+    """
+    return _displacement_year_range(start_year, end_year) & (
+        models.Q(new_displacement__gt=0) | models.Q(total_displacement__gt=0)
+    )
+
+
 def new_displacement_q_for_aggregate(start_year, end_year):
     """Rows summed for new displacement: a flow, so the whole window adds up."""
     return models.Q(new_displacement__gt=0) & _displacement_year_range(start_year, end_year)
@@ -785,10 +797,13 @@ class Query(graphene.ObjectType):
             total_displacements=disaster_total_displacement_qs.aggregate(
                 total=Coalesce(models.Sum("total_displacement", output_field=models.IntegerField()), 0)
             )["total"],
+            # Rows are per (event, country, year), so a count of them would report one event as
+            # many. `event_raw_id` survives the event's deletion, unlike `event_id`.
             total_events=GiddEventDisplacementFilter(data=event_filter_data)
-            .qs.filter(models.Q(cause=Crisis.CRISIS_TYPE.DISASTER) & new_displacement_q)
-            .filter(models.Q(new_displacement__gt=0) | models.Q(total_displacement__gt=0))
-            .count(),
+            .qs.filter(
+                models.Q(cause=Crisis.CRISIS_TYPE.DISASTER) & displacement_q_for_listing(start_year, end_year),
+            )
+            .aggregate(total=models.Count("event_raw_id", distinct=True))["total"],
             total_displacement_countries=disaster_total_displacement_qs.distinct("iso3").count(),
             internal_displacement_countries=disaster_new_displacement_qs.distinct("iso3").count(),
             new_displacement_timeseries_by_year=[

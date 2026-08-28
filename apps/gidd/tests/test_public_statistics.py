@@ -98,11 +98,14 @@ class TestGiddPublicStatistics(HelixGraphQLTestCase):
                 hazard_sub_type=hazard_sub_types[hazard.id],
             )
 
+        event_ids = {}
+
         def create_disaster(country, year, hazard, event_name, nd, idps):
             """The rollup row the statistics aggregate, plus its event-level row.
 
             Generation writes both grains, so a fixture that seeded only one would let a resolver
-            reading the wrong table pass.
+            reading the wrong table pass. One id per event name, since `totalEvents` counts events
+            and generation gives every row of one event the same `event_raw_id`.
             """
             common = dict(
                 country=country,
@@ -114,7 +117,8 @@ class TestGiddPublicStatistics(HelixGraphQLTestCase):
                 total_displacement=idps,
                 **hazard_columns(hazard),
             )
-            GiddEventDisplacement.objects.create(event_name=event_name, **common)
+            event_id = event_ids.setdefault(event_name, len(event_ids) + 1)
+            GiddEventDisplacement.objects.create(event_name=event_name, event_raw_id=event_id, **common)
             return GiddDisplacement(**common)
 
         GiddDisplacement.objects.bulk_create(
@@ -173,6 +177,7 @@ class TestGiddPublicStatistics(HelixGraphQLTestCase):
         data = self.stats(DISASTER_STATISTICS)
         self.assertEqual(data["newDisplacements"], 10 + 20 + 40)
         self.assertEqual(data["totalDisplacements"], 100 + 400)  # 2023 snapshot
+        self.assertEqual(data["totalEvents"], 3)
         by_hazard = {row["label"]: row["newDisplacements"] for row in data["displacementsByHazardType"]}
         self.assertEqual(by_hazard, {"Flood": 10 + 40, "Storm": 20})
 
@@ -221,3 +226,54 @@ class TestGiddPublicStatistics(HelixGraphQLTestCase):
     def test_end_year_at_the_release_year_is_accepted(self):
         data = self.stats(CONFLICT_STATISTICS, endYear=2023)
         self.assertEqual(data["totalDisplacements"], 2000 + 4000)
+
+
+class TestGiddPublicDisasterTotalEvents(HelixGraphQLTestCase):
+    """`totalEvents` counts events, not the rows that carry them.
+
+    A row is per (event, country, year), so one event reaching two countries over two years
+    occupies four of them.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_code = "GIDD-EVENT-COUNT-TEST"
+        Client.objects.create(name="Gidd Event Count", code=cls.client_code, is_active=True)
+        ReleaseMetadata.objects.create(release_year=2023, pre_release_year=2022, modified_by=UserFactory.create())
+
+        hazard = DisasterTypeFactory.create(name="Flood")
+        sub_category = DisasterSubCategoryFactory.create(category=DisasterCategoryFactory.create())
+        countries = [CountryFactory.create(name=name, iso3=iso3) for name, iso3 in (("Nepal", "NPL"), ("India", "IND"))]
+
+        def row(country, year, event_raw_id, event_name):
+            GiddEventDisplacement.objects.create(
+                country=country,
+                iso3=country.iso3,
+                country_name=country.name,
+                year=year,
+                cause=Crisis.CRISIS_TYPE.DISASTER,
+                event_raw_id=event_raw_id,
+                event_name=event_name,
+                new_displacement=1,
+                total_displacement=1,
+                hazard_category=sub_category.category,
+                hazard_sub_category=sub_category,
+                hazard_type=hazard,
+                hazard_type_name=hazard.name,
+                hazard_sub_type=DisasterSubTypeFactory.create(type=hazard),
+            )
+
+        cls.rows = 0
+        for country in countries:
+            for year in (2022, 2023):
+                row(country, year, 1, "Basin Flood")
+                cls.rows += 1
+        row(countries[0], 2023, 2, "Other Flood")
+        cls.rows += 1
+
+    def test_one_event_across_countries_and_years_counts_once(self):
+        response = self.query(DISASTER_STATISTICS, variables=dict(clientId=self.client_code, startYear=2022, endYear=2023))
+        self.assertResponseNoErrors(response)
+        data = response.json()["data"]["giddPublicDisasterStatistics"]
+        self.assertEqual(self.rows, 5)
+        self.assertEqual(data["totalEvents"], 2)
