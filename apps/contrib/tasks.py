@@ -27,6 +27,7 @@ from apps.report.tasks import REPORT_TIMEOUT
 # from helix.settings import QueuePriority
 from helix.celery import app as celery_app
 from utils.common import get_temp_file, redis_lock
+from utils.serializers import make_flat_to_representation
 from utils.streaming import spool_to_temp_file, stream_json_array
 
 logging.basicConfig(level=logging.INFO)
@@ -207,10 +208,10 @@ def generate_external_endpoint_dump_file(
             with spool_to_temp_file(data) as tmp:
                 external_api_dump.dump_file.save(filename, File(tmp), save=False)
         else:
-            # One shared serializer, one record encoded at a time — no
-            # many=True materialisation of the whole dump.
-            record_serializer = serializer()
-            chunks = stream_json_array(record_serializer.to_representation(row) for row in data)
+            # One record encoded at a time — no many=True materialisation of
+            # the whole dump.
+            serialize_record = make_flat_to_representation(serializer())
+            chunks = stream_json_array(serialize_record(row) for row in data)
             with spool_to_temp_file(chunks) as tmp:
                 external_api_dump.dump_file.save(filename, File(tmp), save=False)
 
