@@ -399,7 +399,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             ["CITATION:"],
             [
                 "All derived work from IDMC data could cite IDMC following this example: Internal Displacement "
-                "Monitoring Centre. Global Internal Displacement Database - Disasters. IDMC (2023). Available at: "
+                "Monitoring Centre. Global Internal Displacement Database - Disasters. IDMC (2026). Available at: "
                 "https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access])."
             ],
             [],
@@ -453,29 +453,16 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             [],
             ["HISTORICAL DATA REVISIONS AND CORRECTIONS"],
             [],
-            ["The description of our methodology is available at https://www.internal-displacement.org/monitoring-tools"],
+            ["Methodology: https://www.internal-displacement.org/monitoring-tools"],
             [
                 "As part of our ongoing commitment to providing accurate and reliable internal displacement data, "
-                "the Internal Displacement Monitoring Centre (IDMC) has released updated figures for several countries "
-                "and years where data was previously unavailable or required corrections. "
-                "These revisions, which result from a comprehensive methodological review, address discrepancies in earlier "
-                "figures published in the Global Internal Displacement Database (GIDD) and reflect our dedication to "
-                "upholding the highest standards of data quality and reliability.\n\n"
-                "Our team of experts rigorously reviewed and validated the new figures to ensure they meet IDMC’s "
-                "stringent data requirements. For questions or further information about these updates, "
-                "please contact us at ch.datainfo@idmc.ch."
-            ],
-            [],
-            [
-                "All figures have undergone thorough expert validation to ensure consistency with IDMC’s "
-                "quality requirements. A detailed account of the changes and the analytical processes "
-                "underpinning them is provided in Tab 2_Context_Displacement_data, which contains "
-                "a full summary of the revisions conducted by IDMC experts.\n\n"
-                "For further information or inquiries, please contact us at ch.datainfo@idmc.ch."
+                "IDMC periodically releases updated figures for several countries and years where data was previously "
+                "unavailable or required corrections. These revisions result from comprehensive methodological reviews "
+                "and address discrepancies in earlier figures published in GIDD. All figures undergo expert validation. "
+                "For inquiries: ch.datainfo@idmc.ch."
             ],
             [],
             ["FIGURES REVIEWED IN JANUARY 2025"],
-            [],
             ["ISO3", "Country", "Geographical region", "Year", "Figure cause", "Figure category"],
             ["BDI", "Burundi", "Sub-Saharan Africa", "2021", "Disaster", "Internal Displacements"],
             ["GRC", "Greece", "Europe and Central Asia", "2023", "Disaster", "Internal Displacements"],
@@ -491,12 +478,19 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             ["USA", "United States", "The Americas", "2023", "Disaster", "Internal Displacements"],
             [],
             ["FIGURES REVIEWED IN MAY 2025"],
-            [],
             ["ISO3", "Country", "Geographical region", "Year", "Figure cause", "Figure category"],
             ["PRI", "Puerto Rico", "The Americas", "2017", "Disaster", "Internal Displacements"],
             ["ESP", "Spain", "Europe and Central Asia", "2018", "Disaster", "Internal Displacements"],
             ["PRI", "Puerto Rico", "The Americas", "2019", "Disaster", "Internal Displacements"],
             ["BDI", "Burundi", "Sub-Saharan Africa", "2021", "Disaster", "Internal Displacements"],
+            [],
+            ["FIGURES REVIEWED IN MAY 2026"],
+            ["ISO3", "Country", "Geographical region", "Year", "Figure cause", "Figure category"],
+            ["LBR", "Liberia", "Sub-Saharan Africa", "2017", "Disaster", "Internal Displacements"],
+            ["CRI", "Costa Rica", "The Americas", "2017", "Disaster", "Internal Displacements"],
+            ["PHL", "Philippines", "East Asia and Pacific", "2024", "Disaster", "Internal Displacements"],
+            ["ZAF", "South Africa", "Sub-Saharan Africa", "2024", "Disaster", "Internal Displacements"],
+            ["USA", "United States", "The Americas", "2024", "Disaster", "Internal Displacements"],
         ]
 
         for item in readme_text_3:
@@ -1351,7 +1345,7 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             "\n"
             "CITATION:\n"
             "All derived work from IDMC data could cite IDMC following this example: Internal Displacement Monitoring "
-            "Centre. Global Internal Displacement Database. IDMC (2023). "
+            "Centre. Global Internal Displacement Database. IDMC (2026). "
             "Available at: https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access]).\n"
             "\n"
             "CONTACT: ch.datainfo@idmc.ch\n"
@@ -1696,7 +1690,7 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             ["CITATION: "],
             [
                 "All derived work from IDMC data could cite IDMC following this example: Internal Displacement "
-                "Monitoring Centre. Global Internal Displacement Database. IDMC (2023). Available at: "
+                "Monitoring Centre. Global Internal Displacement Database. IDMC (2026). Available at: "
                 "https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access])."
             ],
             [],
@@ -1901,27 +1895,17 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             [],
             ["HISTORICAL DATA REVISIONS AND CORRECTIONS"],
             [],
-            ["The description of our methodology is available at https://www.internal-displacement.org/monitoring-tools"],
+            ["Methodology: https://www.internal-displacement.org/monitoring-tools"],
             [
                 "As part of our ongoing commitment to providing accurate and reliable internal displacement data, "
-                "the Internal Displacement Monitoring Centre (IDMC) has released updated figures for several countries "
-                "and years where data was previously unavailable or required corrections. "
-                "These revisions, which result from a comprehensive methodological review, address discrepancies in earlier "
-                "figures published in the Global Internal Displacement Database (GIDD) and reflect our dedication to "
-                "upholding the highest standards of data quality and reliability.\n\n"
-                "Our team of experts rigorously reviewed and validated the new figures to ensure they meet IDMC’s "
-                "stringent data requirements. For questions or further information about these updates, "
-                "please contact us at ch.datainfo@idmc.ch."
+                "IDMC periodically releases updated figures for several countries and years where data was previously "
+                "unavailable or required corrections. These revisions result from comprehensive methodological reviews "
+                "and address discrepancies in earlier figures published in GIDD. All figures undergo expert validation. "
+                "A detailed account of changes is provided in tab 2_Context_Displacement_data. "
+                "For inquiries: ch.datainfo@idmc.ch."
             ],
             [],
             ["FIGURES REVIEWED IN JANUARY 2025"],
-            [
-                "All figures have undergone thorough expert validation to ensure consistency with IDMC’s "
-                "quality requirements. A detailed account of the changes and the analytical processes "
-                "underpinning them is provided in Tab 2_Context_Displacement_data, which contains "
-                "a full summary of the revisions conducted by IDMC experts.\n\n"
-                "For further information or inquiries, please contact us at ch.datainfo@idmc.ch."
-            ],
             ["ISO3", "Country", "Geographical region", "Year", "Figure cause", "Figure category"],
             ["BFA", "Burkina Faso", "Sub-Saharan Africa", "2023", "Conflict", "Internal Displacements"],
             ["BDI", "Burundi", "Sub-Saharan Africa", "2021", "Disaster", "Internal Displacements"],
@@ -1949,13 +1933,6 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             ["USA", "United States", "The Americas", "2023", "Disaster", "Internal Displacements"],
             [],
             ["FIGURES REVIEWED IN MAY 2025"],
-            [
-                "All figures have undergone thorough expert validation to ensure consistency with IDMC’s "
-                "quality requirements. A detailed account of the changes and the analytical processes "
-                "underpinning them is provided in Tab 2_Context_Displacement_data, which contains "
-                "a full summary of the revisions conducted by IDMC experts.\n\n"
-                "For further information or inquiries, please contact us at ch.datainfo@idmc.ch."
-            ],
             ["ISO3", "Country", "Geographical region", "Year", "Figure cause", "Figure category"],
             ["IDN", "Indonesia", "East Asia and Pacific", "2016", "Conflict", "Internal Displacements"],
             ["IDN", "Indonesia", "East Asia and Pacific", "2016", "Conflict", "IDPs"],
@@ -2018,6 +1995,22 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             ["THA", "Thailand", "East Asia and Pacific", "2023", "Conflict", "IDPs"],
             ["GEO", "Georgia", "Europe and Central Asia", "2023", "Conflict", "IDPs"],
             ["SLE", "Sierra Leone", "Sub-Saharan Africa", "2023", "Conflict", "IDPs"],
+            [],
+            ["FIGURES REVIEWED IN MAY 2026"],
+            ["ISO3", "Country", "Geographical region", "Year", "Figure cause", "Figure category"],
+            ["GTM", "Guatemala", "The Americas", "2022", "Conflict", "Internal Displacements"],
+            ["GTM", "Guatemala", "The Americas", "2023", "Conflict", "Internal Displacements"],
+            ["GTM", "Guatemala", "The Americas", "2023", "Conflict", "IDPs"],
+            ["SYR", "Syria", "Middle East and North Africa", "2024", "Conflict", "IDPs"],
+            ["PHL", "Philippines", "East Asia and Pacific", "2024", "Disaster", "Internal Displacements"],
+            ["IND", "India", "South Asia", "2023", "Conflict", "Internal Displacements"],
+            ["ZAF", "South Africa", "Sub-Saharan Africa", "2024", "Disaster", "Internal Displacements"],
+            ["COD", "Dem. Rep. Congo", "Sub-Saharan Africa", "2024", "Conflict", "Internal Displacements"],
+            ["USA", "United States", "The Americas", "2024", "Disaster", "Internal Displacements"],
+            ["TCD", "Chad", "Sub-Saharan Africa", "2024", "Conflict", "Internal Displacements"],
+            ["USA", "United States", "The Americas", "2024", "Disaster", "IDPs"],
+            ["LBR", "Liberia", "Sub-Saharan Africa", "2017", "Disaster", "Internal Displacements"],
+            ["CRI", "Costa Rica", "The Americas", "2017", "Disaster", "Internal Displacements"],
         ]
 
         for item in data_description_3:

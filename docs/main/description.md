@@ -149,7 +149,7 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 
 All derived work from IDMC data could cite IDMC following this example:
 
-Internal Displacement Monitoring Centre. Global Internal Displacement Database. IDMC (2023). Available at: [https://www.internal-displacement.org/database/displacement-data/](https://www.internal-displacement.org/database/displacement-data/) (Accessed: [date of access]).
+Internal Displacement Monitoring Centre. Global Internal Displacement Database. IDMC (2026). Available at: [https://www.internal-displacement.org/database/displacement-data/](https://www.internal-displacement.org/database/displacement-data/) (Accessed: [date of access]).
 
 <h2 id="support">Support</h2>
 
