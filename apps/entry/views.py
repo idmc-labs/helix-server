@@ -29,6 +29,7 @@ from apps.gidd.views import client_id
 from helix.storages import TemporaryStorageEnableAuthString, get_external_storage
 from utils.common import track_gidd
 from utils.db import Array
+from utils.streaming import stream_json_object_with_array
 
 external_storage = get_external_storage()
 
@@ -235,7 +236,9 @@ def get_idu_data(filters=None):
                 Value(" </b>"),
             ),
         )
-        .order_by("-start_date", "-end_date")
+        # `id` tiebreaker: (start_date, end_date) is not a total order, so the
+        # dump row order would otherwise be plan-dependent.
+        .order_by("-start_date", "-end_date", "id")
     )
 
     if not include_sources:
@@ -293,7 +296,10 @@ def get_idu_data(filters=None):
     if filters:
         base_query = base_query.filter(**filters)
 
-    for figure_data in base_query.values():
+    # `.iterator()` streams rows from a server-side cursor instead of filling
+    # the queryset result cache. NOTE: incompatible with `prefetch_related` on
+    # Django 3.2 — adding one here would silently re-buffer.
+    for figure_data in base_query.values().iterator(chunk_size=2000):
         locations_data = figure_data.pop("locations", [])
         location_parse = extract_location_data(locations_data)
 
@@ -364,9 +370,11 @@ def get_idu_data_excel(filters=None):
     else:
         idu_data = get_idu_data()
 
+    # One shared serializer, one record at a time — instantiating (and binding
+    # the fields of) a serializer per row dominates the export wall time.
+    serializer = FigureReadOnlySerializer()
     for obj in idu_data:
-        serializer = FigureReadOnlySerializer(obj)
-        item = dict(serializer.data)  # dict used here to solve pyright issue
+        item = serializer.to_representation(obj)
         ws.append(
             [
                 item["id"],
@@ -429,70 +437,78 @@ def get_idu_data_geojson(filters=None):
         idu_data = get_idu_data()
 
     readme_text = "\n\n".join(get_idu_export_field_descriptions())
-    feature_collection = {
+    scalar_fields = {
         "type": "FeatureCollection",
         "readme": readme_text,
         "lastUpdated": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "features": [],
     }
-    for obj in idu_data:
-        serializer = FigureReadOnlySerializer(obj)
-        item = dict(serializer.data)
 
-        coordinates = format_coordinates(item["locations_coordinates"])
-        if coordinates == []:
-            continue
+    # One shared serializer, one record at a time — no context/request
+    # dependency, and no many=True materialisation of the whole dump.
+    serializer = FigureReadOnlySerializer()
 
-        geometry = {
-            "type": "MultiPoint",
-            "coordinates": coordinates,
-        }
+    def feature_iterator():
+        for obj in idu_data:
+            item = serializer.to_representation(obj)
 
-        feature = {
-            "type": "Feature",
-            "geometry": geometry,
-            "properties": remove_null_from_dict(
-                {
-                    "id": item["id"],
-                    "country": item["country"],
-                    "iso3": item["iso3"],
-                    "latitude": item["latitude"],
-                    "longitude": item["longitude"],
-                    "centroid": item["centroid"],
-                    "role": item["role"],
-                    "displacement_type": item["displacement_type"],
-                    "qualifier": item["qualifier"],
-                    "figure": item["figure"],
-                    "displacement_date": item["displacement_date"],
-                    "displacement_start_date": item["displacement_start_date"],
-                    "displacement_end_date": item["displacement_end_date"],
-                    "year": item["year"],
-                    "event_id": item["event_id"],
-                    "event_name": item["event_name"],
-                    "event_codes": item["event_codes"],
-                    "event_code_types": item["event_code_types"],
-                    "event_start_date": item["event_start_date"],
-                    "event_end_date": item["event_end_date"],
-                    "category": item["category"],
-                    "subcategory": item["subcategory"],
-                    "type": item["type"],
-                    "subtype": item["subtype"],
-                    "standard_popup_text": item["standard_popup_text"],
-                    "standard_info_text": item["standard_info_text"],
-                    "old_id": item["old_id"],
-                    "sources": item["sources"],
-                    "source_url": item["source_url"],
-                    "locations_name": item["locations_name"],
-                    "locations_coordinates": item["locations_coordinates"],
-                    "locations_accuracy": item["locations_accuracy"],
-                    "locations_type": item["locations_type"],
-                    "displacement_occurred": item["displacement_occurred"],
-                    "created_at": item["created_at"],
-                }
-            ),
-        }
-        feature_collection["features"].append(feature)
-    return feature_collection
+            coordinates = format_coordinates(item["locations_coordinates"])
+            if coordinates == []:
+                continue
+
+            geometry = {
+                "type": "MultiPoint",
+                "coordinates": coordinates,
+            }
+
+            yield {
+                "type": "Feature",
+                "geometry": geometry,
+                "properties": remove_null_from_dict(
+                    {
+                        "id": item["id"],
+                        "country": item["country"],
+                        "iso3": item["iso3"],
+                        "latitude": item["latitude"],
+                        "longitude": item["longitude"],
+                        "centroid": item["centroid"],
+                        "role": item["role"],
+                        "displacement_type": item["displacement_type"],
+                        "qualifier": item["qualifier"],
+                        "figure": item["figure"],
+                        "displacement_date": item["displacement_date"],
+                        "displacement_start_date": item["displacement_start_date"],
+                        "displacement_end_date": item["displacement_end_date"],
+                        "year": item["year"],
+                        "event_id": item["event_id"],
+                        "event_name": item["event_name"],
+                        "event_codes": item["event_codes"],
+                        "event_code_types": item["event_code_types"],
+                        "event_start_date": item["event_start_date"],
+                        "event_end_date": item["event_end_date"],
+                        "category": item["category"],
+                        "subcategory": item["subcategory"],
+                        "type": item["type"],
+                        "subtype": item["subtype"],
+                        "standard_popup_text": item["standard_popup_text"],
+                        "standard_info_text": item["standard_info_text"],
+                        "old_id": item["old_id"],
+                        "sources": item["sources"],
+                        "source_url": item["source_url"],
+                        "locations_name": item["locations_name"],
+                        "locations_coordinates": item["locations_coordinates"],
+                        "locations_accuracy": item["locations_accuracy"],
+                        "locations_type": item["locations_type"],
+                        "displacement_occurred": item["displacement_occurred"],
+                        "created_at": item["created_at"],
+                    }
+                ),
+            }
+
+    return stream_json_object_with_array(
+        scalar_fields=scalar_fields,
+        array_key="features",
+        items=feature_iterator(),
+    )
 
 
 class FigureViewSet(viewsets.ReadOnlyModelViewSet):
