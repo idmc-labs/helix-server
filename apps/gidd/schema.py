@@ -54,6 +54,18 @@ def default_end_year(kwargs):
     return release_meta_data.release_year
 
 
+def resolve_stock_year(kwargs, requested_end_year):
+    """The year an IDP stock is read from, refusing a request beyond the published release.
+
+    Rows stop at the (pre-)release year, so a later `endYear` would otherwise return a full
+    new-displacement figure beside a zero stock -- a wrong answer that reads like a real one.
+    """
+    release_year = default_end_year(kwargs)
+    if requested_end_year and release_year and requested_end_year > release_year:
+        raise ValueError(f"endYear cannot be greater than the release year: {release_year}")
+    return requested_end_year or release_year
+
+
 def displacement_year_range(start_year, end_year):
     """The year scoping new displacement and IDP stock share.
 
@@ -566,7 +578,7 @@ class Query(graphene.ObjectType):
 
         conflict_qs = ConflictStatisticsFilter(data=kwargs).qs
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
+        end_year = resolve_stock_year(kwargs, kwargs.pop("end_year", None))
         filters = new_displacement_filters(start_year, end_year)
 
         conflict_stock_year = end_year
@@ -707,7 +719,7 @@ class Query(graphene.ObjectType):
         # Copied before the pops below, which mutate kwargs.
         event_filter_data = dict(kwargs)
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
+        end_year = resolve_stock_year(kwargs, kwargs.pop("end_year", None))
         filters = new_displacement_filters(start_year, end_year)
 
         disaster_stock_year = end_year
@@ -973,7 +985,7 @@ class Query(graphene.ObjectType):
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_COMBINED_STAT_GRAPHQL)
 
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
+        end_year = resolve_stock_year(kwargs, kwargs.pop("end_year", None))
 
         filters = new_displacement_filters(start_year, end_year)
 
@@ -1065,7 +1077,7 @@ class Query(graphene.ObjectType):
         # new_displacement is a flow, so it sums across the whole window. total_displacement is
         # IDP stock (point-in-time), so it is confined to a single year: end_year, or the
         # (pre-)release year when end_year is omitted.
-        end_year = kwargs.get("end_year") or default_end_year(kwargs)
+        end_year = resolve_stock_year(kwargs, kwargs.get("end_year"))
         conflict_stock_year = end_year
         disaster_stock_year = end_year
 

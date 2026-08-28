@@ -206,3 +206,18 @@ class TestGiddPublicStatistics(HelixGraphQLTestCase):
         data = self.stats(DISASTERS_BY_EVENT_NAME, eventName="karnali")
         self.assertEqual(data["totalCount"], 1)
         self.assertEqual(data["results"][0]["eventName"], "Karnali Flood")
+
+    def test_end_year_beyond_the_release_year_is_refused(self):
+        # Rows stop at the release year, so a later endYear used to return the full new
+        # displacement figure beside a zero stock rather than saying the year is out of range.
+        response = self.query(
+            CONFLICT_STATISTICS,
+            variables=dict(clientId=self.client_code, endYear=2050),
+        )
+        errors = response.json().get("errors") or []
+        self.assertTrue(errors, "endYear past the release year was accepted")
+        self.assertIn("endYear cannot be greater than the release year", errors[0]["message"])
+
+    def test_end_year_at_the_release_year_is_accepted(self):
+        data = self.stats(CONFLICT_STATISTICS, endYear=2023)
+        self.assertEqual(data["totalDisplacements"], 2000 + 4000)
