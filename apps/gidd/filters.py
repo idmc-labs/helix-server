@@ -221,6 +221,12 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
 
 
 class GiddCountryDisplacementFilter(ReleaseMetadataFilter):
+    # Scoping to one cause drops the other cause's rows before aggregation, so the country-years
+    # that only carry the excluded cause fall out of the row filter and out of `total_count` --
+    # which hiding the columns client-side cannot do.
+    # A ChoiceFilter is unsafe here: django-filter drops a field that fails form validation from
+    # `cleaned_data`, so an unknown cause is silently ignored and every row comes back.
+    cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="cause")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
