@@ -1,4 +1,5 @@
 import io
+import json
 
 import openpyxl
 from django.test import TestCase
@@ -210,4 +211,49 @@ class GiddFigureLocationPcodeTestCase(TestCase):
         pcodes = (row[position["Pcode"]] or "").split(EXTERNAL_ARRAY_SEPARATOR)
         assert len(pcodes) == len(names), f"{len(pcodes)} p-code slots against {len(names)} locations"
         assert pcodes[names.index("Alpha-A")] == "", f"the empty slot was dropped: {pcodes}"
+        assert pcodes[names.index("Zone-B")] == "NPL-B", f"the code moved slot: {pcodes}"
+
+    def test_the_geojson_keeps_a_null_slot_for_a_location_with_no_pcode(self):
+        """The geojson publishes the p-codes as an array, so the gap has to survive as an element.
+
+        The xlsx joins into one cell and the geojson emits a list, so they can fail independently:
+        a filtered list would shorten the array and re-pair every later code with the wrong
+        location while still looking well-formed.
+        """
+        figure = FigureFactory.create(
+            entry=EntryFactory.create(publish_date="2019-01-01"),
+            event=self.event,
+            country=self.country,
+            role=Figure.ROLE.RECOMMENDED,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            total_figures=500,
+            start_date="2018-01-01",
+            end_date="2018-12-31",
+        )
+        for name, pcode in (("Alpha-A", None), ("Zone-B", "NPL-B")):
+            figure.geo_locations.add(
+                FigureLocationFactory.create(
+                    display_name=name,
+                    pcode=pcode,
+                    pcode_accuracy=None if pcode is None else FigureLocation.PCODE_ACCURACY.ADM2,
+                    pcode_source=None if pcode is None else "HDX",
+                )
+            )
+        self.generate(figure)
+
+        payload = b"".join(
+            chunk.encode() if isinstance(chunk, str) else chunk
+            for chunk in DisaggregationViewSet()._export_disaggregated_geojson("probe.geojson", GiddFigure.objects.all())
+        )
+        features = json.loads(payload.decode())["features"]
+        assert len(features) == 1, f"expected one feature, got {len(features)}"
+        properties = features[0]["properties"]
+
+        for key in ("Pcode", "Pcode accuracy", "Pcode source"):
+            assert key in properties, f"{key} is not published at all"
+
+        names = properties["Locations name"]
+        pcodes = properties["Pcode"]
+        assert len(pcodes) == len(names), f"{len(pcodes)} p-code slots against {len(names)} locations"
+        assert pcodes[names.index("Alpha-A")] is None, f"the null slot was dropped: {pcodes}"
         assert pcodes[names.index("Zone-B")] == "NPL-B", f"the code moved slot: {pcodes}"
