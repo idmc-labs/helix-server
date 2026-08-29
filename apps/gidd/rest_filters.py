@@ -26,6 +26,10 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
             # No `id` filter: this list is an aggregate over GiddDisplacement rows and has no pk
             # of its own.
             "iso3": ["iexact"],
+            # The conflict typology levels the GraphQL surface accepts. They scope the rows that
+            # feed the sums, so a total here always matches the selection that produced it.
+            "violence": ["in"],
+            "violence_sub_type": ["in"],
         }
 
     def filter_start_year(self, queryset, name, value):
@@ -57,7 +61,12 @@ class RestDisasterFilterSet(ReleaseMetadataFilter):
         fields = {
             "event_name": ["icontains"],
             "iso3": ["in"],
+            # All four hazard levels, as on the GraphQL surface: a client holding a category or a
+            # sub type cannot express it by enumerating the types beneath or above it.
+            "hazard_category": ["in"],
+            "hazard_sub_category": ["in"],
             "hazard_type": ["in"],
+            "hazard_sub_type": ["in"],
         }
 
     def filter_event_name(self, queryset, name, value):
@@ -103,10 +112,16 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
         model = GiddDisplacement
         fields = {
             "iso3": ["in"],
-            # The conflict counterpart of the disaster export's `hazard_type__in`. Scopes the
-            # rows that feed the conflict sums; disaster rows carry no violence sub type, so
-            # pair it with `cause=conflict`.
+            # This list publishes both causes, so it carries both typologies. Each scopes the rows
+            # that feed the sums; rows of the other cause carry none of these columns and drop out
+            # entirely, so pair a violence filter with `cause=conflict` and a hazard filter with
+            # `cause=disaster`.
+            "violence": ["in"],
             "violence_sub_type": ["in"],
+            "hazard_category": ["in"],
+            "hazard_sub_category": ["in"],
+            "hazard_type": ["in"],
+            "hazard_sub_type": ["in"],
         }
 
     def filter_start_year(self, queryset, name, value):
@@ -252,8 +267,13 @@ class DisaggregationFilterSet(django_filters.FilterSet):
         model = GiddFigure
         fields = {
             "iso3": ["in"],
+            # The same six typology levels the GraphQL surface accepts; `GiddFigure` names the
+            # hazard columns `disaster_*`, so the parameters here do too.
+            "disaster_category": ["in"],
+            "disaster_sub_category": ["in"],
             "disaster_type": ["in"],
-            # The conflict counterpart of `disaster_type__in`.
+            "disaster_sub_type": ["in"],
+            "violence": ["in"],
             "violence_sub_type": ["in"],
         }
 

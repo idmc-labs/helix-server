@@ -16,11 +16,14 @@ from apps.entry.models import ExternalApiDump, Figure
 from apps.event.models import EventCode
 from apps.gidd.models import (
     GiddDisplacement,
+    GiddEvent,
     GiddEventDisplacement,
+    GiddFigure,
     PublicFigureAnalysis,
     ReleaseMetadata,
     StatusLog,
 )
+from apps.gidd.rest_filters import DisaggregationFilterSet
 from apps.gidd.views import (
     ConflictViewSet,
     CountryViewSet,
@@ -39,6 +42,7 @@ from utils.factories import (
     DisasterTypeFactory,
     EventCodeFactory,
     EventFactory,
+    ViolenceFactory,
     ViolenceSubTypeFactory,
 )
 from utils.tests import HelixAPITestCase
@@ -255,6 +259,32 @@ class TestGiddConflictRestApi(GiddRestApiMixin, HelixAPITestCase):
                 "total_displacement": None,
             },
         )
+
+    def test_violence_filter_scopes_the_conflict_sums(self):
+        """This list aggregates before it serializes, so a typology filter has to reach the rows
+        that feed the sums: a client that selects one violence type must not be handed the total
+        every violence type produced."""
+        iac = ViolenceFactory.create(name="International armed conflict")
+        osv = ViolenceFactory.create(name="Other situations of violence")
+        GiddDisplacement.objects.filter(iso3="AFG").update(violence=iac)
+        GiddDisplacement.objects.create(
+            country=self.country_afg,
+            iso3="AFG",
+            country_name="Afghanistan",
+            year=DATA_YEAR,
+            cause=Crisis.CRISIS_TYPE.CONFLICT,
+            violence=osv,
+            new_displacement=500,
+            total_displacement=600,
+        )
+        self.assertEqual(self.by_iso3(self.get_list(CONFLICTS_URL))["AFG"]["new_displacement"], 12345 + 500)
+
+        payload = self.get_list(CONFLICTS_URL, violence__in=iac.pk)
+        self.assertEqual(self.by_iso3(payload)["AFG"]["new_displacement"], 12345)
+        self.assertEqual(self.by_iso3(payload)["AFG"]["total_displacement"], 54321)
+        # NPL carries no violence, so it leaves `results` and `count` rather than summing to NULL.
+        self.assertEqual([row["iso3"] for row in payload["results"]], ["AFG"])
+        self.assertEqual(payload["count"], 1)
 
     def test_release_environment_filter_drops_future_years(self):
         GiddDisplacement.objects.create(
@@ -554,10 +584,91 @@ class TestGiddDisplacementDataRestApi(GiddRestApiMixin, HelixAPITestCase):
         self.assertEqual([row["iso3"] for row in payload["results"]], ["AFG"])
         self.assertEqual(payload["count"], 1)
 
+    def test_hazard_filter_scopes_the_disaster_sums(self):
+        """The disaster mirror of the violence sub type test: the hazard levels apply to the same
+        rollup, so they must scope the disaster sums the same way."""
+        geophysical = DisasterSubCategoryFactory.create(name="Geophysical")
+        climatological = DisasterSubCategoryFactory.create(name="Climatological")
+        GiddDisplacement.objects.filter(iso3="AFG", cause=Crisis.CRISIS_TYPE.DISASTER).update(
+            hazard_sub_category=geophysical
+        )
+        GiddDisplacement.objects.create(
+            country=self.country_afg,
+            iso3="AFG",
+            country_name="Afghanistan",
+            year=DATA_YEAR,
+            cause=Crisis.CRISIS_TYPE.DISASTER,
+            hazard_sub_category=climatological,
+            new_displacement=700,
+            total_displacement=800,
+        )
+
+        unscoped = self.by_iso3(self.get_list(DISPLACEMENTS_URL))["AFG"]
+        self.assertEqual(unscoped["disaster_new_displacement"], 33333 + 700)
+
+        scoped = self.by_iso3(self.get_list(DISPLACEMENTS_URL, hazard_sub_category__in=geophysical.pk))["AFG"]
+        self.assertEqual(scoped["disaster_new_displacement"], 33333)
+        self.assertEqual(scoped["disaster_total_displacement"], 444444)
+        self.assertEqual(scoped["disaster_new_displacement_rounded"], round_and_remove_zero(33333))
+        # Conflict rows carry no hazard, so they feed nothing: the pairing with `cause` is not a
+        # convention, the other cause's split really is gone.
+        self.assertIsNone(scoped["conflict_new_displacement"])
+
     def test_list_query_count(self):
         # client lookup + ReleaseMetadata + COUNT + page + StatusLog.last_release_date
         with self.assertNumQueries(5):
             self.client.get(DISPLACEMENTS_URL, {"client_id": self.CLIENT_CODE})
+
+
+class TestGiddDisaggregationFilterSet(GiddRestApiMixin, HelixAPITestCase):
+    """The two disaggregation actions hand their queryset to an S3-backed export cache, so the
+    filterset is driven directly here."""
+
+    def setUp(self):
+        super().setUp()
+        self.gidd_event = GiddEvent.objects.create(
+            name="Afghanistan: Earthquake",
+            cause=Crisis.CRISIS_TYPE.DISASTER,
+            event_codes=[],
+            event_codes_type=[],
+            event_codes_iso3=[],
+        )
+
+    def make_figure(self, figure_raw_id, cause=Crisis.CRISIS_TYPE.DISASTER, **kwargs):
+        return GiddFigure.objects.create(
+            country=self.country_afg,
+            iso3="AFG",
+            country_name="Afghanistan",
+            year=DATA_YEAR,
+            cause=cause,
+            figure_raw_id=figure_raw_id,
+            gidd_event=self.gidd_event,
+            unit=Figure.UNIT.PERSON,
+            reported=100,
+            total_figures=100,
+            **kwargs,
+        )
+
+    def filtered_ids(self, **params):
+        filterset = DisaggregationFilterSet(data=params, queryset=GiddFigure.objects.all())
+        return sorted(filterset.qs.values_list("figure_raw_id", flat=True))
+
+    def test_disaster_category_filter_selects_only_its_own_figures(self):
+        natural = DisasterCategoryFactory.create(name="Natural")
+        technological = DisasterCategoryFactory.create(name="Technological")
+        self.make_figure(1, disaster_category=natural)
+        self.make_figure(2, disaster_category=technological)
+
+        self.assertEqual(self.filtered_ids(), [1, 2])
+        self.assertEqual(self.filtered_ids(disaster_category__in=str(natural.pk)), [1])
+
+    def test_violence_filter_selects_only_its_own_figures(self):
+        iac = ViolenceFactory.create(name="International armed conflict")
+        osv = ViolenceFactory.create(name="Other situations of violence")
+        self.make_figure(1, cause=Crisis.CRISIS_TYPE.CONFLICT, violence=iac)
+        self.make_figure(2, cause=Crisis.CRISIS_TYPE.CONFLICT, violence=osv)
+
+        self.assertEqual(self.filtered_ids(violence__in=str(osv.pk)), [2])
 
 
 class TestGiddPublicFigureAnalysisRestApi(GiddRestApiMixin, HelixAPITestCase):
