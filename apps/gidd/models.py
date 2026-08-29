@@ -46,10 +46,10 @@ class StatusLog(models.Model):
 
     # A run that died without flipping its status (killed worker: the transaction
     # rolls back but the PENDING log row survives) must not block triggers, and the
-    # cleanup task marks it FAILED. Slightly above the task's 30-min hard ceiling
-    # so a still-running generation is never flipped; the advisory lock in the task
-    # is the real mutual exclusion.
-    PENDING_STALE_AFTER = datetime.timedelta(minutes=35)
+    # cleanup task marks it FAILED. Stays above the task's 7-minute hard ceiling so a
+    # still-running generation is never flipped; the advisory lock in the task is the
+    # real mutual exclusion.
+    PENDING_STALE_AFTER = datetime.timedelta(minutes=10)
 
     class Meta:
         permissions = (("update_gidd_data_gidd", "Can update GIDD data"),)

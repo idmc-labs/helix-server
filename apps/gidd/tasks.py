@@ -763,13 +763,12 @@ def update_new_gidd_tables():
     )
 
 
-# Hard ceiling for one generation run (currently ~12 min in production). The soft
-# limit raises inside the task so the run rolls back and marks itself FAILED; the
-# hard limit is the kill-switch backstop. The lock TTL must stay ABOVE the hard
-# limit: if the lock expired mid-run, a second generation could start — and under
-# READ COMMITTED its DELETE cannot see the first run's uncommitted inserts, so
-# both row sets would COMMIT.
-GIDD_GENERATION_TIMEOUT = 60 * 30
+# Hard ceiling for one generation run. The soft limit raises inside the task so the
+# run rolls back and marks itself FAILED; the hard limit is the kill-switch backstop.
+# The lock TTL must stay ABOVE the hard limit: if the lock expired mid-run, a second
+# generation could start — and under READ COMMITTED its DELETE cannot see the first
+# run's uncommitted inserts, so both row sets would COMMIT.
+GIDD_GENERATION_TIMEOUT = 60 * 5
 GIDD_GENERATION_LOCK_KEY = "update_gidd_data"
 GIDD_GENERATION_LOCK_TTL = GIDD_GENERATION_TIMEOUT + 60 * 5
 
