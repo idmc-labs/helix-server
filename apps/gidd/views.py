@@ -219,6 +219,26 @@ class GiddOrderingFilter(filters.OrderingFilter):
             raise ValidationError({"ordering": [f"Invalid ordering field: {field.lstrip('-')}" for field in unknown]})
         return valid
 
+    def get_schema_operation_parameters(self, view):
+        """Publish the accepted sort keys, and omit the parameter where the action ignores it.
+
+        The keys come from `_term_to_source`, the same map the request is validated against, so
+        the documented set cannot drift from the accepted one. `track_gidd` skips a
+        `swagger_fake_view`, so building the queryset here records no API usage.
+        """
+        if getattr(view, "action", None) in getattr(view, "ORDERING_UNSUPPORTED_ACTIONS", ()):
+            return []
+        parameters = super().get_schema_operation_parameters(view)
+        terms = sorted(self._term_to_source(view.get_queryset(), view))
+        if terms and parameters:
+            parameters[0]["description"] = (
+                f"{parameters[0].get('description', '').rstrip()} "
+                f"Accepted keys: {', '.join(terms)}. "
+                "Prefix a key with `-` to reverse it, and separate several with commas. "
+                "An unrecognised key is rejected rather than ignored."
+            ).strip()
+        return parameters
+
 
 # `ordering_fields` stays unset so the keys come from the serializer: "__all__" would admit every
 # model column, including internal ones like `event_raw_id` that no response carries.
@@ -590,6 +610,8 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     serializer_class = DisplacementDataSerializer
     filterset_class = RestDisplacementDataFilterSet
     pagination_class = GiddLimitOffsetPagination
+    # `export()` re-sorts for the sheet layout, so a requested ordering cannot survive it.
+    ORDERING_UNSUPPORTED_ACTIONS = frozenset({"export"})
 
     def get_queryset(self):
         api_type = ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_REST
@@ -1183,6 +1205,8 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         # Track export
         # Rounded in SQL rather than in python: the sheet builders stream this with `.iterator()`,
         # which needs it to stay a queryset.
+        # `order_by` below replaces any requested ordering, so the parameter is hidden from this
+        # action's schema rather than advertised and silently dropped.
         qs = (
             self.filter_queryset(self.get_queryset())
             .annotate(
