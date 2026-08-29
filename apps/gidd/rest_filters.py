@@ -103,6 +103,10 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
         model = GiddDisplacement
         fields = {
             "iso3": ["in"],
+            # The conflict counterpart of the disaster export's `hazard_type__in`. Scopes the
+            # rows that feed the conflict sums; disaster rows carry no violence sub type, so
+            # pair it with `cause=conflict`.
+            "violence_sub_type": ["in"],
         }
 
     def filter_start_year(self, queryset, name, value):
@@ -249,6 +253,8 @@ class DisaggregationFilterSet(django_filters.FilterSet):
         fields = {
             "iso3": ["in"],
             "disaster_type": ["in"],
+            # The conflict counterpart of `disaster_type__in`.
+            "violence_sub_type": ["in"],
         }
 
     def filter_start_year(self, queryset, name, value):

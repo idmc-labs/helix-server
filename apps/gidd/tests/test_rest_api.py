@@ -39,6 +39,7 @@ from utils.factories import (
     DisasterTypeFactory,
     EventCodeFactory,
     EventFactory,
+    ViolenceSubTypeFactory,
 )
 from utils.tests import HelixAPITestCase
 
@@ -513,6 +514,45 @@ class TestGiddDisplacementDataRestApi(GiddRestApiMixin, HelixAPITestCase):
             cause=Crisis.CRISIS_TYPE.CONFLICT,
         )
         self.assertEqual(self.get_list(DISPLACEMENTS_URL)["count"], 2)
+
+    def test_violence_sub_type_filter_scopes_the_conflict_sums(self):
+        """The conflict counterpart of `hazard_type__in`: it must scope the rows that feed the
+        sums, not merely drop whole country-years, or the dashboard's download would publish
+        totals the dashboard never showed."""
+        iac = ViolenceSubTypeFactory.create(name="IAC")
+        niac = ViolenceSubTypeFactory.create(name="NIAC")
+        GiddDisplacement.objects.filter(iso3="AFG", cause=Crisis.CRISIS_TYPE.CONFLICT).update(violence_sub_type=iac)
+        GiddDisplacement.objects.create(
+            country=self.country_afg,
+            iso3="AFG",
+            country_name="Afghanistan",
+            year=DATA_YEAR,
+            cause=Crisis.CRISIS_TYPE.CONFLICT,
+            violence_sub_type=niac,
+            new_displacement=500,
+            total_displacement=600,
+        )
+
+        unscoped = self.by_iso3(self.get_list(DISPLACEMENTS_URL))["AFG"]
+        self.assertEqual(unscoped["conflict_new_displacement"], 11 + 500)
+
+        scoped = self.by_iso3(self.get_list(DISPLACEMENTS_URL, violence_sub_type__in=iac.pk))["AFG"]
+        self.assertEqual(scoped["conflict_new_displacement"], 11)
+        self.assertEqual(scoped["conflict_total_displacement"], 2222)
+        # The excluded sub type's row is gone from the aggregate, not just hidden.
+        self.assertEqual(scoped["conflict_new_displacement_rounded"], round_and_remove_zero(11))
+
+    def test_violence_sub_type_filter_drops_country_years_it_excludes(self):
+        """NPL carries only the unselected sub type, so it must leave `results` and `count` --
+        column hiding on the client cannot fix a pager that counted it."""
+        iac = ViolenceSubTypeFactory.create(name="IAC")
+        niac = ViolenceSubTypeFactory.create(name="NIAC")
+        GiddDisplacement.objects.filter(iso3="AFG", cause=Crisis.CRISIS_TYPE.CONFLICT).update(violence_sub_type=iac)
+        GiddDisplacement.objects.filter(iso3="NPL").update(violence_sub_type=niac)
+
+        payload = self.get_list(DISPLACEMENTS_URL, cause="conflict", violence_sub_type__in=iac.pk)
+        self.assertEqual([row["iso3"] for row in payload["results"]], ["AFG"])
+        self.assertEqual(payload["count"], 1)
 
     def test_list_query_count(self):
         # client lookup + ReleaseMetadata + COUNT + page + StatusLog.last_release_date
