@@ -4,6 +4,7 @@ from apps.contrib.management.base import (
     M2MById,
     M2MByName,
 )
+from apps.contrib.serializers import IntegerIDField, UpdateSerializerMixin
 from apps.country.models import Country, CountryRegion, GeographicalGroup
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, FigureTag
@@ -17,7 +18,23 @@ from apps.event.models import (
     ViolenceSubType,
 )
 from apps.report.models import Report
-from apps.report.serializers import ReportSerializer, ReportUpdateSerializer
+from apps.report.serializers import ReportSerializer
+
+
+class ReportImportSerializer(ReportSerializer):
+    """Report fields an operator may write from a sheet.
+
+    `is_pfa_visible_in_gidd` is writable here but not on `ReportSerializer`, whose fields become the
+    report mutation inputs: the GraphQL surface gates the flag behind `setPfaVisibleInGidd` and its
+    own admin permission, which a field on the create/update inputs would bypass.
+    """
+
+    class Meta(ReportSerializer.Meta):
+        fields = ReportSerializer.Meta.fields + ["is_pfa_visible_in_gidd"]
+
+
+class ReportImportUpdateSerializer(UpdateSerializerMixin, ReportImportSerializer):
+    id = IntegerIDField(required=True)
 
 
 class Command(BaseImportCommand):
@@ -28,8 +45,8 @@ class Command(BaseImportCommand):
     )
 
     model = Report
-    create_serializer = ReportSerializer
-    update_serializer = ReportUpdateSerializer
+    create_serializer = ReportImportSerializer
+    update_serializer = ReportImportUpdateSerializer
     lookups = [
         # Enum arrays
         EnumArrayLookup("filter_figure_categories", Figure.FIGURE_CATEGORY_TYPES),

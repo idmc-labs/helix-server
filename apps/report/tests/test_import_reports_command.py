@@ -9,7 +9,9 @@ from openpyxl import Workbook, load_workbook
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 from apps.report.management.commands.import_reports import Command as ImportReportsCommand
+from apps.report.management.commands.import_reports import ReportImportSerializer
 from apps.report.models import Report
+from apps.report.serializers import ReportSerializer
 from apps.users.enums import USER_ROLE
 from utils.factories import CountryFactory, CrisisFactory, TagFactory, UserFactory, ViolenceSubTypeFactory
 from utils.tests import HelixTestCase, create_user_with_role
@@ -310,6 +312,104 @@ class TestImportReportsCommand(HelixTestCase):
         path = write_sheet(["id", "name"], [{"id": report.id, "name": "Renamed"}])
         with self.assertRaises(CommandError):
             call_command("import_reports", path, user_email="nobody@example.com", stdout=StringIO())
+
+    # ----- GIDD visibility -----
+
+    PFA_COLUMNS = [
+        "id",
+        "name",
+        "filter_figure_countries",
+        "filter_figure_start_after",
+        "filter_figure_end_before",
+        "filter_figure_categories",
+        "filter_figure_crisis_types",
+        "is_public",
+        "is_pfa_visible_in_gidd",
+    ]
+
+    def _pfa_row(self, **overrides):
+        row = {
+            "id": None,
+            "name": "GRID 2021 - Nepal (ND) - C",
+            "filter_figure_countries": "NPL",
+            "filter_figure_start_after": "2020-01-01",
+            "filter_figure_end_before": "2020-12-31",
+            "filter_figure_categories": "NEW_DISPLACEMENT",
+            "filter_figure_crisis_types": "CONFLICT",
+            "is_public": "Yes",
+            "is_pfa_visible_in_gidd": "Yes",
+        }
+        row.update(overrides)
+        return row
+
+    def test_a_created_report_that_qualifies_becomes_visible_in_gidd(self):
+        path = write_sheet(self.PFA_COLUMNS, [self._pfa_row()])
+        call_command("import_reports", path, user_email=self.editor.email, stdout=StringIO())
+
+        report = Report.objects.get(name="GRID 2021 - Nepal (ND) - C")
+        self.assertTrue(report.is_pfa_visible_in_gidd)
+
+    def test_a_created_report_that_does_not_qualify_is_silenced_not_refused(self):
+        # No category: a PFA total is defined for exactly one of IDPs / Internal Displacements.
+        path = write_sheet(
+            self.PFA_COLUMNS,
+            [self._pfa_row(name="No Category Report", filter_figure_categories=None)],
+        )
+        out = StringIO()
+        call_command("import_reports", path, user_email=self.editor.email, stdout=out)
+
+        self.assertIn("Created 1, updated 0.", out.getvalue())
+        report = Report.objects.get(name="No Category Report")
+        self.assertFalse(report.is_pfa_visible_in_gidd)
+
+    def test_a_second_country_cannot_be_named_in_the_country_cell(self):
+        # filter_figure_countries is declared list_values=False, so the sheet cannot express the
+        # multi-country case the PFA rules reject - the cell fails to resolve first.
+        path = write_sheet(
+            self.PFA_COLUMNS,
+            [self._pfa_row(name="Two Country Report", filter_figure_countries="NPL,IND")],
+        )
+        with self.assertRaises(CommandError):
+            call_command("import_reports", path, user_email=self.editor.email, stdout=StringIO())
+        self.assertFalse(Report.objects.filter(name="Two Country Report").exists())
+
+    def test_a_non_public_report_does_not_become_visible_in_gidd(self):
+        path = write_sheet(self.PFA_COLUMNS, [self._pfa_row(name="Private Report", is_public="No")])
+        call_command("import_reports", path, user_email=self.editor.email, stdout=StringIO())
+
+        report = Report.objects.get(name="Private Report")
+        self.assertFalse(report.is_pfa_visible_in_gidd)
+
+    def test_a_part_year_report_does_not_become_visible_in_gidd(self):
+        path = write_sheet(
+            self.PFA_COLUMNS,
+            [self._pfa_row(name="Half Year Report", filter_figure_end_before="2020-06-30")],
+        )
+        call_command("import_reports", path, user_email=self.editor.email, stdout=StringIO())
+
+        report = Report.objects.get(name="Half Year Report")
+        self.assertFalse(report.is_pfa_visible_in_gidd)
+
+    def test_an_update_can_turn_visibility_on(self):
+        report = self._report(name="Later A PFA")
+        report.filter_figure_categories = [Figure.FIGURE_CATEGORY_TYPES.IDPS]
+        report.filter_figure_crisis_types = [Crisis.CRISIS_TYPE.DISASTER]
+        report.is_public = True
+        report.save()
+        self.assertFalse(report.is_pfa_visible_in_gidd)
+
+        path = write_sheet(["id", "is_pfa_visible_in_gidd"], [{"id": report.id, "is_pfa_visible_in_gidd": "Yes"}])
+        call_command("import_reports", path, user_email=self.editor.email, stdout=StringIO())
+
+        report.refresh_from_db()
+        self.assertTrue(report.is_pfa_visible_in_gidd)
+
+    def test_the_visibility_flag_is_writable_only_from_the_sheet(self):
+        # ReportSerializer's fields become the report mutation inputs, where the flag would bypass
+        # setPfaVisibleInGidd's admin permission.
+        self.assertNotIn("is_pfa_visible_in_gidd", ReportSerializer().fields)
+        self.assertIn("is_pfa_visible_in_gidd", ReportImportSerializer().fields)
+        self.assertIn("is_pfa_visible_in_gidd", ImportReportsCommand().import_columns())
 
     # ----- template -----
 
