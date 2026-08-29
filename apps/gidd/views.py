@@ -101,11 +101,11 @@ def _get_location_accuracy_labels(location_accuracy: typing.List[typing.Tuple[in
 
 
 def _join_keeping_gaps(values) -> str:
-    """Join with a slot for every element, so each value stays under its own location.
+    """Join with a slot for every element, so each value stays under its own row element.
 
-    The location columns are positionally paired, and `string_join` drops `None`: one missing
-    p-code would shift every later value one position left, silently pairing it with the wrong
-    location.
+    The location columns and the source columns are positionally paired, and `string_join` drops
+    `None`: one missing p-code or organisation kind would shift every later value one position
+    left, silently pairing it with the wrong location or source.
     """
     return EXTERNAL_ARRAY_SEPARATOR.join("" if value is None else str(value) for value in values or [])
 
@@ -2142,8 +2142,8 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                     self._get_date_accuracy(item["stock_date_accuracy"]),
                     item["stock_reporting_date"],
                     string_join(EXTERNAL_ARRAY_SEPARATOR, item["publishers"]),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item["sources"]),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item["sources_type"]),
+                    _join_keeping_gaps(item["sources"]),
+                    _join_keeping_gaps(item["sources_type"]),
                     item["gidd_event__event_raw_id"],
                     item["gidd_event__name"],
                     self._get_cause(item["gidd_event__cause"]),
