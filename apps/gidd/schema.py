@@ -290,6 +290,13 @@ class GiddEventDisplacementType(RelationBatchedDjangoObjectType):
     def resolve_event_id(root, info, **kwargs):
         return root.event_raw_id
 
+    @staticmethod
+    def resolve_event_codes(root, info, **kwargs):
+        # An event's codes across every country it touched, matching what
+        # /gidd/disasters/ publishes: the same field name has to mean the same thing
+        # on both surfaces. The row's own-country codes stay in `event_codes`.
+        return root.all_country_event_codes
+
 
 class GiddEventDisplacementListType(CustomDjangoListObjectType):
     class Meta:
