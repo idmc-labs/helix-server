@@ -399,3 +399,35 @@ class DisaggregationPublicFigureAnalysisFilterSet(ValidatedYearFilterSet, django
         release_environment_name = clean_release_environment(self.data.get("release_environment"))
         qs = self.filter_release_environment(qs, release_environment_name)
         return qs
+
+
+# The typology parameters a workbook's first sheet accepts and its companion sheets cannot.
+# `PublicFigureAnalysis` and `IdpsSaddEstimate` carry no typology columns, so these are the
+# requests that must reach them as country-years instead. Listed rather than derived, so a reader
+# sees what triggers the narrowing without running the code;
+# `test_the_narrowing_trigger_list_covers_every_unshared_filter` fails if a first sheet gains a
+# filter that is not added here.
+COMPANION_SHEET_NARROWING_FILTERS = (
+    "violence__in",
+    "violence_sub_type__in",
+    "hazard_category__in",
+    "hazard_sub_category__in",
+    "hazard_type__in",
+    "hazard_sub_type__in",
+    "disaster_category__in",
+    "disaster_sub_category__in",
+    "disaster_type__in",
+    "disaster_sub_type__in",
+)
+
+
+def companion_sheet_narrowing_requested(query_params) -> bool:
+    """Whether the request carries a typology filter the companion sheets cannot express.
+
+    `PublicFigureAnalysis` and `IdpsSaddEstimate` have no typology columns, so django-filter drops
+    such a filter without a word -- publishing a workbook whose first sheet is narrowed beside
+    sheets covering the whole release. The caller answers that by scoping to the country-years the
+    first sheet kept. Nothing to do when no such filter was sent, and an unfiltered export is the
+    slowest request these endpoints serve.
+    """
+    return any(any(value for value in query_params.getlist(name)) for name in COMPANION_SHEET_NARROWING_FILTERS)

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from django.db.models import Case, F, Q, Sum, When
+from django.db.models import Case, Exists, F, OuterRef, Q, Sum, When
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
@@ -53,6 +53,7 @@ from .rest_filters import (
     RestConflictFilterSet,
     RestDisasterFilterSet,
     RestDisplacementDataFilterSet,
+    companion_sheet_narrowing_requested,
 )
 from .serializers import (
     ConflictSerializer,
@@ -919,27 +920,35 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         # which needs it to stay a queryset.
         # `order_by` below replaces any requested ordering, so `ordering` is refused by the filter
         # backend rather than accepted and silently dropped.
-        qs = (
-            self.filter_queryset(self.get_queryset())
-            .annotate(
-                conflict_new_displacement_rounded=rounded_figure_expr("conflict_new_displacement"),
-                conflict_total_displacement_rounded=rounded_figure_expr("conflict_total_displacement"),
-                disaster_new_displacement_rounded=rounded_figure_expr("disaster_new_displacement"),
-                disaster_total_displacement_rounded=rounded_figure_expr("disaster_total_displacement"),
-            )
-            .order_by("-year", "iso3")
-        )
+        displacement_qs = self.filter_queryset(self.get_queryset())
+        qs = displacement_qs.annotate(
+            conflict_new_displacement_rounded=rounded_figure_expr("conflict_new_displacement"),
+            conflict_total_displacement_rounded=rounded_figure_expr("conflict_total_displacement"),
+            disaster_new_displacement_rounded=rounded_figure_expr("disaster_new_displacement"),
+            disaster_total_displacement_rounded=rounded_figure_expr("disaster_total_displacement"),
+        ).order_by("-year", "iso3")
 
         request_cause = request.GET.get("cause")
 
         pfa_qs = PublicFigureAnalysisFilterSet(
             data=self.request.query_params, queryset=PublicFigureAnalysis.objects.all()
-        ).qs.order_by("iso3", "year")
-
+        ).qs
         idps_sadd_qs = IdpsSaddEstimateFilter(
             data=self.request.query_params,
             queryset=IdpsSaddEstimate.objects.all(),
-        ).qs.order_by("iso3", "year")
+        ).qs
+
+        # A typology filter reaches neither companion sheet's model, so it applies as the
+        # country-years sheet 1 kept. A correlated EXISTS, which postgres pulls up into a semi-join
+        # over the scan sheet 1 already does; reading the distinct pairs into python would
+        # materialise a six-figure row set per request.
+        if companion_sheet_narrowing_requested(self.request.query_params):
+            sheet_one_country_years = displacement_qs.filter(iso3=OuterRef("iso3"), year=OuterRef("year")).order_by()
+            pfa_qs = pfa_qs.filter(Exists(sheet_one_country_years))
+            idps_sadd_qs = idps_sadd_qs.filter(Exists(sheet_one_country_years))
+
+        pfa_qs = pfa_qs.order_by("iso3", "year")
+        idps_sadd_qs = idps_sadd_qs.order_by("iso3", "year")
 
         filename = "IDMC_Internal_Displacement_Conflict-Violence_Disasters.xlsx"
         return GiddExportCache.get_or_create(
@@ -1499,9 +1508,15 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
         )
         qs: models.QuerySet[GiddFigure] = self.filter_queryset(queryset)
 
+        # The typology filters reach no column on `PublicFigureAnalysis`, so they are applied as the
+        # country-years sheet 1 kept.
         pfa_qs: models.QuerySet[PublicFigureAnalysis] = DisaggregationPublicFigureAnalysisFilterSet(
             data=self.request.query_params
-        ).qs.order_by("iso3", "year", "id")
+        ).qs
+        # As above: the typology filters reach no column on `PublicFigureAnalysis`.
+        if companion_sheet_narrowing_requested(self.request.query_params):
+            pfa_qs = pfa_qs.filter(Exists(qs.filter(iso3=OuterRef("iso3"), year=OuterRef("year")).order_by()))
+        pfa_qs = pfa_qs.order_by("iso3", "year", "id")
 
         filename = self._generate_export_filename()
         return GiddExportCache.get_or_create(
