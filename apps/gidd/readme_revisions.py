@@ -3,8 +3,24 @@
 import typing
 
 RevisionRow = typing.Tuple[str, str, str, str, str, str]
+Rows = typing.List[typing.List[str]]
 
 REVISION_TABLE_HEADER = ["ISO3", "Country", "Geographical region", "Year", "Figure cause", "Figure category"]
+
+REVISIONS_HEADING = "HISTORICAL DATA REVISIONS AND CORRECTIONS"
+
+METHODOLOGY_ROW = "Methodology: https://www.internal-displacement.org/monitoring-tools"
+
+REVISIONS_INTRO = (
+    "As part of our ongoing commitment to providing accurate and reliable internal displacement data, "
+    "IDMC periodically releases updated figures for several countries and years where data was previously "
+    "unavailable or required corrections. These revisions result from comprehensive methodological reviews "
+    "and address discrepancies in earlier figures published in GIDD. All figures undergo expert validation. "
+)
+
+CONTEXT_TAB_SENTENCE = "A detailed account of changes is provided in tab {tab}. "
+
+REVISIONS_CONTACT = "For inquiries: ch.datainfo@idmc.ch."
 
 
 SEPTEMBER_2026_NOTE = (
@@ -20,7 +36,7 @@ def revision_block(
     cause: typing.Optional[str] = None,
     category: typing.Optional[str] = None,
     note: typing.Optional[str] = None,
-) -> typing.List[typing.List[str]]:
+) -> Rows:
     """Render one revision round as README rows, narrowed to what an export reports.
 
     An export that reports a single cause or metric must not advertise revisions it does
@@ -33,6 +49,151 @@ def revision_block(
         block.append([note])
     block.append(list(REVISION_TABLE_HEADER))
     return [*block, *[list(row) for row in selected]]
+
+
+def historical_revisions_block(
+    cause: typing.Optional[str] = None,
+    category: typing.Optional[str] = None,
+    context_tab: typing.Optional[str] = None,
+) -> Rows:
+    """Render every published revision round, narrowed to what an export reports.
+
+    `context_tab` names the sheet carrying the per-figure account of the changes; an export
+    without such a sheet must not point a reader at one. The September 2026 note explains why
+    no IDPs rows are listed, so it is rendered only for an export that reports IDPs at all --
+    a workbook narrowed to one category carries no IDPs metric for the note to be about.
+    """
+    intro = REVISIONS_INTRO
+    if context_tab:
+        intro += CONTEXT_TAB_SENTENCE.format(tab=context_tab)
+    intro += REVISIONS_CONTACT
+
+    return [
+        [REVISIONS_HEADING],
+        [],
+        [METHODOLOGY_ROW],
+        [intro],
+        *revision_block("FIGURES REVIEWED IN JANUARY 2025", REVISIONS_JANUARY_2025, cause, category),
+        *revision_block("FIGURES REVIEWED IN MAY 2025", REVISIONS_MAY_2025, cause, category),
+        *revision_block("FIGURES REVIEWED IN MAY 2026", REVISIONS_MAY_2026, cause, category),
+        *revision_block(
+            "FIGURES REVIEWED IN SEPTEMBER 2026",
+            REVISIONS_SEPTEMBER_2026,
+            cause,
+            category,
+            note=SEPTEMBER_2026_NOTE if category is None else None,
+        ),
+    ]
+
+
+REVISIONS_JANUARY_2025: typing.List[RevisionRow] = [
+    ("BFA", "Burkina Faso", "Sub-Saharan Africa", "2023", "Conflict", "Internal Displacements"),
+    ("BDI", "Burundi", "Sub-Saharan Africa", "2021", "Disaster", "Internal Displacements"),
+    ("COD", "Dem. Rep. Congo", "Sub-Saharan Africa", "2023", "Conflict", "IDPs"),
+    ("GRC", "Greece", "Europe and Central Asia", "2023", "Disaster", "Internal Displacements"),
+    ("IND", "India", "South Asia", "2021", "Disaster", "IDPs"),
+    ("KGZ", "Kyrgyzstan", "Europe and Central Asia", "2023", "Disaster", "IDPs"),
+    ("KGZ", "Kyrgyzstan", "Europe and Central Asia", "2023", "Disaster", "Internal Displacements"),
+    ("LSO", "Lesotho", "Sub-Saharan Africa", "2023", "Disaster", "Internal Displacements"),
+    ("MLI", "Mali", "Sub-Saharan Africa", "2023", "Conflict", "Internal Displacements"),
+    ("MEX", "Mexico", "The Americas", "2023", "Conflict", "IDPs"),
+    ("MAR", "Morocco", "Middle East and North Africa", "2023", "Disaster", "IDPs"),
+    ("MAR", "Morocco", "Middle East and North Africa", "2023", "Disaster", "Internal Displacements"),
+    ("MOZ", "Mozambique", "Sub-Saharan Africa", "2022", "Conflict", "Internal Displacements"),
+    ("NAM", "Namibia", "Sub-Saharan Africa", "2023", "Disaster", "IDPs"),
+    ("NAM", "Namibia", "Sub-Saharan Africa", "2023", "Disaster", "Internal Displacements"),
+    ("PHL", "Philippines", "East Asia and Pacific", "2023", "Disaster", "Internal Displacements"),
+    ("ESP", "Spain", "Europe and Central Asia", "2017", "Disaster", "Internal Displacements"),
+    ("ESP", "Spain", "Europe and Central Asia", "2018", "Disaster", "Internal Displacements"),
+    ("ESP", "Spain", "Europe and Central Asia", "2023", "Disaster", "Internal Displacements"),
+    ("UGA", "Uganda", "Sub-Saharan Africa", "2021", "Disaster", "IDPs"),
+    ("UGA", "Uganda", "Sub-Saharan Africa", "2022", "Disaster", "IDPs"),
+    ("UGA", "Uganda", "Sub-Saharan Africa", "2022", "Disaster", "Internal Displacements"),
+    ("UGA", "Uganda", "Sub-Saharan Africa", "2023", "Disaster", "IDPs"),
+    ("USA", "United States", "The Americas", "2023", "Disaster", "Internal Displacements"),
+]
+
+
+REVISIONS_MAY_2025: typing.List[RevisionRow] = [
+    ("IDN", "Indonesia", "East Asia and Pacific", "2016", "Conflict", "Internal Displacements"),
+    ("IDN", "Indonesia", "East Asia and Pacific", "2016", "Conflict", "IDPs"),
+    ("PRI", "Puerto Rico", "The Americas", "2017", "Disaster", "Internal Displacements"),
+    ("ESP", "Spain", "Europe and Central Asia", "2017", "Disaster", "IDPs"),
+    ("IDN", "Indonesia", "East Asia and Pacific", "2017", "Conflict", "IDPs"),
+    ("IND", "India", "South Asia", "2017", "Conflict", "Internal Displacements"),
+    ("PAK", "Pakistan", "South Asia", "2018", "Conflict", "Internal Displacements"),
+    ("PAK", "Pakistan", "South Asia", "2018", "Conflict", "IDPs"),
+    ("ESP", "Spain", "Europe and Central Asia", "2018", "Disaster", "Internal Displacements"),
+    ("PNG", "Papua New Guinea", "East Asia and Pacific", "2018", "Conflict", "Internal Displacements"),
+    ("PNG", "Papua New Guinea", "East Asia and Pacific", "2018", "Conflict", "IDPs"),
+    ("IDN", "Indonesia", "East Asia and Pacific", "2018", "Conflict", "Internal Displacements"),
+    ("IND", "India", "South Asia", "2018", "Conflict", "Internal Displacements"),
+    ("PRI", "Puerto Rico", "The Americas", "2019", "Disaster", "Internal Displacements"),
+    ("BGD", "Bangladesh", "South Asia", "2019", "Disaster", "IDPs"),
+    ("BGD", "Bangladesh", "South Asia", "2019", "Conflict", "IDPs"),
+    ("PAK", "Pakistan", "South Asia", "2019", "Conflict", "Internal Displacements"),
+    ("PAK", "Pakistan", "South Asia", "2019", "Disaster", "IDPs"),
+    ("PAK", "Pakistan", "South Asia", "2019", "Conflict", "IDPs"),
+    ("PNG", "Papua New Guinea", "East Asia and Pacific", "2019", "Disaster", "IDPs"),
+    ("PNG", "Papua New Guinea", "East Asia and Pacific", "2019", "Conflict", "IDPs"),
+    ("IDN", "Indonesia", "East Asia and Pacific", "2019", "Conflict", "IDPs"),
+    ("IND", "India", "South Asia", "2019", "Conflict", "Internal Displacements"),
+    ("IND", "India", "South Asia", "2019", "Disaster", "IDPs"),
+    ("BGD", "Bangladesh", "South Asia", "2020", "Disaster", "IDPs"),
+    ("BGD", "Bangladesh", "South Asia", "2020", "Conflict", "Internal Displacements"),
+    ("BGD", "Bangladesh", "South Asia", "2020", "Conflict", "IDPs"),
+    ("BDI", "Burundi", "Sub-Saharan Africa", "2021", "Disaster", "Internal Displacements"),
+    ("UGA", "Uganda", "Sub-Saharan Africa", "2021", "Disaster", "IDPs"),
+    ("IND", "India", "South Asia", "2021", "Disaster", "IDPs"),
+    ("PAK", "Pakistan", "South Asia", "2022", "Conflict", "IDPs"),
+    ("COL", "Colombia", "The Americas", "2022", "Conflict", "Internal Displacements"),
+    ("PNG", "Papua New Guinea", "East Asia and Pacific", "2022", "Conflict", "IDPs"),
+    ("IDN", "Indonesia", "East Asia and Pacific", "2022", "Conflict", "IDPs"),
+    ("IDN", "Indonesia", "East Asia and Pacific", "2022", "Conflict", "Internal Displacements"),
+    ("TUR", "Türkiye", "Europe and Central Asia", "2022", "Conflict", "IDPs"),
+    ("MDG", "Madagascar", "Sub-Saharan Africa", "2022", "Conflict", "IDPs"),
+    ("IND", "India", "South Asia", "2022", "Conflict", "IDPs"),
+    ("LKA", "Sri Lanka", "South Asia", "2022", "Conflict", "IDPs"),
+    ("PHL", "Philippines", "East Asia and Pacific", "2022", "Conflict", "IDPs"),
+    ("GEO", "Georgia", "Europe and Central Asia", "2022", "Conflict", "IDPs"),
+    ("PAK", "Pakistan", "South Asia", "2023", "Conflict", "IDPs"),
+    ("COL", "Colombia", "The Americas", "2023", "Conflict", "Internal Displacements"),
+    ("PNG", "Papua New Guinea", "East Asia and Pacific", "2023", "Conflict", "IDPs"),
+    ("IDN", "Indonesia", "East Asia and Pacific", "2023", "Conflict", "IDPs"),
+    ("IDN", "Indonesia", "East Asia and Pacific", "2023", "Conflict", "Internal Displacements"),
+    ("TUR", "Türkiye", "Europe and Central Asia", "2023", "Conflict", "IDPs"),
+    ("PSE", "Palestine", "Middle East and North Africa", "2023", "Conflict", "IDPs"),
+    ("PSE", "Palestine", "Middle East and North Africa", "2023", "Conflict", "Internal Displacements"),
+    ("MDG", "Madagascar", "Sub-Saharan Africa", "2023", "Conflict", "IDPs"),
+    ("IND", "India", "South Asia", "2023", "Conflict", "IDPs"),
+    ("KAZ", "Kazakhstan", "Europe and Central Asia", "2023", "Conflict", "IDPs"),
+    ("LKA", "Sri Lanka", "South Asia", "2023", "Conflict", "IDPs"),
+    ("BIH", "Bosnia and Herzegovina", "Europe and Central Asia", "2023", "Conflict", "IDPs"),
+    ("PER", "Peru", "The Americas", "2023", "Disaster", "IDPs"),
+    ("KGZ", "Kyrgyzstan", "Europe and Central Asia", "2023", "Conflict", "IDPs"),
+    ("PHL", "Philippines", "East Asia and Pacific", "2023", "Conflict", "IDPs"),
+    ("PHL", "Philippines", "East Asia and Pacific", "2023", "Conflict", "Internal Displacements"),
+    ("THA", "Thailand", "East Asia and Pacific", "2023", "Conflict", "IDPs"),
+    ("GEO", "Georgia", "Europe and Central Asia", "2023", "Conflict", "IDPs"),
+    ("SLE", "Sierra Leone", "Sub-Saharan Africa", "2023", "Conflict", "IDPs"),
+]
+
+
+REVISIONS_MAY_2026: typing.List[RevisionRow] = [
+    ("GTM", "Guatemala", "The Americas", "2022", "Conflict", "Internal Displacements"),
+    ("GTM", "Guatemala", "The Americas", "2023", "Conflict", "Internal Displacements"),
+    ("GTM", "Guatemala", "The Americas", "2023", "Conflict", "IDPs"),
+    ("SYR", "Syria", "Middle East and North Africa", "2024", "Conflict", "IDPs"),
+    ("PHL", "Philippines", "East Asia and Pacific", "2024", "Disaster", "Internal Displacements"),
+    ("IND", "India", "South Asia", "2023", "Conflict", "Internal Displacements"),
+    ("ZAF", "South Africa", "Sub-Saharan Africa", "2024", "Disaster", "Internal Displacements"),
+    ("COD", "Dem. Rep. Congo", "Sub-Saharan Africa", "2024", "Conflict", "Internal Displacements"),
+    ("USA", "United States", "The Americas", "2024", "Disaster", "Internal Displacements"),
+    ("TCD", "Chad", "Sub-Saharan Africa", "2024", "Conflict", "Internal Displacements"),
+    ("USA", "United States", "The Americas", "2024", "Disaster", "IDPs"),
+    ("LBR", "Liberia", "Sub-Saharan Africa", "2017", "Disaster", "Internal Displacements"),
+    ("CRI", "Costa Rica", "The Americas", "2017", "Disaster", "Internal Displacements"),
+]
 
 
 REVISIONS_SEPTEMBER_2026: typing.List[RevisionRow] = [
