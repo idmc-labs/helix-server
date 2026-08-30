@@ -259,12 +259,26 @@ class ReportSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
             raise serializers.ValidationError(errors)
         return attrs
 
+    def create(self, validated_data):
+        instance = super().create(validated_data)
+        return self.clear_pfa_visibility_if_unqualified(instance)
+
     def update(self, instance, validated_data):
         validated_data["last_modified_by"] = self.context["request"].user
         instance = super().update(instance, validated_data)
-        if check_is_pfa_visible_in_gidd(instance):
+        return self.clear_pfa_visibility_if_unqualified(instance)
+
+    @staticmethod
+    def clear_pfa_visibility_if_unqualified(instance):
+        """Drop the GIDD visibility flag from a report that does not qualify to carry it.
+
+        Runs after the save because the checks read the country m2m, which is not written until
+        then. `is_pfa_visible_in_gidd` publishes a figure on an unauthenticated endpoint, so a
+        report that asks for visibility without meeting every condition is silenced, not refused.
+        """
+        if instance.is_pfa_visible_in_gidd and check_is_pfa_visible_in_gidd(instance):
             instance.is_pfa_visible_in_gidd = False
-            instance.save()
+            instance.save(update_fields=["is_pfa_visible_in_gidd"])
         return instance
 
 

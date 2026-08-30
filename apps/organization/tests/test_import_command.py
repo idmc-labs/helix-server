@@ -254,3 +254,43 @@ class TestImportOrganizationsCommand(HelixTestCase):
         with self.assertRaises(CommandError):
             call_command("import_organizations", path)
         self.assertFalse(Organization.objects.filter(name="X").exists())
+
+    def test_an_ambiguous_organization_kind_fails_the_row(self):
+        # ADR 0006 says a name matching multiple rows raises rather than guessing. FKByName
+        # defaulted to picking the first match, unlike M2MByName, so it silently linked one of them.
+        OrganizationKindFactory.create(name="Ambiguous Kind")
+        OrganizationKindFactory.create(name="Ambiguous Kind")
+
+        path = write_sheet(
+            ["name", "category", "methodology", "organization_kind"],
+            [
+                {
+                    "name": "Probe Org",
+                    "category": "INTERNATIONAL",
+                    "methodology": "probe methodology",
+                    "organization_kind": "Ambiguous Kind",
+                }
+            ],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_organizations", path, stdout=out)
+
+        self.assertIn("cannot disambiguate", out.getvalue())
+        self.assertEqual(Organization.objects.filter(name="Probe Org").count(), 0)
+
+    def test_an_unambiguous_name_still_resolves(self):
+        path = write_sheet(
+            ["name", "category", "methodology", "organization_kind"],
+            [
+                {
+                    "name": "Plain Org",
+                    "category": "INTERNATIONAL",
+                    "methodology": "probe methodology",
+                    "organization_kind": "Government",
+                }
+            ],
+        )
+        call_command("import_organizations", path, stdout=StringIO())
+
+        self.assertEqual(Organization.objects.get(name="Plain Org").organization_kind, self.kind)
