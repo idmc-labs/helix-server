@@ -444,13 +444,15 @@ class Query(graphene.ObjectType):
     gidd_public_conflict_statistics = graphene.Field(
         GiddConflictStatisticsType,
         **get_filtering_args_from_filterset(ConflictStatisticsFilter, GiddConflictStatisticsType),
-        required=True,
+        # Nullable: a non-null field that errors propagates its null up to the nearest nullable
+        # parent -- `data` itself -- so one bad argument would empty every sibling field in the
+        # document instead of only the field that failed.
         client_id=graphene.String(required=True),
     )
     gidd_public_disaster_statistics = graphene.Field(
         GiddDisasterStatisticsType,
         **get_filtering_args_from_filterset(DisasterStatisticsFilter, GiddDisasterStatisticsType),
-        required=True,
+        # Nullable for the same reason as the conflict statistics above.
         client_id=graphene.String(required=True),
     )
     gidd_logs = DjangoPaginatedListObjectField(
@@ -491,7 +493,7 @@ class Query(graphene.ObjectType):
     gidd_public_combined_statistics = graphene.Field(
         GiddCombinedStatisticsType,
         **get_filtering_args_from_filterset(DisasterStatisticsFilter, GiddCombinedStatisticsType),
-        required=True,
+        # Nullable for the same reason as the conflict statistics above.
         client_id=graphene.String(required=True),
     )
     gidd_public_displacement_events = DjangoPaginatedListObjectField(
@@ -1153,7 +1155,12 @@ class Query(graphene.ObjectType):
 
         conflict_filter, disaster_filter = cause_typology_filters(kwargs)
         page = max(1, kwargs.pop("page", None) or 1)
-        page_size = get_page_size(kwargs.pop("page_size", None) or GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE)
+        # Only an absent `pageSize` takes the default. `or` would have read 0 as absence, and a
+        # negative value reached the slice below as `rows[0:-n]`, which the ORM refuses.
+        requested_page_size = kwargs.pop("page_size", None)
+        page_size = get_page_size(
+            GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE if requested_page_size is None else requested_page_size
+        )
         ordering = kwargs.pop("ordering", None)
 
         # NULLS LAST throughout. The tiebreak is appended below instead, once the grouped queryset

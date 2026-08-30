@@ -215,14 +215,26 @@ class GatedPageGraphqlPagination(PageGraphqlPagination):
 
 
 def get_page_size(page_size: typing.Optional[int]) -> typing.Optional[int]:
-    """
+    """The page size a request is served, refusing anything outside the published bounds.
+
+    Both bounds raise rather than assert: `python -O` strips an assert, and with it the only thing
+    standing between a client-supplied page size and the row cap. A non-positive size is refused
+    too -- it reached a queryset slice as `rows[0:-1]`, which the ORM rejects with an error naming
+    an internal operation rather than the argument that caused it.
+
     This is separated from PageGraphqlPaginationWithoutCount to support mocking in test cases
     NOTE: This will ignore manually defined limit within the PageGraphqlPaginationWithoutCount instance
     """
-    page_size = page_size or graphql_api_settings.DEFAULT_PAGE_SIZE
+    # `_nonzero_int` returns an unrequested value (None, "") unchanged, so absence arrives here in
+    # more than one shape.
+    if page_size is None or page_size == "":
+        page_size = graphql_api_settings.DEFAULT_PAGE_SIZE
     max_page_size = graphql_api_settings.MAX_PAGE_SIZE
     if page_size is not None:
-        assert page_size <= max_page_size, ValueError(f"Max page size limit {max_page_size} exceeded")
+        if page_size < 1:
+            raise ValueError(f"Page size must be a positive integer, got {page_size}")
+        if page_size > max_page_size:
+            raise ValueError(f"Max page size limit {max_page_size} exceeded")
         return page_size
 
 
@@ -235,7 +247,8 @@ class PageGraphqlPaginationWithoutCount(PageGraphqlPagination):
 
     def paginate_queryset(self, qs, **kwargs):
         page = kwargs.pop(self.page_query_param, 1) or 1
-        assert page > 0, ValueError("Page value for PageGraphqlPagination must be a positive integer")
+        if page < 1:
+            raise ValueError("Page value for PageGraphqlPagination must be a positive integer")
 
         if self.page_size_query_param:
             page_size = _nonzero_int(

@@ -12,7 +12,7 @@ from utils.factories import (
 from utils.tests import HelixGraphQLTestCase
 
 CONFLICT_STATISTICS = """
-    query($clientId: String!, $startYear: Float, $endYear: Float) {
+    query($clientId: String!, $startYear: Int, $endYear: Int) {
         giddPublicConflictStatistics(clientId: $clientId, startYear: $startYear, endYear: $endYear) {
             newDisplacements
             totalDisplacements
@@ -25,7 +25,7 @@ CONFLICT_STATISTICS = """
 """
 
 DISASTER_STATISTICS = """
-    query($clientId: String!, $hazardTypes: [ID!], $startYear: Float, $endYear: Float) {
+    query($clientId: String!, $hazardTypes: [ID!], $startYear: Int, $endYear: Int) {
         giddPublicDisasterStatistics(
             clientId: $clientId, hazardTypes: $hazardTypes, startYear: $startYear, endYear: $endYear
         ) {

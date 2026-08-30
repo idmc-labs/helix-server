@@ -5,7 +5,7 @@ from rest_framework import serializers
 from apps.crisis.models import Crisis
 
 from .enums import CRISIS_TYPE_PUBLIC
-from .filters import ReleaseMetadataFilter, get_name_choices
+from .filters import ReleaseMetadataFilter, ValidatedYearFilterSet, YearFilter, clean_release_environment, get_name_choices
 from .models import (
     GiddDisplacement,
     GiddEventDisplacement,
@@ -17,8 +17,8 @@ from .models import (
 
 
 class RestConflictFilterSet(ReleaseMetadataFilter):
-    start_year = django_filters.NumberFilter(field_name="start_year", method="filter_start_year")
-    end_year = django_filters.NumberFilter(field_name="end_year", method="filter_end_year")
+    start_year = YearFilter(field_name="start_year", method="filter_start_year")
+    end_year = YearFilter(field_name="end_year", method="filter_end_year")
 
     class Meta:
         model = GiddDisplacement
@@ -45,12 +45,12 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
 
 class RestDisasterFilterSet(ReleaseMetadataFilter):
     event_name = django_filters.CharFilter(method="filter_event_name")
-    start_year = django_filters.NumberFilter(
+    start_year = YearFilter(
         field_name="start_year",
         method="filter_start_year",
         help_text="Filter by start date",
     )
-    end_year = django_filters.NumberFilter(
+    end_year = YearFilter(
         field_name="end_year",
         method="filter_end_year",
         help_text="Filter by end date",
@@ -97,12 +97,12 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
         method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(
+    start_year = YearFilter(
         field_name="start_year",
         method="filter_start_year",
         help_text="Filter by start date",
     )
-    end_year = django_filters.NumberFilter(
+    end_year = YearFilter(
         field_name="end_year",
         method="filter_end_year",
         help_text="Filter by end date",
@@ -161,8 +161,8 @@ class IdpsSaddEstimateFilter(ReleaseMetadataFilter):
         method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(field_name="start_year", method="filter_start_year")
-    end_year = django_filters.NumberFilter(field_name="end_year", method="filter_end_year")
+    start_year = YearFilter(field_name="start_year", method="filter_start_year")
+    end_year = YearFilter(field_name="end_year", method="filter_end_year")
 
     class Meta:
         model = IdpsSaddEstimate
@@ -200,12 +200,12 @@ class PublicFigureAnalysisFilterSet(ReleaseMetadataFilter):
         method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(
+    start_year = YearFilter(
         field_name="start_year",
         method="filter_start_year",
         help_text="Filter by start date",
     )
-    end_year = django_filters.NumberFilter(
+    end_year = YearFilter(
         field_name="end_year",
         method="filter_end_year",
         help_text="Filter by end date",
@@ -243,17 +243,17 @@ class PublicFigureAnalysisFilterSet(ReleaseMetadataFilter):
         return queryset
 
 
-class DisaggregationFilterSet(django_filters.FilterSet):
+class DisaggregationFilterSet(ValidatedYearFilterSet, django_filters.FilterSet):
     cause = django_filters.ChoiceFilter(
         method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(
+    start_year = YearFilter(
         field_name="start_year",
         method="filter_start_year",
         help_text="Filter by start date",
     )
-    end_year = django_filters.NumberFilter(
+    end_year = YearFilter(
         field_name="end_year",
         method="filter_end_year",
         help_text="Filter by end date",
@@ -319,24 +319,24 @@ class DisaggregationFilterSet(django_filters.FilterSet):
     @property
     def qs(self):
         qs = super().qs
-        # `or`, not a `.get` default: the argument is nullable, so an explicit null reaches this
-        # as None and `.get`'s default never applies. RELEASE is the documented fallback.
-        release_environment_name = self.data.get("release_environment") or ReleaseMetadata.ReleaseEnvironment.RELEASE.name
+        # Validated here rather than by the declared `ChoiceFilter`, which never runs: this
+        # property reads `self.data` directly and so bypasses form cleaning.
+        release_environment_name = clean_release_environment(self.data.get("release_environment"))
         qs = self.filter_release_environment(qs, release_environment_name)
         return qs
 
 
-class DisaggregationPublicFigureAnalysisFilterSet(django_filters.FilterSet):
+class DisaggregationPublicFigureAnalysisFilterSet(ValidatedYearFilterSet, django_filters.FilterSet):
     cause = django_filters.ChoiceFilter(
         method="filter_figure_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(
+    start_year = YearFilter(
         field_name="start_year",
         method="filter_start_year",
         help_text="Filter by start date",
     )
-    end_year = django_filters.NumberFilter(
+    end_year = YearFilter(
         field_name="end_year",
         method="filter_end_year",
         help_text="Filter by end date",
@@ -394,8 +394,8 @@ class DisaggregationPublicFigureAnalysisFilterSet(django_filters.FilterSet):
     @property
     def qs(self):
         qs = super().qs
-        # `or`, not a `.get` default: the argument is nullable, so an explicit null reaches this
-        # as None and `.get`'s default never applies. RELEASE is the documented fallback.
-        release_environment_name = self.data.get("release_environment") or ReleaseMetadata.ReleaseEnvironment.RELEASE.name
+        # Validated here rather than by the declared `ChoiceFilter`, which never runs: this
+        # property reads `self.data` directly and so bypasses form cleaning.
+        release_environment_name = clean_release_environment(self.data.get("release_environment"))
         qs = self.filter_release_environment(qs, release_environment_name)
         return qs
