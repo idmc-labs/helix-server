@@ -644,8 +644,9 @@ OLD_JOB_EXECUTION_TTL = 72 * 60 * 60  # seconds
 EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT = env("EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT")
 # staying in pending for too long will be moved to killed
 EXCEL_EXPORT_PENDING_STATE_TIMEOUT = 5 * 60 * 60  # seconds
-# staying in progress for too long will be moved to killed
-EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT = 10 * 60  # seconds
+# staying in progress for too long will be moved to killed. Also the export task's own
+# `time_limit`, so the reaper cannot kill a run the task would still have finished.
+EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT = 30 * 60  # seconds
 
 OTP_TOTP_ISSUER = "IDMC"
 OTP_HOTP_ISSUER = "IDMC"

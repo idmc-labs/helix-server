@@ -12,7 +12,7 @@ from utils.factories import (
 from utils.tests import HelixGraphQLTestCase
 
 CONFLICT_STATISTICS = """
-    query($clientId: String!, $startYear: Float, $endYear: Float) {
+    query($clientId: String!, $startYear: Int, $endYear: Int) {
         giddPublicConflictStatistics(clientId: $clientId, startYear: $startYear, endYear: $endYear) {
             newDisplacements
             totalDisplacements
@@ -25,7 +25,7 @@ CONFLICT_STATISTICS = """
 """
 
 DISASTER_STATISTICS = """
-    query($clientId: String!, $hazardTypes: [ID!], $startYear: Float, $endYear: Float) {
+    query($clientId: String!, $hazardTypes: [ID!], $startYear: Int, $endYear: Int) {
         giddPublicDisasterStatistics(
             clientId: $clientId, hazardTypes: $hazardTypes, startYear: $startYear, endYear: $endYear
         ) {
@@ -228,6 +228,15 @@ class TestGiddPublicStatistics(HelixGraphQLTestCase):
         self.assertEqual(data["totalDisplacements"], 2000 + 4000)
 
 
+EVENT_CODES = """
+    query($clientId: String!) {
+        giddPublicDisplacementEvents(clientId: $clientId) {
+            results { eventName eventCodes }
+        }
+    }
+"""
+
+
 class TestGiddPublicDisasterTotalEvents(HelixGraphQLTestCase):
     """`totalEvents` counts events, not the rows that carry them.
 
@@ -277,3 +286,49 @@ class TestGiddPublicDisasterTotalEvents(HelixGraphQLTestCase):
         data = response.json()["data"]["giddPublicDisasterStatistics"]
         self.assertEqual(self.rows, 5)
         self.assertEqual(data["totalEvents"], 2)
+
+
+class TestGiddDisplacementEventsEventCodes(HelixGraphQLTestCase):
+    """`eventCodes` publishes an event's codes across every country it touched.
+
+    The same field name on /gidd/disasters/ means the all-country set, so the two surfaces have
+    to answer alike. The row below carries different values in its own-country columns, which is
+    what makes a reader of the wrong column fail here.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_code = "GIDD-EVENT-CODES-TEST"
+        Client.objects.create(name="Gidd Event Codes", code=cls.client_code, is_active=True)
+        ReleaseMetadata.objects.create(release_year=2023, pre_release_year=2022, modified_by=UserFactory.create())
+
+        hazard = DisasterTypeFactory.create(name="Earthquake")
+        sub_category = DisasterSubCategoryFactory.create(category=DisasterCategoryFactory.create())
+        country = CountryFactory.create(name="Afghanistan", iso3="AFG")
+        GiddEventDisplacement.objects.create(
+            country=country,
+            iso3=country.iso3,
+            country_name=country.name,
+            year=2023,
+            cause=Crisis.CRISIS_TYPE.DISASTER,
+            event_raw_id=1,
+            event_name="Herat Earthquake",
+            event_codes=["PER-COUNTRY-1"],
+            event_codes_type=["Government Assigned Identifier"],
+            all_country_event_codes=["GLIDE-1", "GLIDE-2"],
+            all_country_event_codes_type=["Glide Number", "Government Assigned Identifier"],
+            new_displacement=1,
+            total_displacement=1,
+            hazard_category=sub_category.category,
+            hazard_sub_category=sub_category,
+            hazard_type=hazard,
+            hazard_type_name=hazard.name,
+            hazard_sub_type=DisasterSubTypeFactory.create(type=hazard),
+        )
+
+    def test_event_codes_are_the_all_country_set(self):
+        response = self.query(EVENT_CODES, variables=dict(clientId=self.client_code))
+        self.assertResponseNoErrors(response)
+        results = response.json()["data"]["giddPublicDisplacementEvents"]["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["eventCodes"], ["GLIDE-1", "GLIDE-2"])

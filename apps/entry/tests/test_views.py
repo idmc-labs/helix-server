@@ -174,3 +174,100 @@ class TestIduExportSourceRouting(HelixAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertIn("idus_with_sources", response.url)
         self.assertNotIn("idus_without_sources", response.url)
+
+
+class TestIduGeojsonGeometry(HelixTestCase):
+    """The IDU geojson routes are unauthenticated and read by GIS tooling outside
+    Helix, which parses the geometry rather than the properties. A document that
+    merely loads as JSON is not enough: the positions have to be numbers in
+    [longitude, latitude] order, one per location, so these tests pin the
+    geometry against the spec instead of against the serializer."""
+
+    def setUp(self):
+        super().setUp()
+        self.country = CountryFactory.create(idmc_short_name="Nepal")
+        self.event = EventFactory.create()
+        self.entry = EntryFactory.create(url="https://example.com/source-report", is_confidential=False)
+
+    def _create_figure(self, locations):
+        return FigureFactory.create(
+            entry=self.entry,
+            country=self.country,
+            event=self.event,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            role=Figure.ROLE.RECOMMENDED.value,
+            include_idu=True,
+            excerpt_idu="Some displacement happened.",
+            geo_locations=locations,
+        )
+
+    def _assert_is_number(self, value):
+        # `bool` is a subclass of `int` and would otherwise pass as a number
+        self.assertNotIsInstance(value, bool)
+        self.assertIsInstance(value, (int, float))
+
+    def _assert_valid_geojson(self, doc):
+        self.assertEqual(doc["type"], "FeatureCollection")
+        for feature in doc["features"]:
+            self.assertEqual(feature["type"], "Feature")
+            geometry = feature["geometry"]
+            self.assertEqual(geometry["type"], "MultiPoint")
+            self.assertIsInstance(geometry["coordinates"], list)
+            for position in geometry["coordinates"]:
+                self.assertIsInstance(position, list)
+                self.assertEqual(len(position), 2)
+                longitude, latitude = position
+                self._assert_is_number(longitude)
+                self._assert_is_number(latitude)
+                self.assertGreaterEqual(longitude, -180)
+                self.assertLessEqual(longitude, 180)
+                self.assertGreaterEqual(latitude, -90)
+                self.assertLessEqual(latitude, 90)
+
+    def _get_document(self):
+        doc = json.loads(b"".join(get_idu_data_geojson({"include_sources": False})))
+        self._assert_valid_geojson(doc)
+        return doc
+
+    def test_single_location_emits_one_numeric_longitude_latitude_position(self):
+        self._create_figure([FigureLocationFactory.create(display_name="loc-a", lat=12.5, lon=145.75)])
+
+        features = self._get_document()["features"]
+
+        self.assertEqual(len(features), 1)
+        self.assertEqual(features[0]["geometry"]["coordinates"], [[145.75, 12.5]])
+
+    def test_multiple_locations_emit_one_position_each_without_interleaving(self):
+        self._create_figure(
+            [
+                FigureLocationFactory.create(display_name="loc-a", lat=12.5, lon=145.75),
+                FigureLocationFactory.create(display_name="loc-b", lat=-13.25, lon=46.5),
+                FigureLocationFactory.create(display_name="loc-c", lat=0.5, lon=-72.25),
+            ]
+        )
+
+        features = self._get_document()["features"]
+
+        self.assertEqual(len(features), 1)
+        coordinates = features[0]["geometry"]["coordinates"]
+        self.assertEqual(len(coordinates), 3)
+        # Aggregation order is not part of the contract, the set of positions is
+        self.assertEqual(
+            sorted(tuple(position) for position in coordinates),
+            sorted([(145.75, 12.5), (46.5, -13.25), (-72.25, 0.5)]),
+        )
+
+    def test_figure_without_location_is_omitted_and_leaves_its_neighbours_intact(self):
+        located = self._create_figure([FigureLocationFactory.create(display_name="loc-a", lat=12.5, lon=145.75)])
+        unlocated = self._create_figure([])
+
+        features = self._get_document()["features"]
+
+        published_ids = [feature["properties"]["id"] for feature in features]
+        self.assertEqual(published_ids, [located.id])
+        self.assertNotIn(unlocated.id, published_ids)
+
+    def test_figure_without_any_location_does_not_raise(self):
+        self._create_figure([])
+
+        self.assertEqual(self._get_document()["features"], [])

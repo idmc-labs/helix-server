@@ -5,7 +5,7 @@ from rest_framework import serializers
 from apps.crisis.models import Crisis
 
 from .enums import CRISIS_TYPE_PUBLIC
-from .filters import ReleaseMetadataFilter, get_name_choices
+from .filters import ReleaseMetadataFilter, ValidatedYearFilterSet, YearFilter, clean_release_environment, get_name_choices
 from .models import (
     GiddDisplacement,
     GiddEventDisplacement,
@@ -17,8 +17,8 @@ from .models import (
 
 
 class RestConflictFilterSet(ReleaseMetadataFilter):
-    start_year = django_filters.NumberFilter(field_name="start_year", method="filter_start_year")
-    end_year = django_filters.NumberFilter(field_name="end_year", method="filter_end_year")
+    start_year = YearFilter(field_name="start_year", method="filter_start_year")
+    end_year = YearFilter(field_name="end_year", method="filter_end_year")
 
     class Meta:
         model = GiddDisplacement
@@ -26,6 +26,10 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
             # No `id` filter: this list is an aggregate over GiddDisplacement rows and has no pk
             # of its own.
             "iso3": ["iexact"],
+            # The conflict typology levels the GraphQL surface accepts. They scope the rows that
+            # feed the sums, so a total here always matches the selection that produced it.
+            "violence": ["in"],
+            "violence_sub_type": ["in"],
         }
 
     def filter_start_year(self, queryset, name, value):
@@ -41,12 +45,12 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
 
 class RestDisasterFilterSet(ReleaseMetadataFilter):
     event_name = django_filters.CharFilter(method="filter_event_name")
-    start_year = django_filters.NumberFilter(
+    start_year = YearFilter(
         field_name="start_year",
         method="filter_start_year",
         help_text="Filter by start date",
     )
-    end_year = django_filters.NumberFilter(
+    end_year = YearFilter(
         field_name="end_year",
         method="filter_end_year",
         help_text="Filter by end date",
@@ -57,7 +61,12 @@ class RestDisasterFilterSet(ReleaseMetadataFilter):
         fields = {
             "event_name": ["icontains"],
             "iso3": ["in"],
+            # All four hazard levels, as on the GraphQL surface: a client holding a category or a
+            # sub type cannot express it by enumerating the types beneath or above it.
+            "hazard_category": ["in"],
+            "hazard_sub_category": ["in"],
             "hazard_type": ["in"],
+            "hazard_sub_type": ["in"],
         }
 
     def filter_event_name(self, queryset, name, value):
@@ -88,12 +97,12 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
         method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(
+    start_year = YearFilter(
         field_name="start_year",
         method="filter_start_year",
         help_text="Filter by start date",
     )
-    end_year = django_filters.NumberFilter(
+    end_year = YearFilter(
         field_name="end_year",
         method="filter_end_year",
         help_text="Filter by end date",
@@ -103,6 +112,16 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
         model = GiddDisplacement
         fields = {
             "iso3": ["in"],
+            # This list publishes both causes, so it carries both typologies. Each scopes the rows
+            # that feed the sums; rows of the other cause carry none of these columns and drop out
+            # entirely, so pair a violence filter with `cause=conflict` and a hazard filter with
+            # `cause=disaster`.
+            "violence": ["in"],
+            "violence_sub_type": ["in"],
+            "hazard_category": ["in"],
+            "hazard_sub_category": ["in"],
+            "hazard_type": ["in"],
+            "hazard_sub_type": ["in"],
         }
 
     def filter_start_year(self, queryset, name, value):
@@ -142,8 +161,8 @@ class IdpsSaddEstimateFilter(ReleaseMetadataFilter):
         method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(field_name="start_year", method="filter_start_year")
-    end_year = django_filters.NumberFilter(field_name="end_year", method="filter_end_year")
+    start_year = YearFilter(field_name="start_year", method="filter_start_year")
+    end_year = YearFilter(field_name="end_year", method="filter_end_year")
 
     class Meta:
         model = IdpsSaddEstimate
@@ -181,12 +200,12 @@ class PublicFigureAnalysisFilterSet(ReleaseMetadataFilter):
         method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(
+    start_year = YearFilter(
         field_name="start_year",
         method="filter_start_year",
         help_text="Filter by start date",
     )
-    end_year = django_filters.NumberFilter(
+    end_year = YearFilter(
         field_name="end_year",
         method="filter_end_year",
         help_text="Filter by end date",
@@ -224,17 +243,17 @@ class PublicFigureAnalysisFilterSet(ReleaseMetadataFilter):
         return queryset
 
 
-class DisaggregationFilterSet(django_filters.FilterSet):
+class DisaggregationFilterSet(ValidatedYearFilterSet, django_filters.FilterSet):
     cause = django_filters.ChoiceFilter(
         method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(
+    start_year = YearFilter(
         field_name="start_year",
         method="filter_start_year",
         help_text="Filter by start date",
     )
-    end_year = django_filters.NumberFilter(
+    end_year = YearFilter(
         field_name="end_year",
         method="filter_end_year",
         help_text="Filter by end date",
@@ -248,7 +267,14 @@ class DisaggregationFilterSet(django_filters.FilterSet):
         model = GiddFigure
         fields = {
             "iso3": ["in"],
+            # The same six typology levels the GraphQL surface accepts; `GiddFigure` names the
+            # hazard columns `disaster_*`, so the parameters here do too.
+            "disaster_category": ["in"],
+            "disaster_sub_category": ["in"],
             "disaster_type": ["in"],
+            "disaster_sub_type": ["in"],
+            "violence": ["in"],
+            "violence_sub_type": ["in"],
         }
 
     def filter_start_year(self, queryset, name, value):
@@ -293,25 +319,24 @@ class DisaggregationFilterSet(django_filters.FilterSet):
     @property
     def qs(self):
         qs = super().qs
-        release_environment_name = self.data.get(
-            "release_environment",
-            ReleaseMetadata.ReleaseEnvironment.RELEASE.name,
-        )
+        # Validated here rather than by the declared `ChoiceFilter`, which never runs: this
+        # property reads `self.data` directly and so bypasses form cleaning.
+        release_environment_name = clean_release_environment(self.data.get("release_environment"))
         qs = self.filter_release_environment(qs, release_environment_name)
         return qs
 
 
-class DisaggregationPublicFigureAnalysisFilterSet(django_filters.FilterSet):
+class DisaggregationPublicFigureAnalysisFilterSet(ValidatedYearFilterSet, django_filters.FilterSet):
     cause = django_filters.ChoiceFilter(
         method="filter_figure_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(
+    start_year = YearFilter(
         field_name="start_year",
         method="filter_start_year",
         help_text="Filter by start date",
     )
-    end_year = django_filters.NumberFilter(
+    end_year = YearFilter(
         field_name="end_year",
         method="filter_end_year",
         help_text="Filter by end date",
@@ -369,9 +394,8 @@ class DisaggregationPublicFigureAnalysisFilterSet(django_filters.FilterSet):
     @property
     def qs(self):
         qs = super().qs
-        release_environment_name = self.data.get(
-            "release_environment",
-            ReleaseMetadata.ReleaseEnvironment.RELEASE.name,
-        )
+        # Validated here rather than by the declared `ChoiceFilter`, which never runs: this
+        # property reads `self.data` directly and so bypasses form cleaning.
+        release_environment_name = clean_release_environment(self.data.get("release_environment"))
         qs = self.filter_release_environment(qs, release_environment_name)
         return qs

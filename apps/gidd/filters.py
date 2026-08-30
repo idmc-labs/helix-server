@@ -1,6 +1,7 @@
 import typing
 
 import django_filters
+from django import forms
 from rest_framework import serializers
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -22,7 +23,50 @@ def get_name_choices(enum_class) -> typing.List[typing.Tuple[str, str]]:
     return [(i.name, i.label) for i in enum_class] + [(i.name.lower(), i.label) for i in enum_class]
 
 
-class ReleaseMetadataFilter(django_filters.FilterSet):
+def clean_release_environment(value: typing.Optional[str]) -> str:
+    """The release environment a request reads. Absent or null means RELEASE.
+
+    Matched without regard to case, which is what both surfaces have always accepted. Anything
+    unrecognised is refused rather than served as RELEASE: a near miss like `PRE-RELEASE` otherwise
+    returns release-year data under a 200, which reads as an answer to the question that was asked.
+    """
+    if not value:
+        return ReleaseMetadata.ReleaseEnvironment.RELEASE.name
+    for environment in ReleaseMetadata.ReleaseEnvironment:
+        if value.lower() == environment.name.lower():
+            return environment.name
+    expected = ", ".join(environment.name for environment in ReleaseMetadata.ReleaseEnvironment)
+    raise serializers.ValidationError(f"Invalid release environment '{value}'. Expected one of: {expected}.")
+
+
+class YearFilter(django_filters.NumberFilter):
+    """A calendar year argument.
+
+    `NumberFilter`'s decimal field publishes `Float` and accepts a fraction. IDP stock is selected
+    by year EQUALITY, so `endYear: 2023.5` returns a full new-displacement sum beside a zero stock.
+    """
+
+    field_class = forms.IntegerField
+
+
+class ValidatedYearFilterSet:
+    """Refuses a year argument that is not a positive whole number.
+
+    The bound cannot live on the form field: django-filter drops a field failing form validation
+    from `cleaned_data`, so on the GraphQL surface -- which does not run DRF's filterset validation
+    -- an out-of-range year would be ignored rather than reported.
+
+    Mix in FIRST, ahead of the FilterSet.
+    """
+
+    def filter_queryset(self, queryset):
+        for name, value in self.form.cleaned_data.items():
+            if value is not None and isinstance(self.filters.get(name), YearFilter) and value < 1:
+                raise serializers.ValidationError(f"'{name}' must be a positive year, got {value}.")
+        return super().filter_queryset(queryset)
+
+
+class ReleaseMetadataFilter(ValidatedYearFilterSet, django_filters.FilterSet):
     release_environment = django_filters.ChoiceFilter(
         method="no_op",
         choices=get_name_choices(ReleaseMetadata.ReleaseEnvironment),
@@ -55,17 +99,16 @@ class ReleaseMetadataFilter(django_filters.FilterSet):
     @property
     def qs(self):
         qs = super().qs
-        release_environment_name = self.data.get(
-            "release_environment",
-            ReleaseMetadata.ReleaseEnvironment.RELEASE.name,
-        )
+        # Validated here rather than by the declared `ChoiceFilter`, which never runs: this
+        # property reads `self.data` directly and so bypasses form cleaning.
+        release_environment_name = clean_release_environment(self.data.get("release_environment"))
         qs = self.filter_release_environment(qs, release_environment_name)
         return qs
 
 
 class ConflictStatisticsFilter(ReleaseMetadataFilter):
-    start_year = django_filters.NumberFilter(method="filter_start_year")
-    end_year = django_filters.NumberFilter(method="filter_end_year")
+    start_year = YearFilter(method="filter_start_year")
+    end_year = YearFilter(method="filter_end_year")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
     violence_types = IDListFilter(method="filter_violence_types")
     violence_sub_types = IDListFilter(method="filter_violence_sub_types")
@@ -99,8 +142,8 @@ class DisasterStatisticsFilter(ReleaseMetadataFilter):
     hazard_sub_categories = IDListFilter(method="filter_hazard_sub_categories")
     hazard_types = IDListFilter(method="filter_hazard_types")
     hazard_sub_types = IDListFilter(method="filter_hazard_sub_types")
-    start_year = django_filters.NumberFilter(method="filter_start_year")
-    end_year = django_filters.NumberFilter(method="filter_end_year")
+    start_year = YearFilter(method="filter_start_year")
+    end_year = YearFilter(method="filter_end_year")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
 
     class Meta:
@@ -172,8 +215,8 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
     # `cleaned_data`, so an unknown cause is silently ignored and every row comes back.
     cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="cause")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
-    start_year = django_filters.NumberFilter(method="filter_start_year")
-    end_year = django_filters.NumberFilter(method="filter_end_year")
+    start_year = YearFilter(method="filter_start_year")
+    end_year = YearFilter(method="filter_end_year")
     hazard_categories = IDListFilter(method="filter_hazard_categories")
     hazard_sub_categories = IDListFilter(method="filter_hazard_sub_categories")
     hazard_types = IDListFilter(method="filter_hazard_types")
@@ -222,9 +265,15 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
 
 
 class GiddCountryDisplacementFilter(ReleaseMetadataFilter):
+    # Scoping to one cause drops the other cause's rows before aggregation, so the country-years
+    # that only carry the excluded cause fall out of the row filter and out of `total_count` --
+    # which hiding the columns client-side cannot do.
+    # A ChoiceFilter is unsafe here: django-filter drops a field that fails form validation from
+    # `cleaned_data`, so an unknown cause is silently ignored and every row comes back.
+    cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="cause")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
-    start_year = django_filters.NumberFilter(method="filter_start_year")
-    end_year = django_filters.NumberFilter(method="filter_end_year")
+    start_year = YearFilter(method="filter_start_year")
+    end_year = YearFilter(method="filter_end_year")
 
     class Meta:
         model = GiddDisplacement

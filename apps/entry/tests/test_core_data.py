@@ -1839,7 +1839,7 @@ class TestCoreData(HelixGraphQLTestCase):
             return value
 
         stats_query = """
-            query ConflictStatistics($clientId: String!, $endYear: Float, $releaseEnvironment: String) {
+            query ConflictStatistics($clientId: String!, $endYear: Int, $releaseEnvironment: String) {
                 giddPublicConflictStatistics(
                     clientId: $clientId, endYear: $endYear, releaseEnvironment: $releaseEnvironment,
                 ) {

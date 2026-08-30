@@ -495,10 +495,22 @@ def get_idu_data_excel(filters=None):
 
 
 def get_idu_data_geojson(filters=None):
-    def format_coordinates(coordinates: typing.List[str]):
-        if not coordinates:
-            return []
-        return coordinates.split(",")
+    def format_coordinates(coordinates: typing.Optional[str]) -> typing.List[typing.List[float]]:
+        """Turn the exported `locations_coordinates` string into GeoJSON
+        positions. The export stores each location as "lat, lon" and joins
+        locations with the array separator, while a GeoJSON position is
+        [longitude, latitude] — so the pair is split and swapped. A pair that
+        does not parse as two numbers is dropped rather than raised on, because
+        this runs inside a streaming response that has already sent its
+        headers."""
+        positions = []
+        for pair in (coordinates or "").split(EXTERNAL_ARRAY_SEPARATOR):
+            lat, _, lon = pair.partition(EXTERNAL_TUPLE_SEPARATOR)
+            try:
+                positions.append([float(lon), float(lat)])
+            except ValueError:
+                continue
+        return positions
 
     def remove_null_from_dict(data: dict) -> dict:
         return {key: value for key, value in data.items() if value is not None}
@@ -522,7 +534,9 @@ def get_idu_data_geojson(filters=None):
             item = serialize_record(obj)
 
             coordinates = format_coordinates(item["locations_coordinates"])
-            if coordinates == []:
+            # A row with nothing mappable is omitted rather than published with an
+            # empty or null geometry, matching the GIDD geojson export.
+            if not coordinates:
                 continue
 
             geometry = {

@@ -112,6 +112,10 @@ class DisasterSerializer(serializers.ModelSerializer):
 
     hazard_category_name = serializers.CharField(help_text="Hazard category based on the CRED EM-DAT classification.")
 
+    hazard_sub_category_name = serializers.CharField(
+        help_text="Hazard sub-category based on the CRED EM-DAT classification."
+    )
+
     hazard_type_name = serializers.CharField(help_text="Hazard type as categorized by CRED EM-DAT.")
 
     hazard_sub_type_name = serializers.CharField(
@@ -181,6 +185,13 @@ class DisasterSerializer(serializers.ModelSerializer):
             "event_codes",
             "event_codes_type",
         )
+        # `GiddEventDisplacement` holds both causes, so the hazard columns are nullable for the
+        # conflict rows. This endpoint serves disaster rows only, where they are always set, and
+        # the published schema promised a required integer before the table was unified.
+        extra_kwargs = {
+            field: {"required": True, "allow_null": False}
+            for field in ("hazard_category", "hazard_sub_category", "hazard_type", "hazard_sub_type")
+        }
         lookup_field = "id"
 
 
