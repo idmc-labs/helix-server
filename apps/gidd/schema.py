@@ -647,7 +647,10 @@ class Query(graphene.ObjectType):
                     output_field=models.CharField(),
                 ),
             )
-            .filter(total__gt=0)
+            # The row carries both measures, so filtering on flow alone drops a typology that has
+            # IDP stock and no new displacement -- while the headline sums that same stock. The
+            # breakdown has to admit every row the headline counts, or the two disagree.
+            .filter(Q(total__gt=0) | Q(total_idp__gt=0))
         )
 
         return GiddConflictStatisticsType(
@@ -792,7 +795,10 @@ class Query(graphene.ObjectType):
                     output_field=models.CharField(),
                 ),
             )
-            .filter(total__gt=0)
+            # The row carries both measures, so filtering on flow alone drops a typology that has
+            # IDP stock and no new displacement -- while the headline sums that same stock. The
+            # breakdown has to admit every row the headline counts, or the two disagree.
+            .filter(Q(total__gt=0) | Q(total_idp__gt=0))
         )
 
         return GiddDisasterStatisticsType(

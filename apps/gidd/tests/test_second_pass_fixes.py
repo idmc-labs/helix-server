@@ -27,6 +27,7 @@ from utils.factories import (
     FigureLocationFactory,
     ReportFactory,
     UserFactory,
+    ViolenceSubTypeFactory,
 )
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -37,6 +38,16 @@ CONFLICT_STATISTICS = """
         giddPublicConflictStatistics(clientId: $clientId, releaseEnvironment: $releaseEnvironment) {
             newDisplacements
             totalDisplacements
+        }
+    }
+"""
+
+CONFLICT_BREAKDOWN = """
+    query($clientId: String!, $countriesIso3: [String!]) {
+        giddPublicConflictStatistics(clientId: $clientId, countriesIso3: $countriesIso3) {
+            newDisplacements
+            totalDisplacements
+            displacementsByViolenceSubType { label newDisplacements totalDisplacements }
         }
     }
 """
@@ -152,3 +163,54 @@ class GiddNullReleaseEnvironmentTestCase(HelixGraphQLTestCase):
         # equality above only because both sides were empty.
         stats = self.statistics(releaseEnvironment=None)["data"]["giddPublicConflictStatistics"]
         assert stats["newDisplacements"] == 500, stats
+
+
+class GiddStockOnlyBreakdownTestCase(HelixGraphQLTestCase):
+    """A typology with IDP stock and no new displacement must survive into the breakdown.
+
+    The breakdown and the headline read the same rows, so a predicate that admits fewer rows than
+    the headline makes the two disagree -- and protracted displacement, a standing IDP population
+    with no movement in the year, is exactly the shape that falls through.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_code = "GIDD-STOCK-ONLY-BREAKDOWN"
+        Client.objects.create(name="Gidd Stock Only", code=cls.client_code, is_active=True)
+        ReleaseMetadata.objects.create(
+            release_year=RELEASE_YEAR,
+            pre_release_year=RELEASE_YEAR - 1,
+            modified_by=UserFactory.create(),
+        )
+        country = CountryFactory.create(name="Protractia", iso3="PRO")
+        violence_sub_type = ViolenceSubTypeFactory.create(name="IAC")
+        GiddDisplacement.objects.create(
+            country=country,
+            iso3=country.iso3,
+            country_name=country.name,
+            year=RELEASE_YEAR,
+            cause=Crisis.CRISIS_TYPE.CONFLICT,
+            violence_sub_type=violence_sub_type,
+            violence_sub_type_name=violence_sub_type.name,
+            new_displacement=0,
+            total_displacement=246901,
+        )
+
+    def statistics(self):
+        response = self.query(
+            CONFLICT_BREAKDOWN,
+            variables=dict(clientId=self.client_code, countriesIso3=["PRO"]),
+        )
+        self.assertResponseNoErrors(response)
+        return response.json()["data"]["giddPublicConflictStatistics"]
+
+    def test_the_breakdown_accounts_for_every_idp_the_headline_publishes(self):
+        stats = self.statistics()
+        assert stats["totalDisplacements"] == 246901, stats
+        # The defect: filtering on new displacement alone left the headline standing beside an
+        # empty breakdown.
+        assert len(stats["displacementsByViolenceSubType"]) == 1, stats
+        row = stats["displacementsByViolenceSubType"][0]
+        assert row["label"] == "IAC", row
+        assert row["totalDisplacements"] == stats["totalDisplacements"], (row, stats)
+        assert row["newDisplacements"] == 0, row
