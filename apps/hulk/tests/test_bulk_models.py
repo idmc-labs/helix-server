@@ -8,16 +8,26 @@ from __future__ import annotations
 
 import datetime
 import types
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import ValidationError
 from pyhelix import models as pyhelix_models
 from pyhelix.api.api import helix_client_context
+from pyhelix.constants import MAX_EVENT_CODES
 
-from apps.hulk.bulk.models import HulkEventImport, HulkEventImportEventCode
+from apps.crisis.models import Crisis
+from apps.event.models import Event
+from apps.hulk.bulk.models import (
+    HulkEventImport,
+    HulkEventImportEventCode,
+    HulkFigureImport,
+    HulkSourcePreviewImport,
+)
 from utils.factories import (
     CountryFactory,
     DisasterSubTypeFactory,
+    EntryFactory,
+    EventFactory,
     ViolenceSubTypeFactory,
 )
 from utils.tests import HelixGraphQLTestCase
@@ -100,6 +110,41 @@ class TestHulkEventImportEventCodes(HelixGraphQLTestCase):
         payload = HulkEventImport(**row).generate_for_graphql_mutation()
         self.assertEqual(len(payload["eventCodes"]), 1)
         self.assertEqual(payload["eventCodes"][0]["eventCodeType"], "GOV_ASSIGNED_IDENTIFIER")
+
+    def test_more_than_max_event_codes_rejected(self):
+        """``EventSerializer._validate_event_codes`` caps the list; the bound is
+        shared with pyhelix through the generated ``MAX_EVENT_CODES``."""
+        country = CountryFactory.create()
+        row = self._event_row(
+            event_codes=[
+                {
+                    "uuid": str(uuid4()),
+                    "country_id": country.id,
+                    "event_code": f"GLD-{index:03d}",
+                    "event_code_type": "GLIDE_NUMBER",
+                }
+                for index in range(MAX_EVENT_CODES + 1)
+            ]
+        )
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("event_codes", str(cm.exception))
+
+    def test_max_event_codes_allowed(self):
+        country = CountryFactory.create()
+        row = self._event_row(
+            event_codes=[
+                {
+                    "uuid": str(uuid4()),
+                    "country_id": country.id,
+                    "event_code": f"GLD-{index:03d}",
+                    "event_code_type": "GLIDE_NUMBER",
+                }
+                for index in range(MAX_EVENT_CODES)
+            ]
+        )
+        payload = HulkEventImport(**row).generate_for_graphql_mutation()
+        self.assertEqual(len(payload["eventCodes"]), MAX_EVENT_CODES)
 
     def test_event_code_subclass_used_for_items(self):
         """The override must use the local subclass so each item has
@@ -245,7 +290,33 @@ class TestHulkEnumValidationFieldNames(HelixGraphQLTestCase):
         self.assertNotIn("Invalid event_type", message)
 
 
-class TestHulkEntryImportPublishDate(HelixGraphQLTestCase):
+class _PyhelixStubClientMixin:
+    """A helix client whose managers accept every id.
+
+    The pyhelix models resolve ids through the client; the app subclasses replace
+    those lookups with DB queries. Tests that exercise a parent model directly
+    (to avoid the subclass's DB-backed lookups) supply this instead.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        stub_manager = types.SimpleNamespace(
+            validate_id_exists=lambda _id: None,
+            validate_optional_id_exists=lambda _id: None,
+            validate_ids_exist=lambda _ids: None,
+        )
+        self.stub_client = types.SimpleNamespace(
+            violence_sub_type_manager=stub_manager,
+            disaster_sub_type_manager=stub_manager,
+            other_sub_type_manager=stub_manager,
+            osv_sub_type_manager=stub_manager,
+            context_of_violence_manager=stub_manager,
+            country_manager=stub_manager,
+            figure_tag_manager=stub_manager,
+        )
+
+
+class TestHulkEntryImportPublishDate(_PyhelixStubClientMixin, HelixGraphQLTestCase):
     """``publish_date`` must not be more than 10 years in the future.
 
     Validation lives on the pyhelix parent model, so we exercise it directly to
@@ -267,42 +338,24 @@ class TestHulkEntryImportPublishDate(HelixGraphQLTestCase):
     def test_publish_date_beyond_10_years_rejected(self):
         far_future = datetime.date.today().replace(year=datetime.date.today().year + 11)
         row = self._entry_row(publish_date=far_future.isoformat())
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
             pyhelix_models.HulkEntryImport(**row)
         self.assertIn("publish_date: This date cannot be more than 10 years in the future.", str(cm.exception))
 
     def test_publish_date_within_10_years_allowed(self):
         near_future = datetime.date.today().replace(year=datetime.date.today().year + 5)
         row = self._entry_row(publish_date=near_future.isoformat())
-        pyhelix_models.HulkEntryImport(**row)
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkEntryImport(**row)
 
     def test_publish_date_very_old_allowed(self):
         row = self._entry_row(publish_date="1900-01-01")
-        pyhelix_models.HulkEntryImport(**row)
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkEntryImport(**row)
 
 
-class TestHulkFigureImportDates(HelixGraphQLTestCase):
-    """Figure ``start_date``/``end_date`` must not be more than 10 years in the
-    future — mirroring ``FigureSerializer._validate_dates``.
-
-    The check lives on the pyhelix parent (``parse_dates``) and bounds the
-    resolved ``_start_date``/``_end_date``, so it covers both the flow dates
-    (``start_date``/``end_date``) and the stock mapping
-    (``stock_date`` -> start, ``stock_reporting_date`` -> end). We exercise the
-    parent model directly to avoid the DB-backed entry/event/sub-type lookups on
-    the app subclass, stubbing the sub-type existence check the ``figure_cause``
-    validator performs."""
-
-    def setUp(self) -> None:
-        super().setUp()
-        # parse_figure_cause only calls ``<manager>.validate_id_exists(id)``; a
-        # no-op stub is enough to reach the date validation under test.
-        stub_manager = types.SimpleNamespace(validate_id_exists=lambda _id: None)
-        self.stub_client = types.SimpleNamespace(
-            violence_sub_type_manager=stub_manager,
-            disaster_sub_type_manager=stub_manager,
-            other_sub_type_manager=stub_manager,
-        )
+class _PyhelixFigureRowMixin(_PyhelixStubClientMixin):
+    """Figure rows for the pyhelix parent model."""
 
     def _location(self, **overrides) -> dict:
         loc = {
@@ -365,6 +418,18 @@ class TestHulkFigureImportDates(HelixGraphQLTestCase):
         row.update(overrides)
         return row
 
+
+class TestHulkFigureImportDates(_PyhelixFigureRowMixin, HelixGraphQLTestCase):
+    """Figure ``start_date``/``end_date`` must not be more than 10 years in the
+    future — mirroring ``FigureSerializer._validate_dates`` — and a flow
+    figure's end must already have passed, mirroring
+    ``FigureSerializer._validate_category``.
+
+    The checks live on the pyhelix parent (``parse_dates``) and bound the
+    resolved ``_start_date``/``_end_date``, so they cover both the flow dates
+    (``start_date``/``end_date``) and the stock mapping
+    (``stock_date`` -> start, ``stock_reporting_date`` -> end)."""
+
     @staticmethod
     def _far_future() -> str:
         today = datetime.date.today()
@@ -389,10 +454,13 @@ class TestHulkFigureImportDates(HelixGraphQLTestCase):
             pyhelix_models.HulkFigureImport(**row)
         self.assertIn("end_date: This date cannot be more than 10 years in the future.", str(cm.exception))
 
-    def test_flow_dates_within_10_years_allowed(self):
+    def test_flow_near_future_dates_rejected(self):
+        """Inside the 10-year bound but still ahead of today: rejected by the
+        flow-only past-date rule rather than the future bound."""
         row = self._flow_row(start_date=self._near_future(), end_date=self._near_future())
-        with helix_client_context(self.stub_client):
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
             pyhelix_models.HulkFigureImport(**row)
+        self.assertIn("end_date: This must be a past date.", str(cm.exception))
 
     def test_flow_very_old_dates_allowed(self):
         row = self._flow_row(start_date="1900-01-01", end_date="1900-12-31")
@@ -451,3 +519,254 @@ class TestHulkFigureImportDates(HelixGraphQLTestCase):
         row = self._stock_row(stock_date=self._near_future(), stock_reporting_date=self._near_future())
         with helix_client_context(self.stub_client):
             pyhelix_models.HulkFigureImport(**row)
+
+    # -- flow end date must have passed ---------------------------------------
+
+    @staticmethod
+    def _tomorrow() -> str:
+        return (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+
+    def test_flow_end_date_in_the_future_rejected(self):
+        row = self._flow_row(end_date=self._tomorrow())
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+        self.assertIn("end_date: This must be a past date.", str(cm.exception))
+
+    def test_flow_end_date_today_allowed(self):
+        row = self._flow_row(end_date=datetime.date.today().isoformat())
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+
+    def test_stock_reporting_date_in_the_future_allowed(self):
+        """The past-date bound is flow-only; a stock figure reports forward."""
+        row = self._stock_row(stock_reporting_date=self._tomorrow())
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**row)
+
+
+class TestHulkFigureImportHouseholdSize(_PyhelixFigureRowMixin, HelixGraphQLTestCase):
+    """``FigureSerializer._validate_unit`` rejects any falsy ``household_size``
+    for HOUSEHOLD and derives ``total_figures`` from it into a positive column,
+    so zero and negative values must not reach helix."""
+
+    def _household_row(self, **overrides) -> dict:
+        row = {"unit": "HOUSEHOLD", "household_size": 4.5}
+        row.update(overrides)
+        return self._flow_row(**row)
+
+    def test_household_size_required_for_household_unit(self):
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**self._household_row(household_size=None))
+        self.assertIn("household_size is required when unit is HOUSEHOLD", str(cm.exception))
+
+    def test_zero_household_size_rejected(self):
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**self._household_row(household_size=0))
+        self.assertIn("household_size must be greater than 0 when unit is HOUSEHOLD", str(cm.exception))
+
+    def test_negative_household_size_rejected(self):
+        """A negative size reaches ``total_figures``, a positive column, as a
+        raw constraint violation rather than a field error."""
+        with self.assertRaises(ValidationError) as cm, helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**self._household_row(household_size=-4.5))
+        self.assertIn("household_size must be greater than 0 when unit is HOUSEHOLD", str(cm.exception))
+
+    def test_positive_household_size_allowed(self):
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**self._household_row())
+
+    def test_person_unit_ignores_household_size(self):
+        """helix nulls ``household_size`` for PERSON, so its value is not bounded."""
+        with helix_client_context(self.stub_client):
+            pyhelix_models.HulkFigureImport(**self._flow_row(unit="PERSON", household_size=0))
+
+
+class _ServerFigureRowMixin:
+    """Figure rows for the app subclass, whose validators query the DB."""
+
+    def _event(self, event_type) -> Event:
+        return EventFactory.create(event_type=event_type.value)
+
+    def _figure_row(self, event, **overrides) -> dict:
+        entry = EntryFactory.create()
+        country = CountryFactory.create()
+        row = {
+            "uuid": "99999999-9999-9999-9999-999999999999",
+            "entry_id": entry.id,
+            "event_id": event.id,
+            "figure_cause": "DISASTER",
+            "disaster_sub_type_id": DisasterSubTypeFactory.create().id,
+            "category": "NEW_DISPLACEMENT",
+            "term": "DISPLACED",
+            "quantifier": "EXACT",
+            "unit": "PERSON",
+            "figure_role": "RECOMMENDED",
+            "country_id": country.id,
+            "start_date": "2024-01-01",
+            "start_date_accuracy": "DAY",
+            "end_date": "2024-01-31",
+            "end_date_accuracy": "DAY",
+            "reported_figure": 100,
+            "is_housing_destruction": False,
+            "displacement_occurred": "BEFORE",
+            "is_disaggregated": False,
+            "analysis_text": "analysis",
+            "source_excerpt_text": "excerpt",
+            "include_idu": False,
+            "idu_text": "",
+            "locations": [
+                {
+                    "uuid": "77777777-7777-7777-7777-777777777777",
+                    "display_name": "Kathmandu",
+                    "country_name": "Nepal",
+                    "country_code": "NP",
+                    "identifier": "ORIGIN",
+                    "accuracy": "ADM0",
+                    "geocoder": "GEONAME",
+                    "latitude": 27.7,
+                    "longitude": 85.3,
+                }
+            ],
+            "sources_id": [1],
+        }
+        row.update(overrides)
+        return row
+
+
+class TestHulkFigureImportEventCause(_ServerFigureRowMixin, HelixGraphQLTestCase):
+    """A figure's ``figure_cause`` must match its event's cause, and its country
+    and dates must sit inside the event's. ``parse_event`` resolves the required
+    sub_type from the event, so a cause mismatch has to be reported as a
+    mismatch rather than as the event-side sub_type being absent."""
+
+    def test_cause_mismatch_names_both_causes(self):
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
+        row = self._figure_row(event)
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**row)
+        message = str(cm.exception)
+        self.assertIn("figure_cause DISASTER does not match the cause CONFLICT of its event", message)
+        self.assertIn(f"event_id={event.pk}", message)
+        self.assertNotIn("ViolenceSubType id is None", message)
+
+    def test_empty_locations_rejected(self):
+        """The subclass restates the parent's ``locations`` bound; overriding the
+        field would otherwise drop it."""
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER.value)
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**self._figure_row(event, locations=[]))
+        self.assertIn("locations", str(cm.exception))
+
+    def test_matching_cause_accepted(self):
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER.value)
+        HulkFigureImport(**self._figure_row(event))
+
+    def test_matching_cause_still_requires_sub_type(self):
+        """The mismatch check does not swallow the missing sub_type error for a
+        figure whose cause does match its event's."""
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER.value)
+        row = self._figure_row(event, disaster_sub_type_id=None)
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**row)
+        self.assertIn("DisasterSubType id is None, this is required", str(cm.exception))
+
+
+class TestHulkRelatedIdExistence(_ServerFigureRowMixin, HelixGraphQLTestCase):
+    """Ids the cause branch does not cover were only rejected by the mutation,
+    as ``Invalid pk`` post-errors raised after the row's entry and event exist."""
+
+    UNKNOWN_ID = 987654321
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.country = CountryFactory.create()
+
+    def test_unknown_figure_tag_rejected(self):
+        event = self._event(Crisis.CRISIS_TYPE.DISASTER)
+        row = self._figure_row(event, tags_id=[self.UNKNOWN_ID])
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**row)
+        self.assertIn("tags_id: unknown FigureTag id(s)", str(cm.exception))
+
+    def test_unknown_osv_sub_type_rejected(self):
+        event = self._event(Crisis.CRISIS_TYPE.DISASTER)
+        row = self._figure_row(event, osv_sub_type_id=self.UNKNOWN_ID)
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**row)
+        self.assertIn("osv_sub_type_id: unknown OsvSubType id(s)", str(cm.exception))
+
+    def test_absent_osv_sub_type_allowed(self):
+        event = self._event(Crisis.CRISIS_TYPE.DISASTER)
+        HulkFigureImport(**self._figure_row(event, osv_sub_type_id=None))
+
+    def test_unknown_context_of_violence_rejected(self):
+        event = self._event(Crisis.CRISIS_TYPE.DISASTER)
+        row = self._figure_row(event, context_of_violences_id=[self.UNKNOWN_ID])
+        with self.assertRaises(ValidationError) as cm:
+            HulkFigureImport(**row)
+        self.assertIn("context_of_violences_id: unknown ContextOfViolence id(s)", str(cm.exception))
+
+    def test_unknown_event_country_rejected(self):
+        row = {
+            "uuid": "44444444-4444-4444-4444-444444444444",
+            "event_name": "Test event",
+            "event_cause": "DISASTER",
+            "disaster_sub_type_id": DisasterSubTypeFactory.create().id,
+            "start_date": "2024-01-01",
+            "start_date_accuracy": "DAY",
+            "end_date": "2024-01-31",
+            "end_date_accuracy": "DAY",
+            "event_narrative": "narrative",
+            "countries_id": [self.country.id, self.UNKNOWN_ID],
+            "event_codes": [],
+        }
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("countries_id: unknown Country id(s)", str(cm.exception))
+
+    def test_unknown_event_code_country_rejected(self):
+        row = {
+            "uuid": "44444444-4444-4444-4444-444444444445",
+            "event_name": "Test event",
+            "event_cause": "DISASTER",
+            "disaster_sub_type_id": DisasterSubTypeFactory.create().id,
+            "start_date": "2024-01-01",
+            "start_date_accuracy": "DAY",
+            "end_date": "2024-01-31",
+            "end_date_accuracy": "DAY",
+            "event_narrative": "narrative",
+            "countries_id": [self.country.id],
+            "event_codes": [
+                {
+                    "uuid": "22222222-2222-2222-2222-222222222229",
+                    "country_id": self.UNKNOWN_ID,
+                    "event_code": "GLD-001",
+                    "event_code_type": "GLIDE_NUMBER",
+                }
+            ],
+        }
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("event_codes[].country_id: unknown Country id(s)", str(cm.exception))
+
+
+class TestHulkSourcePreviewImportUrlGuard(HelixGraphQLTestCase):
+    """helix fetches a source preview's url server-side in a headless browser
+    and publishes the render, so the row carries the same destination check the
+    attachment path applies to a download."""
+
+    def _row(self, file_url: str) -> dict:
+        return {"uuid": "33333333-3333-3333-3333-333333333333", "file_url": file_url}
+
+    def test_public_url_allowed(self):
+        HulkSourcePreviewImport(**self._row("https://93.184.216.34/report.pdf"))
+
+    def test_instance_metadata_url_rejected(self):
+        with self.assertRaises(ValidationError) as cm:
+            HulkSourcePreviewImport(**self._row("http://169.254.169.254/latest/meta-data/"))
+        self.assertIn("refused to fetch url", str(cm.exception))
+
+    def test_non_http_scheme_rejected(self):
+        with self.assertRaises(ValidationError) as cm:
+            HulkSourcePreviewImport(**self._row("s3://bucket/key.pdf"))
+        self.assertIn("refused to fetch url", str(cm.exception))
