@@ -109,17 +109,19 @@ LICENSE_ROW = (
     "Creative Commons License (See: https://creativecommons.org/licenses/by-nc/4.0/)."
 )
 
+# Bounded, not open-ended: every export ships from one release, so each states the same end year.
 COVERAGE_ALL_CAUSES = (
-    "COVERAGE: Global. The GIDD provides data on internal displacement caused by conflict since 2009. This "
-    "includes information on both metrics: internal displacements and the total number of IDPs. Data on "
-    "internal displacements triggered by disasters dates back to 2008, and the metrics on the total number "
-    "of IDPs from disaster-related events are available from 2019 onwards."
+    "COVERAGE: Global. The GIDD provides data on internal displacement caused by conflict from 2009 "
+    "through 2024, covering both internal displacements (flows) and the total number of IDPs (stocks). "
+    "Data on internal displacements triggered by disasters dates back to 2008 and runs through 2024; "
+    "the metrics on the total number of IDPs from disaster-related events are available from 2019 "
+    "through 2024."
 )
 
 COVERAGE_DISASTERS_ONLY = (
-    "COVERAGE: Global. The GIDD provides data on internal displacements triggered by disasters dates back "
-    "to 2008, and the metrics on the total number of IDPs from disaster-related events are available from "
-    "2019 onwards."
+    "COVERAGE: Global. The GIDD provides data on internal displacements triggered by disasters dating back "
+    "to 2008 and running through 2024; the metrics on the total number of IDPs from disaster-related "
+    "events are available from 2019 through 2024."
 )
 
 
@@ -236,14 +238,6 @@ DISPLACEMENT_DEFINITIONS: Rows = [
 
 DISPLACEMENT_LICENSE_ROW = (
     "USE LICENSE: This content is licensed under CC BY-NC. See: https://creativecommons.org/licenses/by-nc/4.0/."
-)
-
-DISPLACEMENT_COVERAGE = (
-    "COVERAGE: Global. The GIDD provides data on internal displacement caused by conflict from 2009 "
-    "through 2024, covering both internal displacements (flows) and the total number of IDPs (stocks). "
-    "Data on internal displacements triggered by disasters dates back to 2008 and runs through 2024; "
-    "the metrics on the total number of IDPs from disaster-related events are available from 2019 "
-    "through 2024."
 )
 
 

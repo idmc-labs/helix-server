@@ -715,7 +715,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 version="4",
                 description=[[], [readme_blocks.DISPLACEMENT_DESCRIPTION]],
                 definitions=readme_blocks.DISPLACEMENT_DEFINITIONS,
-                coverage=readme_blocks.DISPLACEMENT_COVERAGE,
+                coverage=readme_blocks.COVERAGE_ALL_CAUSES,
                 license_row=readme_blocks.DISPLACEMENT_LICENSE_ROW,
             ),
             *readme_blocks.data_description_block("1_Displacement_data table"),
