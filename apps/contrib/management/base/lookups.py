@@ -86,14 +86,21 @@ class EnumLookup(BaseLookup):
 
 
 class FKByName(BaseLookup):
-    """Resolves a foreign key by matching a human-friendly field (e.g. name) against the DB."""
+    """
+    Resolves a foreign key by matching a human-friendly field (e.g. name) against the DB.
+
+    An ambiguous name fails the row rather than resolving to whichever match came back first.
+    ``M2MByName`` has always done this; the two now agree, and both match what ADR 0006 says the
+    framework does. Pass ``error_on_multiple=False`` only where picking arbitrarily is genuinely
+    acceptable.
+    """
 
     def __init__(
         self,
         field: str,
         model,
         lookup_field: str = "name",
-        error_on_multiple: bool = False,
+        error_on_multiple: bool = True,
         list_values: bool = True,
     ):
         self.field = field
@@ -390,6 +397,12 @@ class M2MById(BaseLookup):
         self.model = model
         self.split = split
         self.list_values = list_values
+
+    def clear_value(self):
+        # A list field empties to [], as it does for the other multi-value lookups. Without this
+        # the base's None reaches a many-to-many serializer field, which refuses it — leaving an
+        # id-based relation settable but never clearable.
+        return []
 
     def resolve(self, value):
         if is_empty(value):
