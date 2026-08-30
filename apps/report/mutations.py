@@ -267,6 +267,7 @@ class ExportReport(graphene.Mutation):
     result = graphene.Field(ReportType)
 
     @staticmethod
+    @permission_checker(["report.change_report"])
     def mutate(root, info, id):
         from apps.contrib.models import ExcelDownload
 
@@ -274,6 +275,16 @@ class ExportReport(graphene.Mutation):
             instance = Report.objects.get(id=id)
         except Report.DoesNotExist:
             return ExportReport(errors=[dict(field="nonFieldErrors", messages=gettext("Report does not exist."))])
+
+        if not ReportSerializer.has_permission_for_report(
+            info.context.request.user,
+            instance,
+        ):
+            return ExportReport(
+                errors=[
+                    dict(field="nonFieldErrors", messages=gettext("You do not have permission to edit report.")),
+                ]
+            )
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.INDIVIDUAL_REPORT),

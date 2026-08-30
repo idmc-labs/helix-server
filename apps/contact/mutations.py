@@ -100,6 +100,7 @@ class CreateCommunication(graphene.Mutation):
     result = graphene.Field(CommunicationType)
 
     @staticmethod
+    @permission_checker(["contact.add_communication"])
     def mutate(root, info, data):
         serializer = CommunicationSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):
@@ -117,6 +118,7 @@ class UpdateCommunication(graphene.Mutation):
     result = graphene.Field(CommunicationType)
 
     @staticmethod
+    @permission_checker(["contact.change_communication"])
     def mutate(root, info, data):
         try:
             instance = Communication.objects.get(id=data["id"])
@@ -142,6 +144,7 @@ class DeleteCommunication(graphene.Mutation):
     result = graphene.Field(CommunicationType)
 
     @staticmethod
+    @permission_checker(["contact.delete_communication"])
     def mutate(root, info, id):
         try:
             instance = Communication.objects.get(id=id)

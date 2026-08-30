@@ -8,6 +8,7 @@ from djoser.utils import encode_uid
 from apps.users.enums import USER_ROLE
 from apps.users.models import User
 from utils.factories import UserFactory
+from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixAPITestCase, HelixGraphQLTestCase, create_user_with_role
 
 
@@ -643,6 +644,40 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertEqual(content["data"]["users"]["results"][0]["id"], str(admin_user.id))
         self.assertEqual(content["data"]["users"]["results"][0]["email"], admin_user.email)
         self.assertEqual(content["data"]["users"]["results"][0]["portfoliosMetadata"]["isAdmin"], True)
+
+
+class TestExportUsers(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.mutation = """
+        mutation ExportUsers($filters: UserFilterDataInputType!) {
+          exportUsers(filters: $filters) {
+            ok
+            errors
+          }
+        }
+        """
+        self.variables = {"filters": {}}
+
+    def test_admin_can_export_users(self) -> None:
+        self.force_login(create_user_with_role(USER_ROLE.ADMIN.name))
+        response = self.query(self.mutation, variables=self.variables)
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content["data"]["exportUsers"]["ok"], content)
+
+    def test_monitoring_expert_can_export_users(self) -> None:
+        # The roster is readable by every role above guest, so the export must stay with them.
+        self.force_login(create_user_with_role(USER_ROLE.MONITORING_EXPERT.name))
+        response = self.query(self.mutation, variables=self.variables)
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content["data"]["exportUsers"]["ok"], content)
+
+    def test_guest_cannot_export_users(self) -> None:
+        self.force_login(create_user_with_role(USER_ROLE.GUEST.name))
+        response = self.query(self.mutation, variables=self.variables)
+        content = response.json()
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content["errors"][0]["message"])
 
 
 class TestAPIMe(HelixAPITestCase):

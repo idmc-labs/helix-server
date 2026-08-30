@@ -51,6 +51,7 @@ from apps.report.dataloaders import (
 from apps.users.dataloaders import UserPortfoliosMetadataLoader
 from utils.graphene.dataloaders import FilteredRelationCountLoader, FilteredRelationListLoader, call_signature
 from utils.graphene.relation_loaders import RelationNodeLoader
+from utils.permissions import is_guest_user
 
 
 class GQLContext:
@@ -67,6 +68,12 @@ class GQLContext:
     @cached_property
     def user(self):
         return self.request.user
+
+    @cached_property
+    def is_guest(self):
+        # Cached: `highest_role` reads portfolios, and the gates that ask this sit on
+        # per-row resolvers.
+        return is_guest_user(self.user)
 
     def get_filtered_relation_list_loader(self, parent: str, related_name: str, params: dict):
         # One loader per relation AND per set of call arguments: a loader resolves its whole

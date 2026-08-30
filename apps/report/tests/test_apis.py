@@ -609,8 +609,7 @@ class TestIndividualReportExport(HelixGraphQLTestCase):
             "id": str(self.report.id),
         }
 
-    def test_user_can_export_individual_report(self):
-        # Test admin user can export report
+    def test_admin_can_export_individual_report(self):
         user = create_user_with_role(USER_ROLE.ADMIN.name)
         self.force_login(user)
         response = self.query(self.export_mutation, variables=self.variables)
@@ -618,10 +617,41 @@ class TestIndividualReportExport(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertIsNone(content["data"]["exportReport"]["errors"], content)
 
-        # Test non admin user can export report
+    def test_directors_office_can_export_individual_report(self):
+        # Directors' office may edit reports without being able to delete them, so the gate
+        # here is the edit permission, not the delete one.
+        user = create_user_with_role(USER_ROLE.DIRECTORS_OFFICE.name)
+        self.force_login(user)
+        response = self.query(self.export_mutation, variables=self.variables)
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertIsNone(content["data"]["exportReport"]["errors"], content)
+
+    def test_guest_cannot_export_individual_report(self):
         user = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(user)
         response = self.query(self.export_mutation, variables=self.variables)
+        content = response.json()
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content["errors"][0]["message"])
+
+    def test_reporting_team_cannot_export_another_users_report(self):
+        user = create_user_with_role(USER_ROLE.REPORTING_TEAM.name)
+        self.force_login(user)
+        response = self.query(self.export_mutation, variables=self.variables)
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertIn("permission", content["data"]["exportReport"]["errors"][0]["messages"], content)
+
+    def test_reporting_team_can_export_own_report(self):
+        user = create_user_with_role(USER_ROLE.REPORTING_TEAM.name)
+        report = ReportFactory.create(
+            created_by=user,
+            filter_figure_start_after="2020-01-01",
+            filter_figure_end_before="2021-01-01",
+            generated_from=Report.REPORT_TYPE.MASTERFACT,
+        )
+        self.force_login(user)
+        response = self.query(self.export_mutation, variables={"id": str(report.id)})
         content = response.json()
         self.assertResponseNoErrors(response)
         self.assertIsNone(content["data"]["exportReport"]["errors"], content)

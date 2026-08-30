@@ -304,7 +304,7 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
                 qual = getattr(resolver, "__qualname__", "")
                 if "_make_fk_resolver" in qual:
                     fk_count += 1
-                elif "_make_list_resolver" in qual:
+                elif "_make_list_resolver" in qual or "guest_hidden_reverse_fk_list_resolver" in qual:
                     list_count += 1
 
         # Floors, not exact counts: legitimate additions must not fail, while a drop means a

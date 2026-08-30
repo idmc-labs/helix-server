@@ -180,6 +180,22 @@ def reverse_fk_list_resolver(child_model, fk_name):
     return _make_list_resolver(ref, ref, factory)
 
 
+def guest_hidden_reverse_fk_list_resolver(child_model, fk_name):
+    """A reverse-FK list resolver that serves a guest an empty list.
+
+    For relations a GUEST must not read at all. The paginated surfaces of the same relation
+    refuse them through their filterset; an unpaginated list carries no filterset to refuse in.
+    """
+    inner = reverse_fk_list_resolver(child_model, fk_name)
+
+    def resolver(root, info, **kwargs):
+        if info.context.is_guest:
+            return []
+        return inner(root, info, **kwargs)
+
+    return resolver
+
+
 def _list_loader_factory_for(parent_model, rel):
     """Return (ref, factory) for a reverse-FK or M2M relation, or None if unsupported."""
     if rel.one_to_many:  # reverse FK: child has the FK back to parent

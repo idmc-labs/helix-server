@@ -1,6 +1,7 @@
 import graphene
 from django.conf import settings
 from django.contrib.auth import login, logout
+from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext
 
 from apps.contrib.models import ExcelDownload
@@ -26,7 +27,7 @@ from apps.users.serializers import (
 )
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.mutation import generate_input_type_for_serializer
-from utils.permissions import is_authenticated, permission_checker
+from utils.permissions import PERMISSION_DENIED_MESSAGE, is_authenticated, permission_checker
 from utils.validations import MissingCaptchaException
 
 RegisterInputType = generate_input_type_for_serializer("RegisterInputType", RegisterSerializer)
@@ -353,6 +354,15 @@ class ExportUsers(ExportBaseMutation):
         filters = UserFilterDataInputType(required=True)
 
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.USER
+
+    @classmethod
+    def mutate(cls, root, info, filters):
+        # The roster names every user and their role. UserFilter does not scope by role, and no
+        # grantable permission separates a guest from the roles that legitimately download it
+        # (`users.change_user` reaches ADMIN alone), so the role itself is the gate.
+        if info.context.is_guest:
+            raise PermissionDenied(gettext(PERMISSION_DENIED_MESSAGE))
+        return super().mutate(root, info, filters)
 
 
 class Mutation(object):

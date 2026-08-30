@@ -57,9 +57,21 @@ class ContactListType(CustomDjangoListObjectType):
         filterset_class = ContactFilter
 
 
+class GuestHiddenObjectField(DjangoObjectField):
+    """Single-object getter that answers a guest with null instead of the row."""
+
+    @staticmethod
+    def object_resolver(manager, root, info, **kwargs):
+        if info.context.is_guest:
+            return None
+        return DjangoObjectField.object_resolver(manager, root, info, **kwargs)
+
+
 class Query:
     contact = DjangoObjectField(ContactType)
-    communication = DjangoObjectField(CommunicationType)
+    # Guests do not see communications: the list surfaces hide them through CommunicationFilter,
+    # and this getter would otherwise hand one over by id.
+    communication = GuestHiddenObjectField(CommunicationType)
     contact_list = DjangoPaginatedListObjectField(
         ContactListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
     )

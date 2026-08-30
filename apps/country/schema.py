@@ -6,6 +6,7 @@ from graphene_django_extras import (
     DjangoObjectField,
 )
 
+from apps.contact.models import Communication
 from apps.contact.schema import ContactListType
 from apps.country.filters import (
     ContextualAnalysisFilter,
@@ -30,7 +31,7 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
-from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType, guest_hidden_reverse_fk_list_resolver
 from utils.graphene.types import CustomDjangoListObjectType
 
 from .enums import HouseholdSizeGapFillingMethodEnum
@@ -196,6 +197,10 @@ class CountryType(RelationBatchedDjangoObjectType):
 
     regional_coordinator = graphene.Field("apps.users.schema.PortfolioType")
     monitoring_expert = graphene.Field("apps.users.schema.PortfolioType")
+
+    # Communications are hidden from guests everywhere; this unpaginated reverse carries no
+    # filterset of its own to hide them in.
+    resolve_communications = guest_hidden_reverse_fk_list_resolver(Communication, "country")
 
     def resolve_last_summary(root, info, **kwargs):
         return info.context.country_last_summary_loader.load(root.id)

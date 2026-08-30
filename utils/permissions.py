@@ -6,6 +6,8 @@ from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext
 
+from apps.users.enums import USER_ROLE
+
 PERMISSION_DENIED_MESSAGE = "You do not have permission to perform this action."
 
 logger = logging.getLogger(__name__)
@@ -21,6 +23,16 @@ def permission_checker(perms: List[str]) -> Callable[..., Callable]:
         return wrapped_func
 
     return wrapped
+
+
+def is_guest_user(user) -> bool:
+    """Whether `user` reaches the API with no role above GUEST.
+
+    An anonymous caller counts as a guest: `highest_role` reads portfolios and there are none.
+    """
+    if not user.is_authenticated:
+        return True
+    return user.highest_role == USER_ROLE.GUEST
 
 
 def is_authenticated() -> Callable[..., Callable]:

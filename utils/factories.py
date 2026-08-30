@@ -115,10 +115,9 @@ class CommunicationFactory(DjangoModelFactory):
         model = "contact.Communication"
 
     contact = factory.SubFactory(ContactFactory)
-    title = factory.Faker("sentence")
     subject = factory.Faker("sentence")
     content = factory.Faker("paragraph")
-    date_time = factory.Faker("date_time_this_month")
+    date = factory.Faker("date_this_month")
     medium = factory.SubFactory(CommunicationMediumFactory)
 
 
