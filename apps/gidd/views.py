@@ -149,6 +149,13 @@ class GiddOrderingFilter(filters.OrderingFilter):
     unauthenticated, so a deep page pays a full sort.
     """
 
+    def filter_queryset(self, request, queryset, view):
+        if getattr(view, "action", None) in getattr(view, "ORDERING_UNSUPPORTED_ACTIONS", ()):
+            if request.query_params.get(self.ordering_param):
+                raise ValidationError({self.ordering_param: ["This action returns a fixed order and cannot be sorted."]})
+            return queryset
+        return super().filter_queryset(request, queryset, view)
+
     def get_ordering(self, request, queryset, view):
         ordering = super().get_ordering(request, queryset, view)
         if not ordering:
@@ -220,7 +227,7 @@ class GiddOrderingFilter(filters.OrderingFilter):
         return valid
 
     def get_schema_operation_parameters(self, view):
-        """Publish the accepted sort keys, and omit the parameter where the action ignores it.
+        """Publish the accepted sort keys, and omit the parameter where the action refuses it.
 
         The keys come from `_term_to_source`, the same map the request is validated against, so
         the documented set cannot drift from the accepted one. `track_gidd` skips a
@@ -242,7 +249,9 @@ class GiddOrderingFilter(filters.OrderingFilter):
 
 # `ordering_fields` stays unset so the keys come from the serializer: "__all__" would admit every
 # model column, including internal ones like `event_raw_id` that no response carries.
-GIDD_LIST_FILTER_BACKENDS = (DjangoFilterBackend, GiddOrderingFilter, filters.SearchFilter)
+# `SearchFilter` is absent: no GIDD viewset defines `search_fields`, so it returned the queryset
+# untouched while still publishing `search` in the schema.
+GIDD_LIST_FILTER_BACKENDS = (DjangoFilterBackend, GiddOrderingFilter)
 
 
 @client_id
@@ -251,6 +260,18 @@ class ListOnlyViewSetMixin(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
+
+    def handle_exception(self, exc):
+        """Answer an error as JSON even where the action's only renderer emits a spreadsheet.
+
+        `XlsxRenderer` passes its data through untouched, so an error payload would otherwise reach
+        the caller as the repr of a dict under a spreadsheet content type.
+        """
+        response = super().handle_exception(exc)
+        if isinstance(getattr(self.request, "accepted_renderer", None), XlsxRenderer):
+            self.request.accepted_renderer = renderers.JSONRenderer()
+            self.request.accepted_media_type = renderers.JSONRenderer.media_type
+        return response
 
 
 @extend_schema_view(
@@ -610,7 +631,8 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     serializer_class = DisplacementDataSerializer
     filterset_class = RestDisplacementDataFilterSet
     pagination_class = GiddLimitOffsetPagination
-    # `export()` re-sorts for the sheet layout, so a requested ordering cannot survive it.
+    # `export()` re-sorts for the sheet layout, so a requested ordering cannot survive it: the
+    # parameter is refused there rather than accepted and replaced.
     ORDERING_UNSUPPORTED_ACTIONS = frozenset({"export"})
 
     def get_queryset(self):
@@ -1205,8 +1227,8 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         # Track export
         # Rounded in SQL rather than in python: the sheet builders stream this with `.iterator()`,
         # which needs it to stay a queryset.
-        # `order_by` below replaces any requested ordering, so the parameter is hidden from this
-        # action's schema rather than advertised and silently dropped.
+        # `order_by` below replaces any requested ordering, so `ordering` is refused by the filter
+        # backend rather than accepted and silently dropped.
         qs = (
             self.filter_queryset(self.get_queryset())
             .annotate(
