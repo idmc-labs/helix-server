@@ -1614,7 +1614,7 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                             "Event end date": item["gidd_event__end_date"],
                             "Event start date accuracy": self._get_date_accuracy(item["gidd_event__start_date_accuracy"]),
                             "Event end date accuracy": self._get_date_accuracy(item["gidd_event__end_date_accuracy"]),
-                            "Is housing destruction": "Yes" if item["is_housing_destruction"] is not None else "No",
+                            "Is housing destruction": "Yes" if item["is_housing_destruction"] else "No",
                             "Event codes (Code:Type)": self.extract_event_data_raw(
                                 item["gidd_event__event_codes"],
                                 item["gidd_event__event_codes_type"],

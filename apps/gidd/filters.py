@@ -55,10 +55,9 @@ class ReleaseMetadataFilter(django_filters.FilterSet):
     @property
     def qs(self):
         qs = super().qs
-        release_environment_name = self.data.get(
-            "release_environment",
-            ReleaseMetadata.ReleaseEnvironment.RELEASE.name,
-        )
+        # `or`, not a `.get` default: the argument is nullable, so an explicit null reaches this
+        # as None and `.get`'s default never applies. RELEASE is the documented fallback.
+        release_environment_name = self.data.get("release_environment") or ReleaseMetadata.ReleaseEnvironment.RELEASE.name
         qs = self.filter_release_environment(qs, release_environment_name)
         return qs
 
