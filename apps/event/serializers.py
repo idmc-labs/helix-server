@@ -2,6 +2,7 @@ import typing
 from collections import OrderedDict
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.db.models import Max, Min, Q
 from django.utils.translation import gettext
 from rest_framework import serializers
@@ -69,6 +70,7 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
             "glide_numbers",
             "assignee",
             "disaster_category",
+            "disaster_sub_category",
             "disaster_type",
             "ignore_qa",
             "old_id",
@@ -246,6 +248,31 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
             errors["start_date"] = gettext("The earliest start date of one of the figures is %s.") % min_start_date
         return errors
 
+    def _validate_figures_cause(self, attrs):
+        """
+        downward validation: a figure's cause must match its event's
+
+        A figure keeps its own sub-type, which may differ from the event's, but
+        FigureSerializer requires the causes to agree. Changing the event's cause
+        therefore strands its figures: they can no longer be edited, and report
+        totals — which read event__event_type — silently stop counting them.
+        """
+        errors = OrderedDict()
+        if not self.instance or "event_type" not in attrs:
+            return errors
+
+        event_type = attrs["event_type"]
+        if event_type == self.instance.event_type:
+            return errors
+
+        stranded = Figure.objects.filter(event=self.instance).exclude(figure_cause=event_type).count()
+        if stranded:
+            errors["event_type"] = gettext(
+                "%(count)s figure(s) of this event carry a different cause. "
+                "Update or remove them before changing the event's cause."
+            ) % {"count": stranded}
+        return errors
+
     def _update_event_codes(self, event: Event, event_codes: typing.List[typing.Dict]):
         instance_event_codes_qs = EventCode.objects.filter(event=event)
 
@@ -266,15 +293,28 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
                 # Create new
                 event_code_ser = EventCodeSerializer(context=self.context)
             else:
-                # Update existing
+                # Update existing. The queryset is scoped to this event, so an id
+                # from another event has no match.
+                existing = instance_event_codes_qs.filter(id=code["id"]).first()
+                if existing is None:
+                    raise serializers.ValidationError(
+                        {"event_codes": gettext("Event code %s does not belong to this event.") % code["id"]}
+                    )
                 event_code_ser = EventCodeUpdateSerializer(
-                    instance=instance_event_codes_qs.get(id=code["id"]),
+                    instance=existing,
                     partial=True,
                     context=self.context,
                 )
             event_code_ser._validated_data = {**code, "event": event}
             event_code_ser._errors = {}
-            event_code_ser.save()
+            try:
+                event_code_ser.save()
+            except IntegrityError:
+                # uuid is unique across every event code and EventCodeSerializer
+                # drops the UniqueValidator, so a collision only shows up here.
+                raise serializers.ValidationError(
+                    {"event_codes": gettext("Event code uuid %s is already in use.") % code.get("uuid")}
+                )
 
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
@@ -302,6 +342,7 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
         if self.instance:
             errors.update(self._validate_figures_countries(attrs))
             errors.update(self._validate_figures_dates(attrs))
+            errors.update(self._validate_figures_cause(attrs))
 
         if errors:
             raise ValidationError(errors)

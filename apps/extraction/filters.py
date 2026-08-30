@@ -319,8 +319,9 @@ class EntryExtractionFilterSet(AcceptsOrdering, MultiWordSearchFilterSet):
         if value:
             # See filter_filter_figure_disaster_categories: split `~Q | Q` into
             # NOT EXISTS(OSV figure) OR EXISTS(matching figure) to preserve the row set.
+            # A figure carries its own violence, which may differ from its event's.
             return qs.filter(
-                ~Exists(self._figures_for_entry(event__violence__name=OSV))
+                ~Exists(self._figures_for_entry(violence__name=OSV))
                 | Exists(self._figures_for_entry(osv_sub_type__in=value))
             )
         return qs
@@ -545,6 +546,10 @@ class BaseFigureExtractionFilterSet(AcceptsOrdering, MultiWordSearchFilterSet):
     def filter_filter_figure_has_housing_destruction(self, qs, name, value):
         if value is None:
             return qs
+        if value is False:
+            # NULL on a term outside housing_list() means the flag does not apply,
+            # which answers "no housing destruction".
+            return qs.filter(Q(is_housing_destruction=False) | Q(is_housing_destruction__isnull=True))
         return qs.filter(is_housing_destruction=value)
 
     def filter_by_figure_terms(self, qs, name, value):
@@ -587,7 +592,9 @@ class BaseFigureExtractionFilterSet(AcceptsOrdering, MultiWordSearchFilterSet):
 
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(event__violence__name=OSV) | Q(osv_sub_type__in=value))
+            # A figure carries its own violence, which may differ from its event's;
+            # the siblings above narrow on the figure's fields too.
+            return qs.filter(~Q(violence__name=OSV) | Q(osv_sub_type__in=value))
         return qs
 
     def filter_has_disaggregated_data(self, qs, name, value):

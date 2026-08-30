@@ -113,3 +113,37 @@ class TestCrisisUpdateSerializer(HelixTestCase):
         # serializer should be valid now
         serializer = CrisisUpdateSerializer(instance=crisis, data=data, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
+
+
+class TestCrisisUpdateSerializerCountries(HelixTestCase):
+    """``validate_event_countries`` compares the crisis's events' countries with
+    the countries in the request. A partial update that does not mention
+    ``countries`` has nothing to compare and must not be blocked."""
+
+    def setUp(self) -> None:
+        self.context = dict(request=RequestFactory().post("/graphql"))
+        self.crisis = CrisisFactory.create()
+        self.country = CountryFactory.create()
+        self.crisis.countries.set([self.country])
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.OTHER.value, crisis=self.crisis)
+        event.countries.set([self.country])
+
+    def test_partial_update_without_countries_is_valid(self):
+        serializer = CrisisUpdateSerializer(
+            instance=self.crisis,
+            data=dict(name="renamed crisis"),
+            partial=True,
+            context=self.context,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_countries_missing_an_event_country_is_rejected(self):
+        other_country = CountryFactory.create()
+        serializer = CrisisUpdateSerializer(
+            instance=self.crisis,
+            data=dict(countries=[other_country.id]),
+            partial=True,
+            context=self.context,
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("countries", serializer.errors)
