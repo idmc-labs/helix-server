@@ -197,17 +197,21 @@ class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
     # and `int("CONFLICT")` raises. An enum input also rejects unknown members before the ORM.
     figure_cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="figure_cause")
     figure_category = SimpleInputFilter(FigureCategoryTypeEnum, field_name="figure_category")
+    countries_iso3 = StringListFilter(method="filter_countries_iso3")
 
     class Meta:
         model = PublicFigureAnalysis
         # `iso3` and `year` only. The list forms of both were also declared, which made two ways to
         # ask one question, and the year list arrived typed as `[ID!]` -- a year is not an id.
-        # Unlike the filtersets that carry `countries_iso3` as their only country filter, this one
-        # already had the scalar.
+        # `countries_iso3` is the multi-country filter, matching the other GIDD filtersets; the
+        # scalar `iso3` is retained for callers that still ask for a single country.
         fields = {
             "iso3": ["exact"],
             "year": ["exact"],
         }
+
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(iso3__in=value)
 
 
 class GiddEventDisplacementFilter(ReleaseMetadataFilter):

@@ -3343,6 +3343,7 @@ input PublicFigureAnalysisFilterDataInputType {
   releaseEnvironment: String
   figureCause: CRISIS_TYPE
   figureCategory: FIGURE_CATEGORY_TYPES
+  countriesIso3: [String!]
 }
 
 enum QA_RULE_TYPE {
