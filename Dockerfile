@@ -1,4 +1,4 @@
-FROM python:3.8.16-bullseye AS base
+FROM python:3.8.20-bookworm AS base
 COPY --from=ghcr.io/astral-sh/uv:0.6.2 /uv /uvx /bin/
 
 LABEL maintainer="IDMC Dev"
