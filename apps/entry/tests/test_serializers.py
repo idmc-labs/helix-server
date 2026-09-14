@@ -347,6 +347,34 @@ class TestFigureSerializer(HelixTestCase):
         self.request = self.factory.get("/graphql")
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
 
+    def test_sub_type_only_patch_rederives_the_parent_chain(self):
+        """The hazard chain is derived from the figure's own sub-type, so a patch
+        that changes the sub-type without restating figure_cause must re-derive
+        it — otherwise the ancestors keep the previous sub-type's values."""
+        context = {"request": self.request, "bulk_manager": DummyFigureBulkManager()}
+        serializer = FigureSerializer(data=self.data, context=context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        figure = serializer.save()
+        self.assertIsNotNone(figure.disaster_type)
+
+        new_sub_type = DisasterSubTypeFactory.create()
+        self.assertNotEqual(new_sub_type.type_id, figure.disaster_type_id)
+
+        serializer = FigureSerializer(
+            instance=figure,
+            # validate() resolves the instance from attrs["id"], as the bulk
+            # figure tasks do.
+            data={"id": figure.id, "disaster_sub_type": new_sub_type.id},
+            partial=True,
+            context=context,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        figure = serializer.save()
+        self.assertEqual(figure.disaster_sub_type_id, new_sub_type.id)
+        self.assertEqual(figure.disaster_type_id, new_sub_type.type_id)
+        self.assertEqual(figure.disaster_sub_category_id, new_sub_type.type.disaster_sub_category_id)
+        self.assertEqual(figure.disaster_category_id, new_sub_type.type.disaster_sub_category.category_id)
+
     def test_displacement_occur_only_allowed_for_specific_terms(self):
         term = Figure.FIGURE_TERMS.DISPLACED.value
         self.data["term"] = term

@@ -2,10 +2,11 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 from django.test import RequestFactory
+from rest_framework import serializers
 
 from apps.crisis.models import Crisis
 from apps.event.models import EventCode
-from apps.event.serializers import EventSerializer
+from apps.event.serializers import EventSerializer, EventUpdateSerializer
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     CountryFactory,
@@ -15,8 +16,10 @@ from utils.factories import (
     DisasterSubTypeFactory,
     DisasterTypeFactory,
     EntryFactory,
+    EventCodeFactory,
     EventFactory,
     FigureFactory,
+    OtherSubtypeFactory,
     ViolenceFactory,
     ViolenceSubTypeFactory,
 )
@@ -379,3 +382,130 @@ class TestUpdateEventSerializer(HelixTestCase):
         data = dict(name="renamed event")
         serializer = EventSerializer(instance=event, data=data, context=self.context, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
+
+
+class TestEventCauseFlipWithFigures(HelixTestCase):
+    """Changing an event's cause strands the figures attached to it: they can no
+    longer be edited (FigureSerializer requires the causes to agree) and report
+    totals, which read event__event_type, stop counting them."""
+
+    def setUp(self) -> None:
+        self.request = RequestFactory().post("/graphql")
+        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.context = dict(request=self.request)
+        self.violence_sub_type = ViolenceSubTypeFactory.create()
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+            violence_sub_type=self.violence_sub_type,
+        )
+
+    def _serializer(self, **data):
+        return EventSerializer(instance=self.event, data=data, partial=True, context=self.context)
+
+    def test_flip_rejected_when_a_figure_carries_the_old_cause(self):
+        FigureFactory.create(
+            entry=EntryFactory.create(),
+            event=self.event,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+        )
+        serializer = self._serializer(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+            other_sub_type=OtherSubtypeFactory.create().id,
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("event_type", serializer.errors)
+
+    def test_flip_allowed_without_figures(self):
+        serializer = self._serializer(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+            other_sub_type=OtherSubtypeFactory.create().id,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_unrelated_update_is_not_blocked_by_a_mismatched_figure(self):
+        """The guard fires on a cause change, not on every save — an event that
+        already has a mismatched figure stays editable."""
+        FigureFactory.create(
+            entry=EntryFactory.create(),
+            event=self.event,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+        )
+        serializer = self._serializer(name="renamed event")
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_flip_allowed_when_the_figures_already_carry_the_new_cause(self):
+        FigureFactory.create(
+            entry=EntryFactory.create(),
+            event=self.event,
+            figure_cause=Crisis.CRISIS_TYPE.OTHER,
+        )
+        serializer = self._serializer(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+            other_sub_type=OtherSubtypeFactory.create().id,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+
+class TestEventCodeUpdateFailures(HelixTestCase):
+    """``_update_event_codes`` assigns ``_validated_data`` directly and bypasses
+    ``run_validation``, so the two things it cannot cope with used to surface as
+    an EventCode.DoesNotExist and a raw unique-constraint violation."""
+
+    def setUp(self) -> None:
+        self.request = RequestFactory().post("/graphql")
+        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.context = dict(request=self.request)
+        self.country = CountryFactory.create()
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+            other_sub_type=OtherSubtypeFactory.create(),
+        )
+        self.event.countries.set([self.country])
+        self.code = EventCodeFactory.create(event=self.event, country=self.country)
+
+    def _code(self, **overrides) -> dict:
+        code = {
+            "uuid": str(uuid4()),
+            "country": self.country.id,
+            "event_code": "GLD-001",
+            "event_code_type": EventCode.EVENT_CODE_TYPE.GLIDE_NUMBER.value,
+        }
+        code.update(overrides)
+        return code
+
+    def _save(self, event_codes):
+        serializer = EventUpdateSerializer(
+            instance=self.event,
+            data=dict(id=self.event.id, event_codes=event_codes),
+            partial=True,
+            context=self.context,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        return serializer.save()
+
+    def test_id_belonging_to_another_event_is_reported(self):
+        other_event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.OTHER.value)
+        foreign_code = EventCodeFactory.create(event=other_event, country=self.country)
+        with self.assertRaises(serializers.ValidationError) as cm:
+            self._save([self._code(id=foreign_code.id)])
+        self.assertIn("does not belong to this event", str(cm.exception))
+
+    def test_uuid_held_by_another_event_is_reported(self):
+        other_event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.OTHER.value)
+        foreign_code = EventCodeFactory.create(event=other_event, country=self.country)
+        with self.assertRaises(serializers.ValidationError) as cm:
+            self._save([self._code(uuid=str(foreign_code.uuid))])
+        self.assertIn("already in use", str(cm.exception))
+
+    def test_own_code_and_a_new_code_are_saved(self):
+        self._save([self._code(id=self.code.id, uuid=str(self.code.uuid)), self._code(event_code="GLD-002")])
+        self.assertEqual(EventCode.objects.filter(event=self.event).count(), 2)
+
+
+class TestEventDerivedFieldsNotWritable(HelixTestCase):
+    def test_derived_hazard_chain_is_not_writable(self):
+        """All four are derived from disaster_sub_type; disaster_sub_category was
+        the only one still exposed on the input types."""
+        fields = EventSerializer().fields
+        for field in ("violence", "disaster_type", "disaster_sub_category", "disaster_category"):
+            self.assertNotIn(field, fields)

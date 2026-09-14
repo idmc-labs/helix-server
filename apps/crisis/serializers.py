@@ -68,7 +68,7 @@ class CrisisSerializer(serializers.ModelSerializer, MetaInformationSerializerMix
             return errors
 
         countries = [each.id for each in attrs.get("countries", [])]
-        if countries is None:
+        if not countries:
             return errors
         event_countries = self.instance.events.filter(countries__isnull=False).values_list("countries", flat=True)
 
