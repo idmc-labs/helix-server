@@ -41,7 +41,7 @@ from apps.crisis.models import Crisis
 from apps.entry.models import Figure, FigureLocation
 from apps.event.models import EventCode
 from apps.hulk.models import HulkBulkImport
-from utils.validations import MAX_FUTURE_YEARS
+from utils.validations import MAX_EVENT_CODES, MAX_FUTURE_YEARS
 
 PYHELIX_CONSTANTS_REL_PATH = "libs/pyhelix/pyhelix/constants.py"
 PYHELIX_API_TYPES_REL_PATH = "libs/pyhelix/pyhelix/api_types.py"
@@ -142,6 +142,7 @@ ScalarSpec = Tuple[str, str, Any]
 
 SCALAR_SPECS: List[ScalarSpec] = [
     ("MAX_FUTURE_YEARS", "utils.validations.MAX_FUTURE_YEARS", MAX_FUTURE_YEARS),
+    ("MAX_EVENT_CODES", "utils.validations.MAX_EVENT_CODES", MAX_EVENT_CODES),
 ]
 
 HEADER = (

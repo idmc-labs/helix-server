@@ -18,6 +18,7 @@ from .constants import (
     FIGURE_FLOW_LIST,
     FIGURE_STOCK_LIST,
     FIGURE_UNIT,
+    MAX_EVENT_CODES,
     MAX_FUTURE_YEARS,
 )
 from .enums import (
@@ -171,7 +172,10 @@ class HulkEventImport(HulkBaseModel):
     FK: country.Country
     """
 
-    event_codes: typing.List[HulkEventImportEventCode]
+    event_codes: typing_extensions.Annotated[
+        typing.List[HulkEventImportEventCode],
+        Field(max_length=MAX_EVENT_CODES),
+    ]
 
     @field_validator("event_narrative")
     @classmethod
@@ -198,6 +202,14 @@ class HulkEventImport(HulkBaseModel):
             typing_extensions.assert_never(event_type)
 
         return data
+
+    @model_validator(mode="after")
+    def validate_related_ids(self):
+        country_manager = get_active_helix_client().country_manager
+        country_manager.validate_ids_exist(self.countries_id)
+        for event_code in self.event_codes:
+            country_manager.validate_id_exists(event_code.country_id)
+        return self
 
     @model_validator(mode="after")
     def _validate_dates(self):
@@ -335,9 +347,28 @@ class HulkFigureImport(HulkBaseModel):
         return data
 
     @model_validator(mode="after")
+    def validate_related_ids(self):
+        """Existence checks for the FKs the cause branch does not cover.
+
+        Without them a stale id is only caught by the mutation, after the row's
+        entry and event have already been created.
+        """
+        helix_client = get_active_helix_client()
+        helix_client.country_manager.validate_id_exists(self.country_id)
+        helix_client.figure_tag_manager.validate_ids_exist(self.tags_id)
+        helix_client.osv_sub_type_manager.validate_optional_id_exists(self.osv_sub_type_id)
+        helix_client.context_of_violence_manager.validate_ids_exist(self.context_of_violences_id)
+        return self
+
+    @model_validator(mode="after")
     def _validate_household_size(self):
-        if self.unit == FIGURE_UNIT.HOUSEHOLD and self.household_size is None:
-            raise ValueError("household_size is required when unit is HOUSEHOLD")
+        # FigureSerializer._validate_unit rejects any falsy household_size for
+        # HOUSEHOLD, and derives total_figures from it into a positive column.
+        if self.unit == FIGURE_UNIT.HOUSEHOLD:
+            if self.household_size is None:
+                raise ValueError("household_size is required when unit is HOUSEHOLD")
+            if self.household_size <= 0:
+                raise ValueError("household_size must be greater than 0 when unit is HOUSEHOLD")
         return self
 
     @model_validator(mode="after")
@@ -401,5 +432,9 @@ class HulkFigureImport(HulkBaseModel):
             raise ValueError(f"{start_field}: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
         if end_date and end_date > max_future_date:
             raise ValueError(f"{end_field}: This date cannot be more than {MAX_FUTURE_YEARS} years in the future.")
+        # FigureSerializer._validate_category bounds a flow figure's end at today;
+        # a stock figure's reporting date may sit in the future.
+        if self.category.value in FIGURE_FLOW_LIST and end_date and end_date > datetime.date.today():
+            raise ValueError(f"{end_field}: This must be a past date.")
 
         return self

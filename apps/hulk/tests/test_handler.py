@@ -56,6 +56,11 @@ from .fixtures import (
     read_expected_success,
 )
 
+# A routable literal: source-preview rows clear ``validate_fetch_url`` during
+# validation, so a non-resolving host would fail the row before the behaviour
+# under test is reached.
+PUBLIC_FILE_URL = "https://93.184.216.34/a.pdf"
+
 # Subset of expected outcomes that the mocked GraphQL client preserves:
 # pydantic-level errors fire regardless of what the client returns. The other
 # expected failures (helix serializer post-errors) only land under the real
@@ -1916,7 +1921,7 @@ class TestHulkBulkImportImpersonation(HelixGraphQLTestCase):
                 [
                     {
                         "uuid": "11111111-1111-4111-8111-111111111111",
-                        "file_url": "https://example.invalid/a.pdf",
+                        "file_url": PUBLIC_FILE_URL,
                         "impersonate_as": self.impersonated.pk,
                     }
                 ]
@@ -1939,7 +1944,7 @@ class TestHulkBulkImportImpersonation(HelixGraphQLTestCase):
                 [
                     {
                         "uuid": "22222222-2222-4222-8222-222222222222",
-                        "file_url": "https://example.invalid/a.pdf",
+                        "file_url": PUBLIC_FILE_URL,
                     }
                 ]
             ),
@@ -1958,7 +1963,7 @@ class TestHulkBulkImportImpersonation(HelixGraphQLTestCase):
                 [
                     {
                         "uuid": "33333333-3333-4333-8333-333333333333",
-                        "file_url": "https://example.invalid/a.pdf",
+                        "file_url": PUBLIC_FILE_URL,
                         "impersonate_as": 999_999,
                     }
                 ]
@@ -1991,7 +1996,7 @@ class TestHulkBulkImportImpersonation(HelixGraphQLTestCase):
                 [
                     {
                         "uuid": "44444444-4444-4444-8444-444444444444",
-                        "file_url": "https://example.invalid/a.pdf",
+                        "file_url": PUBLIC_FILE_URL,
                         "impersonate_as": self.impersonated.pk,
                     }
                 ]
@@ -2016,22 +2021,30 @@ class TestHulkBulkImportImpersonation(HelixGraphQLTestCase):
                     # 3 unique users → expect exactly 3 client constructions.
                     {
                         "uuid": "50000000-0000-4000-8000-000000000001",
-                        "file_url": "u",
+                        "file_url": PUBLIC_FILE_URL,
                         "impersonate_as": self.impersonated.pk,
                     },
                     {
                         "uuid": "50000000-0000-4000-8000-000000000002",
-                        "file_url": "u",
+                        "file_url": PUBLIC_FILE_URL,
                         "impersonate_as": self.impersonated.pk,
                     },
                     {
                         "uuid": "50000000-0000-4000-8000-000000000003",
-                        "file_url": "u",
+                        "file_url": PUBLIC_FILE_URL,
                         "impersonate_as": self.impersonated.pk,
                     },
-                    {"uuid": "50000000-0000-4000-8000-000000000004", "file_url": "u", "impersonate_as": other.pk},
-                    {"uuid": "50000000-0000-4000-8000-000000000005", "file_url": "u", "impersonate_as": other.pk},
-                    {"uuid": "50000000-0000-4000-8000-000000000006", "file_url": "u"},
+                    {
+                        "uuid": "50000000-0000-4000-8000-000000000004",
+                        "file_url": PUBLIC_FILE_URL,
+                        "impersonate_as": other.pk,
+                    },
+                    {
+                        "uuid": "50000000-0000-4000-8000-000000000005",
+                        "file_url": PUBLIC_FILE_URL,
+                        "impersonate_as": other.pk,
+                    },
+                    {"uuid": "50000000-0000-4000-8000-000000000006", "file_url": PUBLIC_FILE_URL},
                 ]
             ),
         )
@@ -2094,7 +2107,7 @@ class TestGraphqlErrorNormalization(HelixGraphQLTestCase):
                 "\n".join(
                     json.dumps(r)
                     for r in [
-                        {"uuid": "60000000-0000-4000-8000-000000000001", "file_url": "https://x.invalid/a.pdf"},
+                        {"uuid": "60000000-0000-4000-8000-000000000001", "file_url": PUBLIC_FILE_URL},
                     ]
                 )
                 + "\n"

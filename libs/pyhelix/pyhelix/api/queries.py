@@ -55,6 +55,40 @@ class GraphqlQuery:
     }
 
     # NOTE: Pagination not required
+    osv_sub_types = {
+        "operationName": "pyhelixOsvSubTypes",
+        "query": """
+           query pyhelixOsvSubTypes {
+             osvSubTypeList {
+               totalCount
+               pageSize
+               page
+               results {
+                 id
+                 name
+               }
+             }
+           }
+        """,
+    }
+
+    context_of_violences = {
+        "operationName": "pyhelixContextOfViolences",
+        "query": """
+           query pyhelixContextOfViolences {
+             contextOfViolenceList {
+               totalCount
+               pageSize
+               page
+               results {
+                 id
+                 name
+               }
+             }
+           }
+        """,
+    }
+
     other_sub_types = {
         "operationName": "pyhelixOtherSubTypes",
         "query": """

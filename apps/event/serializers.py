@@ -18,6 +18,7 @@ from apps.entry.models import Figure
 from apps.event.models import Actor, ContextOfViolence, Event, EventCode
 from apps.notification.models import Notification
 from utils.validations import (
+    MAX_EVENT_CODES,
     is_child_parent_dates_valid,
     is_child_parent_inclusion_valid,
     is_date_within_future_bound,
@@ -84,8 +85,8 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
         errors = OrderedDict()
         if "event_codes" in attrs:
             event_codes = attrs.get("event_codes")
-            if event_codes and len(event_codes) > 50:
-                errors["event_codes"] = gettext("More than 50 event codes are not allowed")
+            if event_codes and len(event_codes) > MAX_EVENT_CODES:
+                errors["event_codes"] = gettext("More than %(max)s event codes are not allowed") % {"max": MAX_EVENT_CODES}
         return errors
 
     def _validate_violence(self, attrs):
