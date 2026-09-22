@@ -122,7 +122,7 @@ services:
         hard: 10240
 
   minio:
-    image: minio/minio:RELEASE.2023-09-30T07-02-29Z.fips
+    image: quay.io/minio/minio:RELEASE.2023-09-30T07-02-29Z.fips
     command: minio server /data --console-address ":9001"
     restart: on-failure
     ports:
@@ -140,7 +140,7 @@ services:
       retries: 5
 
   createbuckets:
-    image: minio/mc
+    image: quay.io/minio/mc
     entrypoint: ["/bin/bash", "/usr/local/bin/createbuckets.sh"]
     restart: "no"
     environment:
