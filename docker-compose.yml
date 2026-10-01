@@ -122,7 +122,7 @@ services:
         hard: 10240
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2023-09-30T07-02-29Z.fips
+    image: ghcr.io/idmc-labs/helix-server-minio:release.2023-09-30t07-02-29z.fips
     command: minio server /data --console-address ":9001"
     restart: on-failure
     ports:
@@ -140,7 +140,7 @@ services:
       retries: 5
 
   createbuckets:
-    image: quay.io/minio/mc
+    image:  ghcr.io/idmc-labs/helix-server-mc:latest
     entrypoint: ["/bin/bash", "/usr/local/bin/createbuckets.sh"]
     restart: "no"
     environment:
