@@ -14,6 +14,25 @@ from utils.graphene.fields import generate_serializer_field_class
 from utils.serializers import GraphqlSupportDrfSerializerJSONField
 
 
+class BulkApiOperationAhhsClonePayloadSerializer(serializers.Serializer):
+    source_year = serializers.IntegerField(required=False, allow_null=True)
+    target_year = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate(self, attrs):
+        source_year = attrs.get("source_year")
+        target_year = attrs.get("target_year")
+
+        # both required together
+        if bool(source_year) != bool(target_year):
+            raise serializers.ValidationError("Both source_year and target_year are required.")
+
+        # prevent cloning into same year
+        if source_year is not None and target_year is not None and source_year == target_year:
+            raise serializers.ValidationError("source_year and target_year must be different.")
+
+        return attrs
+
+
 # ---- Bulk Operation Serializers ----
 class BulkApiOperationFilterSerializer(serializers.Serializer):
     figure_role = type(
@@ -35,6 +54,11 @@ class BulkApiOperationFilterSerializer(serializers.Serializer):
                 GraphqlSupportDrfSerializerJSONField,
             )(required=True),
         ),
+    )(required=False, allow_null=True)
+    ahhs_clone = type(
+        "BulkOperationAHHSCloneFilterSerializer",
+        (serializers.Serializer,),
+        {},
     )(required=False, allow_null=True)
 
 
@@ -75,6 +99,7 @@ class BulkApiOperationFigureEventPayloadSerializer(serializers.Serializer):
 class BulkApiOperationPayloadSerializer(serializers.Serializer):
     figure_role = BulkApiOperationFigureRolePayloadSerializer(required=False, allow_null=True)
     figure_event = BulkApiOperationFigureEventPayloadSerializer(required=False, allow_null=True)
+    ahhs_clone = BulkApiOperationAhhsClonePayloadSerializer(required=False, allow_null=True)
 
 
 class BulkApiOperationSerializer(serializers.ModelSerializer):
@@ -84,6 +109,7 @@ class BulkApiOperationSerializer(serializers.ModelSerializer):
     ACTION_FIELD_MAP = {
         BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_ROLE.value: "figure_role",
         BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_EVENT.value: "figure_event",
+        BulkApiOperation.BULK_OPERATION_ACTION.AHHS_CLONE.value: "ahhs_clone",
     }
 
     class Meta:

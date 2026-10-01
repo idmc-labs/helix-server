@@ -649,10 +649,12 @@ class BulkApiOperation(models.Model):
     class BULK_OPERATION_ACTION(enum.Enum):
         FIGURE_ROLE = 0
         FIGURE_EVENT = 1
+        AHHS_CLONE = 2
 
         __labels__ = {
             FIGURE_ROLE: _("Figure Role"),
             FIGURE_EVENT: _("Figure Event"),
+            AHHS_CLONE: _("Clone Average Household Size"),
         }
 
     class BULK_OPERATION_STATUS(enum.Enum):
