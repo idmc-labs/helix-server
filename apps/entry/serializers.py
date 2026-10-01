@@ -372,8 +372,9 @@ class CommonFigureValidationMixin:
     def _validate_figure_cause(self, instance, attrs):
         errors = OrderedDict()
 
-        # Skip on update if not provided
-        if instance and "figure_cause" not in attrs:
+        # Skip on update unless the request touches the cause or one of the
+        # sub-types the parent chain is derived from.
+        if instance and not {"figure_cause", "violence_sub_type", "disaster_sub_type"} & attrs.keys():
             return errors
 
         event = attrs.get("event", getattr(instance, "event", None))
