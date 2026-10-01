@@ -55,7 +55,9 @@ class BaseImportCommand(BaseCommand):
     update_only = False
 
     #: Ordered ``(sheet column, model field)`` pairs an existing row may be named by. A row must
-    #: supply exactly one of them; keys identify a row and are never written to it. Override to
+    #: supply at least one; the first present resolves the row and any others are cross-checked
+    #: against it, so a sheet carrying both cannot silently edit the wrong row. Keys identify a
+    #: row and are never written to it. Override to
     #: offer a second way in, e.g. ``(("id", "pk"), ("uuid", "uuid"))``.
     match_columns: typing.Tuple[typing.Tuple[str, str], ...] = (("id", "pk"),)
 
@@ -165,7 +167,7 @@ class BaseImportCommand(BaseCommand):
         """
         Importable columns an operator must supply.
 
-        With one match key that key is required outright. With several a row needs exactly one of
+        With one match key that key is required outright. With several a row needs at least one of
         them, so none is required on its own and the template says so in their notes instead.
         """
         importable = set(self.import_columns())
@@ -247,7 +249,11 @@ class BaseImportCommand(BaseCommand):
                 notes[column] = lookups[column].note()
             elif column in self.match_column_names:
                 if len(self.match_columns) > 1:
-                    notes[column] = f"identifies the row; supply exactly one of {DISPLAY_SEP.join(self.match_column_names)}"
+                    notes[column] = (
+                        f"identifies the row; supply at least one of {DISPLAY_SEP.join(self.match_column_names)}. "
+                        "Supplying more than one is safer: the first resolves the row and the rest are "
+                        "checked against it."
+                    )
                 elif self.update_only:
                     notes[column] = f"{column} of the row to update"
                 else:
@@ -352,6 +358,33 @@ class BaseImportCommand(BaseCommand):
             return None, (f"{column} {key} matches more than one {self.model.__name__} ({ids}); cannot tell which to edit")
         return matches[0], None
 
+    def cross_check_keys(self, instance, extra_keys, raw_row) -> typing.Dict[str, str]:
+        """
+        Confirm the row's other match keys name the instance the first one resolved.
+
+        A key that disagrees is the signature of a sheet built somewhere else: ids are allocated
+        per instance, so the same id names a different row in another database and every edit
+        lands on the wrong record. Comparing a second key turns that from silent corruption into
+        a row error.
+        """
+        errors: typing.Dict[str, str] = {}
+        for column, field in extra_keys:
+            model_field = self._match_field(field)
+            supplied = raw_row.get(column)
+            try:
+                coerced = model_field.to_python(supplied)
+            except (DjangoValidationError, ValueError, TypeError):
+                errors[column] = f"{supplied!r} is not a valid {column}"
+                continue
+            actual = instance.pk if field == "pk" else getattr(instance, field, None)
+            if coerced != actual:
+                errors[column] = (
+                    f"{column} {supplied} does not name the same row as the key that resolved it "
+                    f"(that row has {column} {actual}). The sheet was probably built against a "
+                    "different database."
+                )
+        return errors
+
     def prepare_row(self, raw_row: typing.Dict, request, resolved: typing.Optional[typing.Dict] = None):
         """Resolve a raw row and build its serializer. Returns a PreparedRow."""
         row_errors: typing.Dict[str, str] = {}
@@ -386,14 +419,15 @@ class BaseImportCommand(BaseCommand):
 
         context = {"request": request}
         serializer = None
-        if len(supplied) > 1:
-            row_errors[supplied[0][0]] = f"exactly one of {names} is required; {len(supplied)} given"
-        elif is_update:
+        if is_update:
             column, field = supplied[0]
             key = raw_row.get(column)
             instance, error = self.resolve_row(column, field, key, resolved)
-            if error:
-                row_errors[column] = error
+            # Kept apart from row_errors: only a failure to identify the row blocks the max_id
+            # skip below. A skipped row is not this run's, so errors in its other cells are moot.
+            key_errors = {column: error} if error else self.cross_check_keys(instance, supplied[1:], raw_row)
+            if key_errors:
+                row_errors.update(key_errors)
             elif self.max_id is not None and instance.pk > self.max_id:
                 # Excluded before validation: not this run's row, so its validity is moot.
                 return PreparedRow(None, True, {}, [], skipped=True)
@@ -404,7 +438,7 @@ class BaseImportCommand(BaseCommand):
                 serializer = self.update_serializer(instance=instance, data=data, partial=True, context=context)
         elif self.update_only:
             row_errors[self.match_column_names[0]] = (
-                f"exactly one of {names} is required; none given. "
+                f"at least one of {names} is required; none given. "
                 f"This importer only updates existing {self.model.__name__} rows"
             )
         else:
