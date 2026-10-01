@@ -68,6 +68,14 @@ class HelixOtherSubTypeEntity(HelixEntityBase):
     name: str
 
 
+class HelixOsvSubTypeEntity(HelixEntityBase):
+    name: str
+
+
+class HelixContextOfViolenceEntity(HelixEntityBase):
+    name: str
+
+
 class HelixFigureTagEntity(HelixEntityBase):
     id: int
     name: str
@@ -162,6 +170,16 @@ class HelixEntityManager(typing.Generic[EntityT]):
         if entity is None:
             raise ValueError(f"Invalid id={_id} for {type(self).__name__}")
         return entity
+
+    def validate_optional_id_exists(self, _id: typing.Optional[int]) -> typing.Optional[EntityT]:
+        """``validate_id_exists`` for a nullable FK: absent is valid, wrong is not."""
+        if _id is None:
+            return None
+        return self.validate_id_exists(_id)
+
+    def validate_ids_exist(self, ids: typing.Optional[typing.Iterable[int]]) -> None:
+        for _id in ids or []:
+            self.validate_id_exists(_id)
 
 
 class HelixEntityLazyManagerFetcher:
@@ -416,6 +434,40 @@ class HelixOtherSubType(HelixEntityManager[HelixOtherSubTypeEntity]):
         @typing_extensions.override
         def _parse_resp(self, resp):
             return resp.json()["data"]["otherSubTypeList"]
+
+    fetch_manager = Fetcher
+
+
+class HelixOsvSubType(HelixEntityManager[HelixOsvSubTypeEntity]):
+    entity_cls = HelixOsvSubTypeEntity
+
+    class Fetcher(HelixEntityManagerFetcher):
+        helix_model_name = "OsvSubType"
+
+        @typing_extensions.override
+        def _fetch_page(self, page, page_size):
+            return self.helix_client.grequest(GraphqlQuery.osv_sub_types)
+
+        @typing_extensions.override
+        def _parse_resp(self, resp):
+            return resp.json()["data"]["osvSubTypeList"]
+
+    fetch_manager = Fetcher
+
+
+class HelixContextOfViolence(HelixEntityManager[HelixContextOfViolenceEntity]):
+    entity_cls = HelixContextOfViolenceEntity
+
+    class Fetcher(HelixEntityManagerFetcher):
+        helix_model_name = "ContextOfViolence"
+
+        @typing_extensions.override
+        def _fetch_page(self, page, page_size):
+            return self.helix_client.grequest(GraphqlQuery.context_of_violences)
+
+        @typing_extensions.override
+        def _parse_resp(self, resp):
+            return resp.json()["data"]["contextOfViolenceList"]
 
     fetch_manager = Fetcher
 

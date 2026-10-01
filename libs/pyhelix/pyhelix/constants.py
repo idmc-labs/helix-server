@@ -307,3 +307,5 @@ FIGURE_STOCK_LIST = [
 
 # Clone of utils.validations.MAX_FUTURE_YEARS
 MAX_FUTURE_YEARS = 10
+# Clone of utils.validations.MAX_EVENT_CODES
+MAX_EVENT_CODES = 50

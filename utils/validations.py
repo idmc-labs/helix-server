@@ -11,6 +11,7 @@ from django.utils.translation import gettext
 # Single source of truth: pyhelix receives this value via its generated
 # constants.py (./manage.py update_pyhelix_constants) — do NOT hand-copy it.
 MAX_FUTURE_YEARS = 10
+MAX_EVENT_CODES = 50
 
 
 class MissingCaptchaException(Exception):

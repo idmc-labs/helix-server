@@ -15,10 +15,12 @@ from pyhelix.api_types import HulkBulkImportState
 from pyhelix.constants import HULK_BULK_IMPORT_STATUS
 
 from .entities import (
+    HelixContextOfViolence,
     HelixCountry,
     HelixDisasterSubType,
     HelixFigureTag,
     HelixOrganization,
+    HelixOsvSubType,
     HelixOtherSubType,
     HelixUser,
     HelixViolenceSubType,
@@ -263,6 +265,20 @@ class HelixClient:
         manager = getattr(self, "_other_sub_type_manager", None)
         if not manager:
             manager = self._other_sub_type_manager = HelixOtherSubType(self)
+        return manager
+
+    @property
+    def osv_sub_type_manager(self) -> HelixOsvSubType:
+        manager = getattr(self, "_osv_sub_type_manager", None)
+        if not manager:
+            manager = self._osv_sub_type_manager = HelixOsvSubType(self)
+        return manager
+
+    @property
+    def context_of_violence_manager(self) -> HelixContextOfViolence:
+        manager = getattr(self, "_context_of_violence_manager", None)
+        if not manager:
+            manager = self._context_of_violence_manager = HelixContextOfViolence(self)
         return manager
 
     @property
