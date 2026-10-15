@@ -44,6 +44,7 @@ ADMIN_MODELS = REGIONAL_COORDINATOR_MODELS | {
     PERMISSION_ENTITY.portfolio,
     PERMISSION_ENTITY.client,
     PERMISSION_ENTITY.hulkbulkimport,
+    PERMISSION_ENTITY.householdsize,
 }
 
 # NOTE: To add custom permissions, add `bla_model` like `sign_off_model`.
