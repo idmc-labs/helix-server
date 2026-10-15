@@ -902,6 +902,12 @@ type CreateFigureTag {
   result: FigureTagType
 }
 
+type CreateHouseholdSize {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: CountryHouseholdSizeType
+}
+
 type CreateMonitoringExpertPortfolio {
   errors: [GenericScalar!]
   ok: Boolean
@@ -2710,6 +2716,19 @@ enum HULK_BULK_IMPORT_STATUS {
   SKIPPED
 }
 
+input HouseholdSizeCreateInputType {
+  country: ID!
+  year: Int!
+  size: Float!
+  dataSourceCategory: String!
+  source: String!
+  sourceLink: String
+  notes: String
+  isActive: Boolean
+  referenceDate: Date
+  gapFillingMethod: GAP_FILLING_METHOD
+}
+
 input HouseholdSizeFilterDataTypeInputType {
   search: String
   year: Float
@@ -2722,6 +2741,20 @@ type HouseholdSizeListType {
   totalCount: Int
   page: Int
   pageSize: Int
+}
+
+input HouseholdSizeUpdateInputType {
+  id: ID!
+  country: ID
+  year: Int
+  size: Float
+  dataSourceCategory: String
+  source: String
+  sourceLink: String
+  notes: String
+  isActive: Boolean
+  referenceDate: Date
+  gapFillingMethod: GAP_FILLING_METHOD
 }
 
 input HulkBulkImportCreateInputType {
@@ -2949,6 +2982,8 @@ type Mutation {
   exportOrganizations(filters: OrganizationFilterDataInputType!): ExportOrganizations
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
+  createHouseholdSize(data: HouseholdSizeCreateInputType!): CreateHouseholdSize
+  updateHouseholdSize(data: HouseholdSizeUpdateInputType!): UpdateHouseholdSize
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
   exportMonitoringSubRegions(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegions
   exportHouseholdSize(filters: HouseholdSizeFilterDataTypeInputType!): ExportHouseholdSize
@@ -3234,6 +3269,7 @@ enum PERMISSION_ENTITY {
   client
   figuretag
   hulkbulkimport
+  householdsize
 }
 
 enum PREVIEW_STATUS {
@@ -4191,6 +4227,12 @@ type UpdateFigureTag {
   errors: [GenericScalar!]
   ok: Boolean
   result: FigureTagType
+}
+
+type UpdateHouseholdSize {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: CountryHouseholdSizeType
 }
 
 type UpdateOrganization {
