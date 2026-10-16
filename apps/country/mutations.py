@@ -55,7 +55,6 @@ class HouseholdSizeCreateInputType(graphene.InputObjectType):
     source = graphene.String(required=True)
     source_link = graphene.String()
     notes = graphene.String()
-    is_active = graphene.Boolean()
     reference_date = graphene.Date()
     gap_filling_method = graphene.Field(HouseholdSizeGapFillingMethodEnum)
 
