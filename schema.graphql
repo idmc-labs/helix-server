@@ -2724,7 +2724,6 @@ input HouseholdSizeCreateInputType {
   source: String!
   sourceLink: String
   notes: String
-  isActive: Boolean
   referenceDate: Date
   gapFillingMethod: GAP_FILLING_METHOD
 }
@@ -2745,14 +2744,11 @@ type HouseholdSizeListType {
 
 input HouseholdSizeUpdateInputType {
   id: ID!
-  country: ID
-  year: Int
   size: Float
   dataSourceCategory: String
   source: String
   sourceLink: String
   notes: String
-  isActive: Boolean
   referenceDate: Date
   gapFillingMethod: GAP_FILLING_METHOD
 }

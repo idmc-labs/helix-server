@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.utils.translation import gettext
 from rest_framework import serializers
 
 from apps.contrib.serializers import MetaInformationSerializerMixin
@@ -20,50 +20,56 @@ class ContextualAnalysisSerializer(MetaInformationSerializerMixin, serializers.M
 
 
 class HouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
+    """
+    NOTE: An edit never updates an AHHS value in place. It archives the active value and inserts
+    a new active one, the same as the update_ahhs command (see HouseholdSize.replace_active).
+    """
+
     class Meta:
         model = HouseholdSize
         fields = (
             "id",
             "country",
             "year",
-            "size",
-            "data_source_category",
-            "source",
-            "source_link",
-            "notes",
+            *HouseholdSize.DATA_FIELDS,
             "is_active",
-            "reference_date",
-            "gap_filling_method",
             "created_at",
             "modified_at",
             "created_by",
             "last_modified_by",
         )
+        read_only_fields = ("is_active",)
 
-    @staticmethod
-    def _deactivate_other_active(country, year, exclude_pk=None):
-        # NOTE: Only one active household size is allowed per country-year
-        HouseholdSize.objects.filter(
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if self.instance is not None and not self.instance.is_active:
+            raise serializers.ValidationError(gettext("Only the active household size can be edited."))
+        return attrs
+
+    def _save_new_value(self, country, year, data) -> HouseholdSize:
+        active_records = list(HouseholdSize.objects.filter(country=country, year=year, is_active=True))
+        # NOTE: Like update_ahhs, an edit that changes nothing doesn't create a new value
+        if len(active_records) == 1 and active_records[0].has_same_data(data):
+            return active_records[0]
+        user = self.context["request"].user
+        return HouseholdSize.replace_active(
             country=country,
             year=year,
-            is_active=True,
-        ).exclude(pk=exclude_pk).update(is_active=False)
+            created_by=user,
+            last_modified_by=user,
+            **{field: data[field] for field in HouseholdSize.DATA_FIELDS if field in data},
+        )
 
-    @transaction.atomic
     def create(self, validated_data):
-        if validated_data.get("is_active"):
-            self._deactivate_other_active(validated_data["country"], validated_data["year"])
-        return super().create(validated_data)
+        return self._save_new_value(validated_data["country"], validated_data["year"], validated_data)
 
-    @transaction.atomic
     def update(self, instance, validated_data):
-        if validated_data.get("is_active", instance.is_active):
-            self._deactivate_other_active(
-                validated_data.get("country", instance.country),
-                validated_data.get("year", instance.year),
-                exclude_pk=instance.pk,
-            )
-        return super().update(instance, validated_data)
+        # NOTE: country and year identify the value being corrected, so they are kept from the instance
+        data = {
+            **{field: getattr(instance, field) for field in HouseholdSize.DATA_FIELDS},
+            **{field: validated_data[field] for field in HouseholdSize.DATA_FIELDS if field in validated_data},
+        }
+        return self._save_new_value(instance.country, instance.year, data)
 
 
 class HouseholdSizeCliImportSerializer(serializers.ModelSerializer):

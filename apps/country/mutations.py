@@ -57,7 +57,6 @@ class HouseholdSizeCreateInputType(graphene.InputObjectType):
     source = graphene.String(required=True)
     source_link = graphene.String()
     notes = graphene.String()
-    is_active = graphene.Boolean()
     reference_date = graphene.Date()
     gap_filling_method = graphene.Field(HouseholdSizeGapFillingMethodEnum)
 
@@ -68,14 +67,11 @@ class HouseholdSizeUpdateInputType(graphene.InputObjectType):
     """
 
     id = graphene.ID(required=True)
-    country = graphene.ID()
-    year = graphene.Int()
     size = graphene.Float()
     data_source_category = graphene.String()
     source = graphene.String()
     source_link = graphene.String()
     notes = graphene.String()
-    is_active = graphene.Boolean()
     reference_date = graphene.Date()
     gap_filling_method = graphene.Field(HouseholdSizeGapFillingMethodEnum)
 
@@ -149,7 +145,8 @@ class UpdateHouseholdSize(graphene.Mutation):
             instance = HouseholdSize.objects.get(id=data["id"])
         except HouseholdSize.DoesNotExist:
             return UpdateHouseholdSize(
-                errors=[dict(field="nonFieldErrors", messages=gettext("Household size does not exist."))]
+                errors=[dict(field="nonFieldErrors", messages=gettext("Household size does not exist."))],
+                ok=False,
             )
         serializer = HouseholdSizeSerializer(
             instance=instance, data=data, partial=True, context={"request": info.context.request}
