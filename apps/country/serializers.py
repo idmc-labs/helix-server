@@ -1,4 +1,3 @@
-from django.db import transaction
 from rest_framework import serializers
 
 from apps.contrib.serializers import MetaInformationSerializerMixin
@@ -20,36 +19,55 @@ class ContextualAnalysisSerializer(MetaInformationSerializerMixin, serializers.M
 
 
 class HouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
+    """
+    Household size is never updated directly. If the country and year already have an active value,
+    the old value is archived and a new active value is created (see HouseholdSize.replace_active).
+    """
+
     class Meta:
         model = HouseholdSize
         fields = (
             "id",
             "country",
             "year",
-            "size",
-            "data_source_category",
-            "source",
-            "source_link",
-            "notes",
+            *HouseholdSize.DATA_FIELDS,
             "is_active",
-            "reference_date",
-            "gap_filling_method",
             "created_at",
             "modified_at",
             "created_by",
             "last_modified_by",
         )
+        read_only_fields = ("is_active",)
 
-    @transaction.atomic
     def create(self, validated_data):
-        if validated_data.get("is_active"):
-            # NOTE: Only one active household size is allowed per country-year
-            HouseholdSize.objects.filter(
-                country=validated_data["country"],
-                year=validated_data["year"],
-                is_active=True,
-            ).update(is_active=False)
-        return super().create(validated_data)
+        country = validated_data["country"]
+        year = validated_data["year"]
+        active_records = list(HouseholdSize.objects.filter(country=country, year=year, is_active=True).order_by("-id"))
+        latest_active_record = None
+        if active_records:
+            latest_active_record = active_records[0]
+
+        # If there is already an active value, this is a correction of it.
+        # So the fields that are not sent keep the value of the active record.
+        data = {}
+        for field in HouseholdSize.DATA_FIELDS:
+            if field in validated_data:
+                data[field] = validated_data[field]
+            elif latest_active_record:
+                data[field] = getattr(latest_active_record, field)
+
+        # Same as update_ahhs, don't create a new value if nothing has changed
+        if len(active_records) == 1 and latest_active_record.has_same_data(data):
+            return latest_active_record
+
+        user = self.context["request"].user
+        return HouseholdSize.replace_active(
+            country=country,
+            year=year,
+            created_by=user,
+            last_modified_by=user,
+            **data,
+        )
 
 
 class HouseholdSizeCliImportSerializer(serializers.ModelSerializer):
