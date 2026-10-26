@@ -21,6 +21,7 @@ class PERMISSION_ACTION(enum.Enum):
     update_gidd_data = 10
     update_release_meta_data = 11
     bulk_import = 12
+    manage_release = 13
 
     __labels__ = {
         add: _("Add"),
@@ -36,6 +37,7 @@ class PERMISSION_ACTION(enum.Enum):
         update_gidd_data: _("Update GIDD data"),
         update_release_meta_data: _("Update release meta data"),
         bulk_import: _("Bulk import"),
+        manage_release: _("Manage GIDD releases"),
     }
 
 

@@ -2,6 +2,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.contrib.serializers import IntegerIDField, MetaInformationSerializerMixin, UpdateSerializerMixin
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
@@ -10,6 +11,7 @@ from utils.common import round_and_remove_zero
 from .models import (
     GiddDisplacement,
     GiddEventDisplacement,
+    GiddRelease,
     IdpsSaddEstimate,
     PublicFigureAnalysis,
     ReleaseMetadata,
@@ -352,3 +354,25 @@ class IdpsSaddEstimateSerializer(serializers.ModelSerializer):
         validated_data["country_name"] = country.idmc_short_name
         validated_data["iso3"] = country.iso3
         return validated_data
+
+
+class GiddReleaseSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
+    """Authored fields of a release. `is_live` is absent on purpose: only generation sets it."""
+
+    class Meta:
+        model = GiddRelease
+        fields = (
+            "name",
+            "version",
+            "release_date",
+            "notes",
+            "citation",
+            "is_visible_in_gidd",
+        )
+
+
+class GiddReleaseUpdateSerializer(UpdateSerializerMixin, GiddReleaseSerializer):
+    id = IntegerIDField(required=True)
+
+    class Meta(GiddReleaseSerializer.Meta):
+        fields = ("id", *GiddReleaseSerializer.Meta.fields)

@@ -2,6 +2,7 @@ import typing
 
 import django_filters
 from django import forms
+from django.db import models
 from rest_framework import serializers
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -13,6 +14,7 @@ from utils.filters import IDListFilter, SimpleInputFilter, StringListFilter
 from .models import (
     GiddDisplacement,
     GiddEventDisplacement,
+    GiddRelease,
     PublicFigureAnalysis,
     ReleaseMetadata,
     StatusLog,
@@ -178,6 +180,7 @@ class DisasterStatisticsFilter(ReleaseMetadataFilter):
 
 class GiddStatusLogFilter(django_filters.FilterSet):
     status = StringListFilter(method="filter_by_status")
+    releases = IDListFilter(method="filter_releases")
 
     class Meta:
         model = StatusLog
@@ -190,6 +193,28 @@ class GiddStatusLogFilter(django_filters.FilterSet):
                 return qs.filter(status__in=value)
             return qs.filter(status__in=[StatusLog.Status.get(item).value for item in value])
         return qs
+
+    def filter_releases(self, qs, name, value):
+        return qs.filter(release__in=value)
+
+
+class GiddReleaseFilter(django_filters.FilterSet):
+    search = django_filters.CharFilter(method="filter_search")
+    is_live = django_filters.BooleanFilter()
+    release_date_after = django_filters.DateFilter(field_name="release_date", lookup_expr="gte")
+    release_date_before = django_filters.DateFilter(field_name="release_date", lookup_expr="lte")
+
+    class Meta:
+        model = GiddRelease
+        fields = ()
+
+    def filter_search(self, qs, name, value):
+        return qs.filter(models.Q(name__icontains=value) | models.Q(version__icontains=value))
+
+    @property
+    def qs(self):
+        # Public list: a release hidden from GIDD is not listed, so there is no filter to ask for it.
+        return super().qs.filter(is_visible_in_gidd=True)
 
 
 class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
