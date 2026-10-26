@@ -66,6 +66,18 @@ class TestHouseholdSizeFilter(HelixTestCase):
         # inactive household size must be filtered out.
         self.assertEqual(expected, list(obtained))
 
+    def test_householdsize_filter_by_status(self):
+        archived = HouseholdSizeFactory.create(country=self.c5, year=self.current_year + 2, is_active=False)
+        active = [self.h1, self.h2, self.h3, self.h4, self.h5, self.h6]
+        for status, expected in [
+            (None, active),
+            ("ACTIVE", active),
+            ("ARCHIVED", [archived]),
+            ("ALL", [*active, archived]),
+        ]:
+            obtained = self.filter_class(data=dict(status=status)).qs
+            self.assertEqual(set(expected), set(obtained), status)
+
 
 class TestCountryFilter(HelixTestCase):
     def setUp(self) -> None:
