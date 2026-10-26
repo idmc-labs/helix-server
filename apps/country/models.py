@@ -751,16 +751,20 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
 
     @classmethod
     @transaction.atomic
-    def replace_active(cls, country, year, **fields):
+    def replace_active(cls, country, year, archive_notes=None, **fields):
         """
         Archive the active household size of the country and year, and create a new active one.
         We never update a household size directly, so the old values are kept as history.
         This is used by both the household size mutation and the update_ahhs command.
+        If archive_notes is given, it is saved as the notes of the archived value to record why it was archived.
         """
         # Lock the country so that two requests at the same time can't create two active values
         Country.objects.select_for_update().filter(pk=country.pk).first()
         old_active_values = cls.objects.filter(country=country, year=year, is_active=True)
-        old_active_values.update(is_active=False)
+        if archive_notes is not None:
+            old_active_values.update(is_active=False, notes=archive_notes)
+        else:
+            old_active_values.update(is_active=False)
 
         fields["country"] = country
         fields["year"] = year

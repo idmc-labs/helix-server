@@ -56,6 +56,13 @@ class HouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelS
             elif latest_active_record:
                 data[field] = getattr(latest_active_record, field)
 
+        # For a correction, the notes sent is the reason for the correction. It is saved on the
+        # archived value, and the new value keeps the notes of the value it replaces.
+        archive_notes = None
+        if latest_active_record:
+            archive_notes = validated_data.get("notes")
+            data["notes"] = latest_active_record.notes
+
         # Same as update_ahhs, don't create a new value if nothing has changed
         if len(active_records) == 1 and latest_active_record.has_same_data(data):
             return latest_active_record
@@ -66,6 +73,7 @@ class HouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelS
             year=year,
             created_by=user,
             last_modified_by=user,
+            archive_notes=archive_notes,
             **data,
         )
 
