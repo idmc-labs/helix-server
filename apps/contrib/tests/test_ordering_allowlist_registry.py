@@ -322,6 +322,15 @@ EXPECTED = {
         "violence_sub_type_name",
         "year",
     ],
+    "gidd.GiddRelease": [
+        "created_at",
+        "id",
+        "is_live",
+        "modified_at",
+        "name",
+        "release_date",
+        "version",
+    ],
     "gidd.PublicFigureAnalysis": [
         "description",
         "figure_category",

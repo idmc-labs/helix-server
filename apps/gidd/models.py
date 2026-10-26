@@ -43,6 +43,14 @@ class StatusLog(models.Model):
     triggered_at = models.DateTimeField(verbose_name="Triggered at", auto_now_add=True)
     completed_at = models.DateTimeField(verbose_name="Completed at", null=True, blank=True)
     status = enum.EnumField(verbose_name=_("Status"), enum=Status, default=Status.PENDING)
+    release = models.ForeignKey(
+        "gidd.GiddRelease",
+        verbose_name=_("Release"),
+        related_name="status_logs",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
 
     # A run that died without flipping its status (killed worker: the transaction
     # rolls back but the PENDING log row survives) must not block triggers, and the
@@ -761,3 +769,69 @@ class GiddEventDisplacement(models.Model):
 
     def __str__(self):
         return f"{self.event_name} - {self.iso3} - {self.year}"
+
+
+class GiddRelease(MetaInformationAbstractModel):
+    """A published GIDD dataset. Authored first; generation runs (StatusLog) are triggered against it."""
+
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "created_at",
+            "id",
+            "is_live",
+            "modified_at",
+            "name",
+            "release_date",
+            "version",
+        }
+    )
+
+    name = models.CharField(
+        verbose_name=_("Name"),
+        max_length=256,
+    )
+    version = models.CharField(
+        verbose_name=_("Version"),
+        max_length=100,
+    )
+    release_date = models.DateField(
+        verbose_name=_("Release date"),
+    )
+    notes = UnbleachedTextField(
+        verbose_name=_("Notes"),
+    )
+    citation = UnbleachedTextField(
+        verbose_name=_("Citation"),
+        blank=True,
+        null=True,
+    )
+    doi = models.CharField(
+        verbose_name=_("DOI"),
+        max_length=256,
+        blank=True,
+        null=True,
+    )
+    is_live = models.BooleanField(
+        verbose_name=_("Is live"),
+        default=False,
+        editable=False,
+    )  # NOTE: Set by generation only, never by an input.
+    is_visible_in_gidd = models.BooleanField(
+        verbose_name=_("Is visible in GIDD"),
+        default=True,
+    )
+
+    class Meta:
+        verbose_name = _("GIDD Release")
+        verbose_name_plural = _("GIDD Releases")
+        permissions = (("manage_release_gidd", "Can create and update GIDD releases"),)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["is_live"],
+                condition=models.Q(is_live=True),
+                name="gidd_release_single_live",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.name} - {self.version}"
