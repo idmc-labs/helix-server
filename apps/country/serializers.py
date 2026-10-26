@@ -37,7 +37,8 @@ class HouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelS
             "created_by",
             "last_modified_by",
         )
-        read_only_fields = ("is_active",)
+        # gap_filling_method is calculated in create(), so it is not taken from the input
+        read_only_fields = ("is_active", "gap_filling_method")
 
     def create(self, validated_data):
         country = validated_data["country"]
@@ -62,6 +63,13 @@ class HouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelS
         if latest_active_record:
             archive_notes = validated_data.get("notes")
             data["notes"] = latest_active_record.notes
+
+        # gap_filling_method is calculated from year and reference_date, same as update_ahhs
+        reference_date = data.get("reference_date")
+        if reference_date:
+            data["gap_filling_method"] = HouseholdSize.calculate_gap_filling_method(year, reference_date.year)
+        else:
+            data["gap_filling_method"] = None
 
         # Same as update_ahhs, don't create a new value if nothing has changed
         if len(active_records) == 1 and latest_active_record.has_same_data(data):

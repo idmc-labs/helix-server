@@ -68,14 +68,6 @@ VERIFICATION_HEADLINES = {
 }
 
 
-def calculate_gap_filling_method(year, reference_year):
-    if year == reference_year:
-        return HouseholdSize.GAP_FILLING_METHOD.EXACT_YEAR
-    if year < reference_year:
-        return HouseholdSize.GAP_FILLING_METHOD.BACKWARD_FILLING
-    return HouseholdSize.GAP_FILLING_METHOD.FORWARD_FILLING
-
-
 def format_date(date: Union[str, datetime]) -> datetime:
     if isinstance(date, datetime):
         return date
@@ -349,7 +341,7 @@ class Command(BaseCommand):
             size = 0
 
         reference_year = datetime.strptime(row["Reference date"], "%Y-%m-%d").year
-        gap_filling_method = calculate_gap_filling_method(int(row["Year"]), reference_year)
+        gap_filling_method = HouseholdSize.calculate_gap_filling_method(int(row["Year"]), reference_year)
 
         return {
             # Data from csv
