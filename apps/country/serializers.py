@@ -38,7 +38,8 @@ class HouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelS
             "created_by",
             "last_modified_by",
         )
-        read_only_fields = ("is_active",)
+        # NOTE: gap_filling_method is derived from year and reference_date, the same as the update_ahhs command
+        read_only_fields = ("is_active", "gap_filling_method")
 
     def create(self, validated_data):
         country = validated_data["country"]
@@ -55,6 +56,10 @@ class HouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelS
                 **{field: getattr(active_records[0], field) for field in HouseholdSize.DATA_FIELDS},
                 **data,
             }
+        reference_date = data.get("reference_date")
+        data["gap_filling_method"] = (
+            HouseholdSize.calculate_gap_filling_method(year, reference_date.year) if reference_date else None
+        )
         # NOTE: Like update_ahhs, a correction that changes nothing doesn't create a new value
         if len(active_records) == 1 and active_records[0].has_same_data(data):
             return active_records[0]

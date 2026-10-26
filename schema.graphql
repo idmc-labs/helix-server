@@ -2725,7 +2725,6 @@ input HouseholdSizeCreateInputType {
   sourceLink: String
   notes: String
   referenceDate: Date
-  gapFillingMethod: GAP_FILLING_METHOD
 }
 
 input HouseholdSizeFilterDataTypeInputType {

@@ -2,7 +2,6 @@ import graphene
 
 from apps.contrib.models import ExcelDownload
 from apps.contrib.mutations import ExportBaseMutation
-from apps.country.enums import HouseholdSizeGapFillingMethodEnum
 from apps.country.filters import (
     CountryFilterDataInputType,
     HouseholdSizeFilterDataTypeInputType,
@@ -56,7 +55,6 @@ class HouseholdSizeCreateInputType(graphene.InputObjectType):
     source_link = graphene.String()
     notes = graphene.String()
     reference_date = graphene.Date()
-    gap_filling_method = graphene.Field(HouseholdSizeGapFillingMethodEnum)
 
 
 class CreateSummary(graphene.Mutation):

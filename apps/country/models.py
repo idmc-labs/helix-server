@@ -733,6 +733,14 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
     def __str__(self):
         return f"PK:{self.pk}-Country-ID:{self.country_id}-Year:{self.year}"
 
+    @classmethod
+    def calculate_gap_filling_method(cls, year: int, reference_year: int) -> "HouseholdSize.GAP_FILLING_METHOD":
+        if year == reference_year:
+            return cls.GAP_FILLING_METHOD.EXACT_YEAR
+        if year < reference_year:
+            return cls.GAP_FILLING_METHOD.BACKWARD_FILLING
+        return cls.GAP_FILLING_METHOD.FORWARD_FILLING
+
     @staticmethod
     def _normalize_for_comparison(value):
         if value is None:

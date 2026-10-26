@@ -36,7 +36,7 @@ class TestCreateHouseholdSize(HelixGraphQLTestCase):
             "size": 4.5,
             "dataSourceCategory": "Census",
             "source": "National statistics office",
-            "gapFillingMethod": HouseholdSize.GAP_FILLING_METHOD.EXACT_YEAR.name,
+            "referenceDate": "2024-06-30",
         }
 
     def test_valid_household_size_creation(self) -> None:
@@ -50,9 +50,24 @@ class TestCreateHouseholdSize(HelixGraphQLTestCase):
         self.assertTrue(data["ok"], content)
         self.assertEqual(data["result"]["year"], self.input["year"])
         self.assertEqual(data["result"]["size"], self.input["size"])
-        self.assertEqual(data["result"]["gapFillingMethod"], self.input["gapFillingMethod"])
+        self.assertEqual(data["result"]["gapFillingMethod"], HouseholdSize.GAP_FILLING_METHOD.EXACT_YEAR.name)
         self.assertEqual(data["result"]["createdBy"]["id"], str(admin.id))
         self.assertTrue(data["result"]["isActive"])
+
+    def test_gap_filling_method_is_derived_from_reference_date(self) -> None:
+        self.force_login(create_user_with_role(USER_ROLE.ADMIN.name))
+        for reference_date, expected in [
+            ("2020-01-01", HouseholdSize.GAP_FILLING_METHOD.FORWARD_FILLING.name),
+            ("2026-01-01", HouseholdSize.GAP_FILLING_METHOD.BACKWARD_FILLING.name),
+            (None, None),
+        ]:
+            response = self.query(self.mutation, input_data={**self.input, "referenceDate": reference_date})
+            content = json.loads(response.content)
+
+            self.assertResponseNoErrors(response)
+            data = content["data"]["createHouseholdSize"]
+            self.assertTrue(data["ok"], content)
+            self.assertEqual(data["result"]["gapFillingMethod"], expected)
 
     def test_active_household_size_creation_deactivates_previous(self) -> None:
         previous = HouseholdSizeFactory.create(
@@ -118,6 +133,8 @@ class TestCorrectHouseholdSize(HelixGraphQLTestCase):
                     sourceLink
                     notes
                     isActive
+                    referenceDate
+                    gapFillingMethod
                     createdBy {
                         id
                     }
@@ -189,6 +206,24 @@ class TestCorrectHouseholdSize(HelixGraphQLTestCase):
         self.household_size.refresh_from_db()
         self.assertFalse(self.household_size.is_active)
         self.assertEqual(self.household_size.notes, "Old notes")
+
+    def test_correction_recalculates_gap_filling_method(self) -> None:
+        HouseholdSize.objects.filter(pk=self.household_size.pk).update(
+            reference_date="2024-01-01",
+            gap_filling_method=HouseholdSize.GAP_FILLING_METHOD.EXACT_YEAR,
+        )
+        self.force_login(create_user_with_role(USER_ROLE.ADMIN.name))
+        response = self.query(self.mutation, input_data={**self.base_input, "referenceDate": "2021-01-01"})
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        data = content["data"]["createHouseholdSize"]
+        self.assertTrue(data["ok"], content)
+        self.assertEqual(data["result"]["referenceDate"], "2021-01-01")
+        self.assertEqual(data["result"]["gapFillingMethod"], HouseholdSize.GAP_FILLING_METHOD.FORWARD_FILLING.name)
+        self.household_size.refresh_from_db()
+        self.assertFalse(self.household_size.is_active)
+        self.assertEqual(self.household_size.gap_filling_method, HouseholdSize.GAP_FILLING_METHOD.EXACT_YEAR)
 
     def test_correction_with_only_notes_keeps_active_value(self) -> None:
         self.force_login(create_user_with_role(USER_ROLE.ADMIN.name))
