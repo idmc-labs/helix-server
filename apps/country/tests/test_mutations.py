@@ -157,16 +157,17 @@ class TestCorrectHouseholdSize(HelixGraphQLTestCase):
         self.assertEqual(data["result"]["year"], self.household_size.year)
         self.assertEqual(data["result"]["size"], self.input["size"])
         self.assertEqual(data["result"]["source"], self.input["source"])
-        self.assertEqual(data["result"]["notes"], self.input["notes"])
+        # The new value keeps the notes of the value it replaces
+        self.assertEqual(data["result"]["notes"], "Old notes")
         self.assertEqual(data["result"]["createdBy"]["id"], str(editor.id))
         self.assertEqual(data["result"]["lastModifiedBy"]["id"], str(editor.id))
 
-        # The superseded value is kept as it was
+        # The superseded value keeps its data, and its notes record the reason for the correction
         self.household_size.refresh_from_db()
         self.assertFalse(self.household_size.is_active)
         self.assertEqual(self.household_size.size, 3.0)
         self.assertEqual(self.household_size.source, "Old source")
-        self.assertEqual(self.household_size.notes, "Old notes")
+        self.assertEqual(self.household_size.notes, self.input["notes"])
         self.assertEqual(self.household_size.last_modified_by, self.creator)
         self.assertEqual(
             HouseholdSize.objects.filter(country=self.country, year=self.household_size.year, is_active=True).count(),
@@ -184,6 +185,24 @@ class TestCorrectHouseholdSize(HelixGraphQLTestCase):
         self.assertEqual(data["result"]["size"], 4.0)
         self.assertEqual(data["result"]["sourceLink"], "https://example.com/old")
         self.assertEqual(data["result"]["notes"], "Old notes")
+        # Without a reason, the archived value keeps its notes
+        self.household_size.refresh_from_db()
+        self.assertFalse(self.household_size.is_active)
+        self.assertEqual(self.household_size.notes, "Old notes")
+
+    def test_correction_with_only_notes_keeps_active_value(self) -> None:
+        self.force_login(create_user_with_role(USER_ROLE.ADMIN.name))
+        response = self.query(self.mutation, input_data={**self.base_input, "notes": "No change"})
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        data = content["data"]["createHouseholdSize"]
+        self.assertTrue(data["ok"], content)
+        self.assertEqual(data["result"]["id"], str(self.household_size.id))
+        self.household_size.refresh_from_db()
+        self.assertTrue(self.household_size.is_active)
+        self.assertEqual(self.household_size.notes, "Old notes")
+        self.assertEqual(HouseholdSize.objects.filter(country=self.country).count(), 1)
 
     def test_correction_without_changes_keeps_active_value(self) -> None:
         self.force_login(create_user_with_role(USER_ROLE.ADMIN.name))

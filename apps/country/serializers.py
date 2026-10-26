@@ -44,10 +44,13 @@ class HouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelS
         country = validated_data["country"]
         year = validated_data["year"]
         active_records = list(HouseholdSize.objects.filter(country=country, year=year, is_active=True).order_by("-id"))
+        archive_notes = None
         data = {field: validated_data[field] for field in HouseholdSize.DATA_FIELDS if field in validated_data}
         if active_records:
-            # NOTE: A value for a country-year with an active value is a correction of it,
-            # so fields that are not sent keep the active value.
+            # NOTE: A value for a country-year with an active value is a correction of it. Notes is the
+            # reason for the correction and is saved on the archived value, the new value keeps the
+            # notes of the value it replaces, and fields that are not sent keep the active value.
+            archive_notes = data.pop("notes", None)
             data = {
                 **{field: getattr(active_records[0], field) for field in HouseholdSize.DATA_FIELDS},
                 **data,
@@ -61,6 +64,7 @@ class HouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelS
             year=year,
             created_by=user,
             last_modified_by=user,
+            archive_notes=archive_notes,
             **data,
         )
 

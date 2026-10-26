@@ -749,15 +749,21 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
 
     @classmethod
     @transaction.atomic
-    def replace_active(cls, *, country: "Country", year: int, **fields) -> "HouseholdSize":
+    def replace_active(
+        cls, *, country: "Country", year: int, archive_notes: typing.Optional[str] = None, **fields
+    ) -> "HouseholdSize":
         """
         Archive the active value(s) for the country-year and insert a new active one.
         NOTE: AHHS values are never updated in place, so the history of a correction is kept.
         Shared by the application and the update_ahhs command so both leave the same rows.
+        archive_notes, when given, replaces the notes of the archived value(s) to record why they were archived.
         """
         # NOTE: Lock the country so concurrent edits of a country-year can't leave two active values
         Country.objects.select_for_update().filter(pk=country.pk).first()
-        cls.objects.filter(country=country, year=year, is_active=True).update(is_active=False)
+        archive_update: typing.Dict[str, typing.Any] = {"is_active": False}
+        if archive_notes is not None:
+            archive_update["notes"] = archive_notes
+        cls.objects.filter(country=country, year=year, is_active=True).update(**archive_update)
         return cls.objects.create(**{**fields, "country": country, "year": year, "is_active": True})
 
     @classmethod
