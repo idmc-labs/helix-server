@@ -2732,6 +2732,7 @@ input HouseholdSizeFilterDataTypeInputType {
   year: Float
   ahhsSource: String
   countries: [ID!]
+  status: HouseholdSizeStatusEnum
 }
 
 type HouseholdSizeListType {
@@ -2739,6 +2740,12 @@ type HouseholdSizeListType {
   totalCount: Int
   page: Int
   pageSize: Int
+}
+
+enum HouseholdSizeStatusEnum {
+  ALL
+  ACTIVE
+  ARCHIVED
 }
 
 input HulkBulkImportCreateInputType {

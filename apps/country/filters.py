@@ -8,6 +8,7 @@ from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext
 
+from apps.country.enums import HouseholdSizeStatusEnum
 from apps.country.models import (
     ContextualAnalysis,
     Country,
@@ -41,6 +42,8 @@ class HouseholdSizeFilter(MultiWordSearchFilterSet):
     year = django_filters.NumberFilter(method="filter_year")
     ahhs_source = django_filters.CharFilter(method="filter_source")
     countries = IDListFilter(method="filter_countries")
+    # NOTE: Only the active values are shown unless asked otherwise
+    status = SimpleInputFilter(HouseholdSizeStatusEnum, method="filter_status")
 
     def filter_year(self, qs, name, value):
         if value is None:
@@ -58,9 +61,19 @@ class HouseholdSizeFilter(MultiWordSearchFilterSet):
             return qs
         return qs.filter(country__in=value)
 
+    def filter_status(self, qs, name, value):
+        if value == HouseholdSizeStatusEnum.ACTIVE.value:
+            return qs.filter(is_active=True)
+        if value == HouseholdSizeStatusEnum.ARCHIVED.value:
+            return qs.filter(is_active=False)
+        return qs
+
     @property
     def qs(self):
-        return super().qs.filter(is_active=True)
+        qs = super().qs
+        if not self.form.cleaned_data.get("status"):
+            return qs.filter(is_active=True)
+        return qs
 
     class Meta:
         model = HouseholdSize
