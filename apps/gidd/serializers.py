@@ -322,9 +322,11 @@ class PublicFigureAnalysisSerializer(serializers.ModelSerializer):
 
 
 class StatusLogSerializer(serializers.ModelSerializer):
+    release = serializers.PrimaryKeyRelatedField(queryset=GiddRelease.objects.all(), required=True)
+
     class Meta:
         model = StatusLog
-        fields = ("id", "triggered_by", "triggered_at", "completed_at", "status")
+        fields = ("id", "triggered_by", "triggered_at", "completed_at", "status", "release")
 
 
 class ReleaseMetadataSerializer(serializers.ModelSerializer):

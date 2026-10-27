@@ -18,6 +18,9 @@ from .tasks import update_gidd_data
 
 
 class GiddUpdateData(graphene.Mutation):
+    class Arguments:
+        release_id = graphene.ID(required=True)
+
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(GiddStatusLogType)
@@ -25,7 +28,7 @@ class GiddUpdateData(graphene.Mutation):
     @staticmethod
     @is_authenticated()
     @permission_checker(["gidd.update_gidd_data_gidd"])
-    def mutate(root, info):
+    def mutate(root, info, release_id):
         user = info.context.user
         # Check if any pending updates
         if StatusLog.has_active_run():
@@ -41,7 +44,7 @@ class GiddUpdateData(graphene.Mutation):
                 ok=False,
             )
 
-        serializer = StatusLogSerializer(data=dict(triggered_by=user.id))
+        serializer = StatusLogSerializer(data=dict(triggered_by=user.id, release=release_id))
         if errors := mutation_is_not_valid(serializer):
             return GiddUpdateData(errors=errors, ok=False)
         instance = serializer.save()

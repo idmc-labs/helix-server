@@ -2925,7 +2925,7 @@ type MonitoringSubRegionType {
 
 type Mutation {
   triggerHulkBulkImport(data: HulkBulkImportCreateInputType!): TriggerHulkBulkImport
-  giddUpdateData: GiddUpdateData
+  giddUpdateData(releaseId: ID!): GiddUpdateData
   giddUpdateReleaseMetaData(data: ReleaseMetadataInputType!): GiddUpdateReleaseMetaData
   createGiddRelease(data: GiddReleaseCreateInputType!): CreateGiddRelease
   updateGiddRelease(data: GiddReleaseUpdateInputType!): UpdateGiddRelease
