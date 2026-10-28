@@ -5,7 +5,7 @@ on:
 
 jobs:
   _:
-    uses: toggle-corp/banjo-action/.github/workflows/pipeline.yml@v0.4.0
+    uses: toggle-corp/banjo-action/.github/workflows/pipeline.yml@v0.5.1
     permissions:
       contents: read
       packages: write
