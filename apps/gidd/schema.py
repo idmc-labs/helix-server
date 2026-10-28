@@ -27,6 +27,7 @@ from .filters import (
     DisasterStatisticsFilter,
     GiddCountryDisplacementFilter,
     GiddEventDisplacementFilter,
+    GiddReleaseFilter,
     GiddStatusLogFilter,
     PublicFigureAnalysisFilter,
     ReleaseMetadataFilter,
@@ -34,6 +35,7 @@ from .filters import (
 from .models import (
     GiddDisplacement,
     GiddEventDisplacement,
+    GiddRelease,
     PublicFigureAnalysis,
     ReleaseMetadata,
     StatusLog,
@@ -215,7 +217,7 @@ class GiddStatusLogType(RelationBatchedDjangoObjectType):
         # Pinned, not excluded, so a column added to StatusLog later does not join the payload on
         # its own. `triggered_by` is listed deliberately: the admin client renders it, and this
         # type is not whitelisted, so it never reaches an unauthenticated caller.
-        fields = ("id", "triggered_at", "completed_at", "status", "triggered_by")
+        fields = ("id", "triggered_at", "completed_at", "status", "triggered_by", "release")
 
     status = graphene.Field(GiddStatusLogEnum)
     status_display = EnumDescription(source="get_status_display")
@@ -316,6 +318,32 @@ class GiddReleaseMetadataType(RelationBatchedDjangoObjectType):
             "release_year",
             "pre_release_year",
         )
+
+
+class GiddReleaseType(RelationBatchedDjangoObjectType):
+    class Meta:
+        model = GiddRelease
+        fields = (
+            "id",
+            "name",
+            "version",
+            "release_date",
+            "notes",
+            "citation",
+            "doi",
+            "is_live",
+            "is_visible_in_gidd",
+            "created_at",
+            "created_by",
+            "modified_at",
+            "last_modified_by",
+        )
+
+
+class GiddReleaseListType(CustomDjangoListObjectType):
+    class Meta:
+        model = GiddRelease
+        filterset_class = GiddReleaseFilter
 
 
 class GiddPublicCountryRegionType(graphene.ObjectType):
@@ -441,6 +469,13 @@ class GiddCountryYearDisplacementListType(graphene.ObjectType):
 
 
 class Query(graphene.ObjectType):
+    gidd_releases = DjangoPaginatedListObjectField(
+        GiddReleaseListType,
+        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
+    )
+    gidd_release = graphene.Field(GiddReleaseType, id=graphene.ID(required=True))
+    gidd_live_release = graphene.Field(GiddReleaseType)
+
     gidd_public_conflict_statistics = graphene.Field(
         GiddConflictStatisticsType,
         **get_filtering_args_from_filterset(ConflictStatisticsFilter, GiddConflictStatisticsType),
@@ -541,6 +576,15 @@ class Query(graphene.ObjectType):
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
         return ReleaseMetadata.objects.last()
+
+    @staticmethod
+    def resolve_gidd_release(parent, info, id):
+        return GiddRelease.objects.filter(pk=id).first()
+
+    @staticmethod
+    def resolve_gidd_live_release(parent, info, **kwargs):
+        # At most one row: `gidd_release_single_live` enforces it.
+        return GiddRelease.objects.filter(is_live=True).first()
 
     @staticmethod
     def resolve_gidd_public_countries(parent, info, **kwargs):

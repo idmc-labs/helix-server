@@ -33,6 +33,7 @@ from .models import (
     GiddEvent,
     GiddEventDisplacement,
     GiddFigure,
+    GiddRelease,
     IdpsSaddEstimate,
     PublicFigureAnalysis,
     StatusLog,
@@ -793,6 +794,18 @@ def _all_country_event_code_cte():
     )
 
 
+def mark_release_live(release_id):
+    if release_id is None:
+        return
+
+    GiddRelease.objects.filter(Q(is_live=True) | Q(id=release_id)).update(
+        is_live=Case(
+            When(id=release_id, then=Value(True)),
+            default=Value(False),
+        )
+    )
+
+
 @redis_lock(GIDD_GENERATION_LOCK_KEY, GIDD_GENERATION_LOCK_TTL)
 def _generate_gidd_data(log_id):
     try:
@@ -813,6 +826,9 @@ def _generate_gidd_data(log_id):
             update_new_gidd_tables()
             # After update_new_gidd_tables: reads the GiddDisplacement rows it writes.
             update_public_figure_analysis()
+            # Inside the rebuild's transaction: a failed run rolls back with the tables, so the
+            # live release always describes the data actually published.
+            mark_release_live(StatusLog.objects.values_list("release_id", flat=True).get(id=log_id))
             StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.SUCCESS, completed_at=timezone.now())
         logger.info("GIDD data updated.")
     except Exception as e:

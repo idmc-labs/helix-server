@@ -902,6 +902,12 @@ type CreateFigureTag {
   result: FigureTagType
 }
 
+type CreateGiddRelease {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: GiddReleaseType
+}
+
 type CreateMonitoringExpertPortfolio {
   errors: [GenericScalar!]
   ok: Boolean
@@ -2623,9 +2629,32 @@ type GiddPublicFigureAnalysisType {
   figureCategoryDisplay: EnumDescription
 }
 
+input GiddReleaseCreateInputType {
+  name: String!
+  version: String!
+  releaseDate: Date!
+  notes: String!
+  citation: String
+  isVisibleInGidd: Boolean
+}
+
 enum GiddReleaseEnvironmentsEnum {
   PRE_RELEASE
   RELEASE
+}
+
+input GiddReleaseFilterDataInputType {
+  search: String
+  isLive: Boolean
+  releaseDateAfter: Date
+  releaseDateBefore: Date
+}
+
+type GiddReleaseListType {
+  results: [GiddReleaseType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
 }
 
 type GiddReleaseMetadataType {
@@ -2634,8 +2663,35 @@ type GiddReleaseMetadataType {
   preReleaseYear: Int!
 }
 
+type GiddReleaseType {
+  id: ID!
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  name: String!
+  version: String!
+  releaseDate: Date!
+  notes: String!
+  citation: String
+  doi: String
+  isLive: Boolean!
+  isVisibleInGidd: Boolean!
+}
+
+input GiddReleaseUpdateInputType {
+  id: ID!
+  name: String
+  version: String
+  releaseDate: Date
+  notes: String
+  citation: String
+  isVisibleInGidd: Boolean
+}
+
 input GiddStatusLogFilterDataInputType {
   status: [String!]
+  releases: [ID!]
 }
 
 type GiddStatusLogListType {
@@ -2651,6 +2707,7 @@ type GiddStatusLogType {
   triggeredAt: DateTime!
   completedAt: DateTime
   status: GiddStatusLogTypeEnum
+  release: GiddReleaseType
   statusDisplay: EnumDescription
 }
 
@@ -2868,8 +2925,10 @@ type MonitoringSubRegionType {
 
 type Mutation {
   triggerHulkBulkImport(data: HulkBulkImportCreateInputType!): TriggerHulkBulkImport
-  giddUpdateData: GiddUpdateData
+  giddUpdateData(releaseId: ID!): GiddUpdateData
   giddUpdateReleaseMetaData(data: ReleaseMetadataInputType!): GiddUpdateReleaseMetaData
+  createGiddRelease(data: GiddReleaseCreateInputType!): CreateGiddRelease
+  updateGiddRelease(data: GiddReleaseUpdateInputType!): UpdateGiddRelease
   toggleNotificationRead(id: ID!): ToggleNotificationRead
   createContextualUpdate(data: ContextualUpdateCreateInputType!): CreateContextualUpdate
   updateContextualUpdate(data: ContextualUpdateUpdateInputType!): UpdateContextualUpdate
@@ -3206,6 +3265,7 @@ enum PERMISSION_ACTION {
   update_gidd_data
   update_release_meta_data
   bulk_import
+  manage_release
 }
 
 enum PERMISSION_ENTITY {
@@ -3360,6 +3420,9 @@ enum QUANTIFIER {
 type Query {
   hulkBulkImport(id: ID!): HulkBulkImportType
   hulkBulkImports(filters: HulkBulkImportFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): HulkBulkImportListType
+  giddReleases(filters: GiddReleaseFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): GiddReleaseListType
+  giddRelease(id: ID!): GiddReleaseType
+  giddLiveRelease: GiddReleaseType
   giddPublicConflictStatistics(releaseEnvironment: String, startYear: Int, endYear: Int, countriesIso3: [String!], violenceTypes: [ID!], violenceSubTypes: [ID!], clientId: String!): GiddConflictStatisticsType
   giddPublicDisasterStatistics(releaseEnvironment: String, hazardCategories: [ID!], hazardSubCategories: [ID!], hazardTypes: [ID!], hazardSubTypes: [ID!], startYear: Int, endYear: Int, countriesIso3: [String!], clientId: String!): GiddDisasterStatisticsType
   giddLogs(filters: GiddStatusLogFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
@@ -4191,6 +4254,12 @@ type UpdateFigureTag {
   errors: [GenericScalar!]
   ok: Boolean
   result: FigureTagType
+}
+
+type UpdateGiddRelease {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: GiddReleaseType
 }
 
 type UpdateOrganization {

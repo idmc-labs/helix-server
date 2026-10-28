@@ -61,6 +61,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.update_pfa_visibility: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.update_gidd_data: {PERMISSION_ENTITY.gidd},
         PERMISSION_ACTION.update_release_meta_data: {PERMISSION_ENTITY.gidd},
+        PERMISSION_ACTION.manage_release: {PERMISSION_ENTITY.gidd},
     },
     USER_ROLE.REGIONAL_COORDINATOR: {
         PERMISSION_ACTION.add: REGIONAL_COORDINATOR_MODELS,
@@ -75,6 +76,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.update_pfa_visibility: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.update_gidd_data: set(),
         PERMISSION_ACTION.update_release_meta_data: set(),
+        PERMISSION_ACTION.manage_release: set(),
     },
     USER_ROLE.MONITORING_EXPERT: {
         PERMISSION_ACTION.add: MONITORING_EXPERT_MODELS,
@@ -89,6 +91,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.update_pfa_visibility: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.update_gidd_data: set(),
         PERMISSION_ACTION.update_release_meta_data: set(),
+        PERMISSION_ACTION.manage_release: set(),
     },
     USER_ROLE.DIRECTORS_OFFICE: {
         PERMISSION_ACTION.add: set(),
@@ -102,6 +105,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.clear_self_assignee: set(),
         PERMISSION_ACTION.update_gidd_data: set(),
         PERMISSION_ACTION.update_release_meta_data: set(),
+        PERMISSION_ACTION.manage_release: set(),
     },
     USER_ROLE.REPORTING_TEAM: {
         PERMISSION_ACTION.add: {PERMISSION_ENTITY.report, PERMISSION_ENTITY.organization, PERMISSION_ENTITY.figuretag},
@@ -115,6 +119,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.clear_self_assignee: set(),
         PERMISSION_ACTION.update_gidd_data: set(),
         PERMISSION_ACTION.update_release_meta_data: set(),
+        PERMISSION_ACTION.manage_release: set(),
     },
     USER_ROLE.GUEST: {
         PERMISSION_ACTION.add: set(),
@@ -128,5 +133,6 @@ PERMISSIONS = {
         PERMISSION_ACTION.clear_self_assignee: set(),
         PERMISSION_ACTION.update_gidd_data: set(),
         PERMISSION_ACTION.update_release_meta_data: set(),
+        PERMISSION_ACTION.manage_release: set(),
     },
 }
