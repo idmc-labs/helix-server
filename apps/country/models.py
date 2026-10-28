@@ -5,7 +5,7 @@ from datetime import datetime
 from django.contrib.postgres.aggregates.general import StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Count, Exists, OuterRef, Subquery
 from django.db.models.query import QuerySet
 from django.db.models.sql.constants import LOUTER
@@ -716,10 +716,63 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
     reference_date = models.DateField(verbose_name=_("Reference date"), blank=True, null=True)
     gap_filling_method = enum.EnumField(GAP_FILLING_METHOD, verbose_name=_("Gap filling method"), blank=True, null=True)
 
+    # Data fields that decide whether an incoming AHHS value differs from the active record.
+    # Metadata churn fields (created_at/modified_at/created_by/last_modified_by/is_active) are excluded on purpose.
+    DATA_FIELDS = (
+        "size",
+        "reference_date",
+        "gap_filling_method",
+        "data_source_category",
+        "source",
+        "source_link",
+        "notes",
+    )
+
     country_id: int
 
     def __str__(self):
         return f"PK:{self.pk}-Country-ID:{self.country_id}-Year:{self.year}"
+
+    @classmethod
+    def calculate_gap_filling_method(cls, year: int, reference_year: int) -> "HouseholdSize.GAP_FILLING_METHOD":
+        if year == reference_year:
+            return cls.GAP_FILLING_METHOD.EXACT_YEAR
+        if year < reference_year:
+            return cls.GAP_FILLING_METHOD.BACKWARD_FILLING
+        return cls.GAP_FILLING_METHOD.FORWARD_FILLING
+
+    @staticmethod
+    def _normalize_for_comparison(value):
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    def has_same_data(self, data: typing.Dict) -> bool:
+        return all(
+            self._normalize_for_comparison(getattr(self, field)) == self._normalize_for_comparison(data.get(field))
+            for field in self.DATA_FIELDS
+        )
+
+    @classmethod
+    @transaction.atomic
+    def replace_active(
+        cls, *, country: "Country", year: int, archive_notes: typing.Optional[str] = None, **fields
+    ) -> "HouseholdSize":
+        """
+        Archive the active value(s) for the country-year and insert a new active one.
+        NOTE: AHHS values are never updated in place, so the history of a correction is kept.
+        Shared by the application and the update_ahhs command so both leave the same rows.
+        archive_notes, when given, replaces the notes of the archived value(s) to record why they were archived.
+        """
+        # NOTE: Lock the country so concurrent edits of a country-year can't leave two active values
+        Country.objects.select_for_update().filter(pk=country.pk).first()
+        archive_update: typing.Dict[str, typing.Any] = {"is_active": False}
+        if archive_notes is not None:
+            archive_update["notes"] = archive_notes
+        cls.objects.filter(country=country, year=year, is_active=True).update(**archive_update)
+        return cls.objects.create(**{**fields, "country": country, "year": year, "is_active": True})
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):

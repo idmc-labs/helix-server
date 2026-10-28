@@ -11,7 +11,7 @@ from django.test import SimpleTestCase
 from apps.contrib.models import BulkApiOperation
 from apps.country.models import HouseholdSize
 from apps.entry.management.commands.update_ahhs import Command as UpdateAhhsCommand
-from apps.entry.management.commands.update_ahhs import calculate_gap_filling_method, rewrite_excerpt_idu
+from apps.entry.management.commands.update_ahhs import rewrite_excerpt_idu
 from apps.entry.management.commands.update_figure_event import Command as UpdateFigureEventCommand
 from apps.entry.models import Figure
 from apps.event.models import Event
@@ -28,19 +28,19 @@ from utils.tests import HelixGraphQLTestCase, HelixTestCase
 class TestCalculateGapFillingMethod(SimpleTestCase):
     def test_reference_year_equals_year_is_exact(self):
         self.assertEqual(
-            calculate_gap_filling_method(2020, 2020),
+            HouseholdSize.calculate_gap_filling_method(2020, 2020),
             HouseholdSize.GAP_FILLING_METHOD.EXACT_YEAR,
         )
 
     def test_reference_year_after_year_is_backward_filling(self):
         self.assertEqual(
-            calculate_gap_filling_method(2020, 2022),
+            HouseholdSize.calculate_gap_filling_method(2020, 2022),
             HouseholdSize.GAP_FILLING_METHOD.BACKWARD_FILLING,
         )
 
     def test_reference_year_before_year_is_forward_filling(self):
         self.assertEqual(
-            calculate_gap_filling_method(2020, 2018),
+            HouseholdSize.calculate_gap_filling_method(2020, 2018),
             HouseholdSize.GAP_FILLING_METHOD.FORWARD_FILLING,
         )
 
