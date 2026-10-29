@@ -10,7 +10,7 @@ from django_cte import With
 from django_filters import rest_framework as df
 
 from apps.common.enums import GENDER_TYPE
-from apps.country.models import Country
+from apps.country.models import Country, HouseholdSize
 from apps.crisis.models import Crisis
 from apps.entry.constants import FLOW, STOCK
 from apps.entry.filters import FigureTagFilter
@@ -415,6 +415,8 @@ class BaseFigureExtractionFilterSet(AcceptsOrdering, MultiWordSearchFilterSet):
     filter_figure_has_excerpt_idu = df.BooleanFilter(method="filter_filter_figure_has_excerpt_idu")
     filter_figure_has_housing_destruction = df.BooleanFilter(method="filter_filter_figure_has_housing_destruction")
     filter_figure_entry = df.CharFilter(field_name="entry", lookup_expr="exact")
+    # Figures affected by editing this AHHS row
+    household_size_id = IDFilter(method="filter_household_size_id")
 
     class Meta:
         model = Figure
@@ -546,6 +548,25 @@ class BaseFigureExtractionFilterSet(AcceptsOrdering, MultiWordSearchFilterSet):
         if value is None:
             return qs
         return qs.filter(is_housing_destruction=value)
+
+    def filter_household_size_id(self, qs, name, value):
+        """Figures that would be affected by editing one AHHS row.
+
+        A figure is affected when it is a recommended, household-unit figure in the same country,
+        with a start date in the same year as the AHHS row.
+
+        Each figure keeps its own copy of the household size, so some of these figures may have a
+        different value from the AHHS row. The caller sees each figure's value and can sort on it.
+        """
+        ahhs = HouseholdSize.objects.filter(pk=value).first()
+        if ahhs is None:
+            return qs.none()
+        return qs.filter(
+            country=ahhs.country_id,
+            start_date__year=ahhs.year,
+            role=Figure.ROLE.RECOMMENDED,
+            unit=Figure.UNIT.HOUSEHOLD,
+        )
 
     def filter_by_figure_terms(self, qs, name, value):
         if value:

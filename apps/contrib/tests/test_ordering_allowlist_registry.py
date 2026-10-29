@@ -201,6 +201,7 @@ EXPECTED = {
         "flow_end_date",
         "flow_start_date",
         "geolocations",
+        "household_size",
         "id",
         "modified_at",
         "role",

@@ -2003,6 +2003,7 @@ input FigureExtractionBulkOperationFilterDataInputType {
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   filterFigureEntry: String
+  householdSizeId: ID
   filterFigureIds: [ID!]
   filterFigureExcludeIds: [ID!]
 }
@@ -2043,6 +2044,7 @@ type FigureExtractionBulkOperationFilterDataType {
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   filterFigureEntry: String
+  householdSizeId: ID
 }
 
 input FigureExtractionFilterDataInputType {
@@ -2079,6 +2081,7 @@ input FigureExtractionFilterDataInputType {
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   filterFigureEntry: String
+  householdSizeId: ID
 }
 
 input FigureFilterDataInputType {
