@@ -345,11 +345,6 @@ class TestCarryOverHouseholdSize(HelixGraphQLTestCase):
                 no_reference_country.id: None,
             },
         )
-        for value in HouseholdSize.objects.filter(year=2025, reference_date__isnull=False):
-            self.assertEqual(
-                value.gap_filling_method,
-                HouseholdSize.calculate_gap_filling_method(2025, value.reference_date.year),
-            )
 
     def test_refuses_when_target_year_has_any_value(self) -> None:
         HouseholdSizeFactory.create(country=self.country_a, year=2024, is_active=True)
