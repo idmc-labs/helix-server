@@ -251,6 +251,12 @@ enum CRISIS_TYPE {
   OTHER
 }
 
+type CarryOverHouseholdSize {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: [CountryHouseholdSizeType!]
+}
+
 type ChangeUserPassword {
   errors: [GenericScalar!]
   ok: Boolean
@@ -2716,6 +2722,17 @@ enum HULK_BULK_IMPORT_STATUS {
   SKIPPED
 }
 
+input HouseholdSizeAffectedFigureFilterDataInputType {
+  householdSizeId: ID
+}
+
+type HouseholdSizeAffectedFigureListType {
+  results: [FigureType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
 input HouseholdSizeCreateInputType {
   country: ID!
   year: Int!
@@ -2974,6 +2991,7 @@ type Mutation {
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
   createHouseholdSize(data: HouseholdSizeCreateInputType!): CreateHouseholdSize
+  carryOverHouseholdSize(targetYear: Int!): CarryOverHouseholdSize
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
   exportMonitoringSubRegions(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegions
   exportHouseholdSize(filters: HouseholdSizeFilterDataTypeInputType!): ExportHouseholdSize
@@ -3425,6 +3443,7 @@ type Query {
   figureTagList(filters: FigureTagFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): FigureTagListType
   figure(id: ID!): FigureType
   figureList(filters: FigureExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): FigureListType
+  householdSizeAffectedFigureList(filters: HouseholdSizeAffectedFigureFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): HouseholdSizeAffectedFigureListType
   sourcePreview(id: ID!): SourcePreviewType
   entry(id: ID!): EntryType
   entryList(filters: EntryExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType

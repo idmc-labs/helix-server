@@ -33,6 +33,7 @@ from apps.entry.filters import (
     FigureFilter,
     FigureLocationFilter,
     FigureTagFilter,
+    HouseholdSizeAffectedFigureFilter,
 )
 from apps.entry.models import (
     DisaggregatedAge,
@@ -52,7 +53,7 @@ from apps.organization.schema import OrganizationListType
 from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
-from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.pagination import GatedPageGraphqlPagination, PageGraphqlPaginationWithoutCount
 from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
@@ -226,6 +227,12 @@ class FigureListType(CustomDjangoListObjectType):
         filterset_class = FigureFilter
 
 
+class HouseholdSizeAffectedFigureListType(CustomDjangoListObjectType):
+    class Meta:
+        model = Figure
+        filterset_class = HouseholdSizeAffectedFigureFilter
+
+
 class TotalFigureFilterInputType(graphene.InputObjectType):
     categories = graphene.List(graphene.NonNull(graphene.String))
     filter_figure_start_after = graphene.Date()
@@ -321,6 +328,11 @@ class Query:
             page_size_query_param="pageSize",
         ),
         filterset_class=FigureExtractionFilterSet,
+    )
+    # Figures affected by editing an AHHS row, shown before the edit is saved.
+    # Read-only; totalCount is the number of all matching figures, not just this page.
+    household_size_affected_figure_list = DjangoPaginatedListObjectField(
+        HouseholdSizeAffectedFigureListType, pagination=GatedPageGraphqlPagination(page_size_query_param="pageSize")
     )
     source_preview = DjangoObjectField(SourcePreviewType)
     entry = DjangoObjectField(EntryType)
