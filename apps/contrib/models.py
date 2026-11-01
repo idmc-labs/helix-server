@@ -9,6 +9,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
 from django.db.models import JSONField
 from django.utils import timezone
+from django.utils.module_loading import import_string
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
@@ -269,6 +270,7 @@ class ExcelDownload(MetaInformationAbstractModel):
         MONITORING_SUB_REGION = 15
         CLIENT = 16
         AHHS = 17
+        GIDD_UPDATED_DISPLACEMENT = 18
 
     started_at = models.DateTimeField(
         verbose_name=_("Started at"),
@@ -327,6 +329,8 @@ class ExcelDownload(MetaInformationAbstractModel):
             self.DOWNLOAD_TYPES.MONITORING_SUB_REGION: apps.get_model("country", "MonitoringSubRegion"),
             self.DOWNLOAD_TYPES.CLIENT: apps.get_model("contrib", "Client"),
             self.DOWNLOAD_TYPES.AHHS: apps.get_model("country", "HouseholdSize"),
+            # Not a model: an aggregate of Figure, so the getter lives with the GIDD query.
+            self.DOWNLOAD_TYPES.GIDD_UPDATED_DISPLACEMENT: import_string("apps.gidd.utils.UpdatedDisplacementExport"),
         }
         model = mapper.get(self.download_type)
         if not model:

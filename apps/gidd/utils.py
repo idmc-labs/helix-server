@@ -46,3 +46,41 @@ def displacement_aggregates(years: typing.Optional[typing.Iterable[int]] = None)
         .order_by("iso3", "year", "cause")
     )
 
+
+class UpdatedDisplacementExport:
+    """ExcelDownload getter for `displacement_aggregates`: the numbers a release would publish."""
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.crisis.models import Crisis
+        from apps.gidd.filters import UpdatedDisplacementExportFilter
+        from apps.gidd.tasks import get_gidd_years
+
+        # The years a generation would build; `yearGte`/`yearLte` narrow within them.
+        release_years = get_gidd_years()
+        data = UpdatedDisplacementExportFilter(
+            data=filters,
+            # GIDD publishes conflict and disaster only.
+            queryset=displacement_aggregates(release_years).filter(
+                cause__in=[Crisis.CRISIS_TYPE.CONFLICT, Crisis.CRISIS_TYPE.DISASTER]
+            ),
+        ).qs
+
+        headers = OrderedDict(
+            iso3="ISO3",
+            country_name="Country name",
+            year="Year",
+            cause="Cause",
+            new_displacement="New displacement",
+            total_displacement="Total displacement",
+        )
+
+        def transformer(data):
+            return {**data, "cause": Crisis.CRISIS_TYPE(data["cause"]).label}
+
+        return {
+            "headers": headers,
+            "data": data,
+            "formulae": None,
+            "transformer": transformer,
+        }

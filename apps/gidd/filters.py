@@ -9,7 +9,13 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.models import Crisis
 from apps.entry.enums import FigureCategoryTypeEnum
 from apps.entry.models import ExternalApiDump
-from utils.filters import IDListFilter, SimpleInputFilter, StringListFilter
+from utils.filters import (
+    IDListFilter,
+    MultipleInputFilter,
+    SimpleInputFilter,
+    StringListFilter,
+    generate_type_for_filter_set,
+)
 
 from .models import (
     GiddDisplacement,
@@ -217,6 +223,22 @@ class GiddReleaseFilter(django_filters.FilterSet):
         return super().qs.filter(is_visible_in_gidd=True)
 
 
+class UpdatedDisplacementExportFilter(django_filters.FilterSet):
+    """Filters `displacement_aggregates` rows; every field is a column of the aggregate."""
+
+    iso3_in = StringListFilter(field_name="iso3", lookup_expr="in")
+    year_gte = YearFilter(field_name="year", lookup_expr="gte")
+    year_lte = YearFilter(field_name="year", lookup_expr="lte")
+    cause_in = MultipleInputFilter(CrisisTypeGrapheneEnum, method="filter_cause_in")
+
+    def filter_cause_in(self, qs, name, value):
+        if not value:
+            return qs
+        if isinstance(value[0], int):
+            return qs.filter(cause__in=value)
+        return qs.filter(cause__in=[Crisis.CRISIS_TYPE.get(item).value for item in value])
+
+
 class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
     # Both columns are EnumFields, i.e. integer columns: a raw name reaches the ORM as a string
     # and `int("CONFLICT")` raises. An enum input also rejects unknown members before the ORM.
@@ -328,3 +350,11 @@ GIDD_API_TYPE_MAP = {
     for prefix in ["Graphene", ""]
     for filter_class, api_type in GIDD_TRACKING_FILTERS.items()
 }
+
+
+UpdatedDisplacementExportFilterDataType, UpdatedDisplacementExportFilterDataInputType = generate_type_for_filter_set(
+    UpdatedDisplacementExportFilter,
+    "gidd.schema.gidd_updated_displacements",
+    "UpdatedDisplacementExportFilterDataType",
+    "UpdatedDisplacementExportFilterDataInputType",
+)
