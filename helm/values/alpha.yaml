@@ -74,6 +74,7 @@ app:
                   user = User.objects.filter(email=email).first()
                   if user is None:
                       print(f"Failed to process user {email=}. Doesn't exists")
+                      continue
 
                   user.username = user.email = email
                   user.is_superuser = True
