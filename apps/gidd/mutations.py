@@ -1,11 +1,15 @@
 import graphene
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils.translation import gettext
 
+from apps.contrib.models import ExcelDownload
+from apps.contrib.mutations import ExportBaseMutation
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.mutation import generate_input_type_for_serializer
-from utils.permissions import is_authenticated, permission_checker
+from utils.permissions import PERMISSION_DENIED_MESSAGE, is_authenticated, permission_checker
 
+from .filters import UpdatedDisplacementExportFilterDataInputType
 from .models import GiddRelease, StatusLog
 from .schema import GiddReleaseMetadataType, GiddReleaseType, GiddStatusLogType
 from .serializers import (
@@ -144,8 +148,24 @@ class UpdateGiddRelease(graphene.Mutation):
         return UpdateGiddRelease(result=instance, errors=None, ok=True)
 
 
+class ExportGiddUpdatedDisplacements(ExportBaseMutation):
+    """The numbers a release would publish, as a spreadsheet in the requester's downloads."""
+
+    class Arguments(ExportBaseMutation.Arguments):
+        filters = UpdatedDisplacementExportFilterDataInputType(required=True)
+
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.GIDD_UPDATED_DISPLACEMENT
+
+    @classmethod
+    def mutate(cls, _, info, filters):
+        if not info.context.user.is_authenticated:
+            raise PermissionDenied(gettext(PERMISSION_DENIED_MESSAGE))
+        return super().mutate(_, info, filters)
+
+
 class Mutation(object):
     gidd_update_data = GiddUpdateData.Field()
     gidd_update_release_meta_data = GiddUpdateReleaseMetaData.Field()
     create_gidd_release = CreateGiddRelease.Field()
     update_gidd_release = UpdateGiddRelease.Field()
+    export_gidd_updated_displacements = ExportGiddUpdatedDisplacements.Field()
