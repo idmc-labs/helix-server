@@ -1527,6 +1527,13 @@ input EventCreateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String!
   includeTriangulationInQa: Boolean
+  hazardIntensityValue: Float
+  hazardIntensityUnit: HAZARD_INTENSITY_UNIT
+  hazardSourceName: String
+  hazardSourceEventId: String
+  hazardFootprintUrl: String
+  hazardFootprintId: String
+  hazardFootprintGeometryType: HAZARD_FOOTPRINT_GEOMETRY_TYPE
   crisis: ID
   otherSubType: ID
   violenceSubType: ID
@@ -1552,6 +1559,10 @@ input EventFilterDataInputType {
   endDate_Gte: Date
   endDate_Gt: Date
   ignoreQa: Boolean
+  hazardIntensityValue_Lte: Float
+  hazardIntensityValue_Lt: Float
+  hazardIntensityValue_Gte: Float
+  hazardIntensityValue_Gt: Float
   search: String
   crisisByIds: [ID!]
   eventTypes: [String!]
@@ -1567,6 +1578,7 @@ input EventFilterDataInputType {
   reviewStatus: [String!]
   assignees: [ID!]
   assigners: [ID!]
+  hazardIntensityUnits: [String!]
   filterFigures: FigureExtractionFilterDataInputType
   aggregateFigures: FigureAggregateFilterDataInputType
 }
@@ -1620,6 +1632,13 @@ type EventType {
   assignedAt: DateTime
   reviewStatus: EVENT_REVIEW_STATUS
   includeTriangulationInQa: Boolean!
+  hazardIntensityValue: Float
+  hazardIntensityUnit: HAZARD_INTENSITY_UNIT
+  hazardSourceName: String
+  hazardSourceEventId: String
+  hazardFootprintUrl: String
+  hazardFootprintId: String
+  hazardFootprintGeometryType: HAZARD_FOOTPRINT_GEOMETRY_TYPE
   notifications: [GenericNotificationType!]!
   eventReviews: [UnifiedReviewCommentType!]!
   eventCode: [EventCodeType!]!
@@ -1635,6 +1654,8 @@ type EventType {
   eventTypology: String
   figureTypology: [String]
   reviewStatusDisplay: EnumDescription
+  hazardIntensityUnitDisplay: EnumDescription
+  hazardFootprintGeometryTypeDisplay: EnumDescription
   reviewCount: EventReviewCountType
   eventCodes: [EventCodeType!]
   crisisId: ID!
@@ -1652,6 +1673,13 @@ input EventUpdateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
   includeTriangulationInQa: Boolean
+  hazardIntensityValue: Float
+  hazardIntensityUnit: HAZARD_INTENSITY_UNIT
+  hazardSourceName: String
+  hazardSourceEventId: String
+  hazardFootprintUrl: String
+  hazardFootprintId: String
+  hazardFootprintGeometryType: HAZARD_FOOTPRINT_GEOMETRY_TYPE
   crisis: ID
   otherSubType: ID
   violenceSubType: ID
@@ -2692,6 +2720,19 @@ type GiddViolenceSubType {
 
 type GiddYearType {
   year: Int!
+}
+
+enum HAZARD_FOOTPRINT_GEOMETRY_TYPE {
+  POINT
+  LINESTRING
+  POLYGON
+  MULTIPOLYGON
+}
+
+enum HAZARD_INTENSITY_UNIT {
+  M
+  KM_PER_HOUR
+  KNOTS
 }
 
 enum HULK_BULK_IMPORT_DATASET_IMPORT_TYPE {

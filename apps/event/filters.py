@@ -61,6 +61,9 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     review_status = StringListFilter(method="filter_review_status")
     assignees = IDListFilter(method="filter_assignees")
     assigners = IDListFilter(method="filter_assigners")
+    # Intensity values are only comparable within one unit, so the range filter
+    # (hazard_intensity_value__gte/lte in Meta.fields) is meant to be used with this one.
+    hazard_intensity_units = StringListFilter(method="filter_hazard_intensity_units")
 
     filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method="filter_by_figures")
     aggregate_figures = SimpleInputFilter(FigureAggregateFilterDataInputType, method="noop")
@@ -74,6 +77,7 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
             "start_date": ["lte", "lt", "gte", "gt"],
             "end_date": ["lte", "lt", "gte", "gt"],
             "ignore_qa": ["exact"],
+            "hazard_intensity_value": ["lte", "lt", "gte", "gt"],
         }
         # NOTE: event_code__event_code is not using exact match
         multi_word_search_fields = ["name", "event_code__event_code"]
@@ -120,6 +124,15 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
                 return qs.filter(event_type__in=value)
             return qs.filter(event_type__in=[Crisis.CRISIS_TYPE.get(item).value for item in value])
         return qs
+
+    def filter_hazard_intensity_units(self, qs, name, value):
+        if not value:
+            return qs
+        if isinstance(value[0], int):
+            # internal filtering
+            return qs.filter(hazard_intensity_unit__in=value)
+        units = [Event.HAZARD_INTENSITY_UNIT.get(item) for item in value]
+        return qs.filter(hazard_intensity_unit__in=[unit.value for unit in units if unit is not None])
 
     def filter_review_status(self, qs, name, value):
         # Filter out *_BUT_CHANGED values from user input

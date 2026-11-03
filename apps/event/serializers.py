@@ -1,3 +1,4 @@
+import math
 import typing
 from collections import OrderedDict
 
@@ -79,6 +80,12 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
             "countries": {"required": True, "allow_empty": False},
             "event_narrative": {"required": True, "allow_blank": False, "allow_null": False},
         }
+
+    def validate_hazard_intensity_value(self, value):
+        # DRF's FloatField already refuses non-numbers such as "7.8M", but it accepts "nan" and "inf".
+        if value is not None and not math.isfinite(value):
+            raise serializers.ValidationError(gettext("A valid number is required."))
+        return value
 
     def _validate_event_codes(self, attrs):
         errors = OrderedDict()
