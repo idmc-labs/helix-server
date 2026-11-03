@@ -32,3 +32,18 @@ class CRISIS_TYPE_PUBLIC(enum.Enum):
         CONFLICT: _("Conflict"),
         DISASTER: _("Disaster"),
     }
+
+
+# The two displacement metrics a GiddEventDisplacement row carries: `new_displacement` (a flow) and
+# `total_displacement` (IDP stock). Not a model column -- a logical selector the events table filters on.
+class DISPLACEMENT_TYPE_PUBLIC(enum.Enum):
+    NEW_DISPLACEMENT = 0
+    IDPS = 1
+
+    __labels__ = {
+        NEW_DISPLACEMENT: _("New displacement"),
+        IDPS: _("IDPs"),
+    }
+
+
+GiddDisplacementTypeEnum = convert_enum_to_graphene_enum(DISPLACEMENT_TYPE_PUBLIC, name="GiddDisplacementTypeEnum")

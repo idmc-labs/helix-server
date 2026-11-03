@@ -361,12 +361,16 @@ class GiddEventAffectedCountryType(graphene.ObjectType):
     country_name = graphene.String(required=True)
     new_displacement = graphene.Int()
     new_displacement_rounded = graphene.Int()
+    total_displacement = graphene.Int()
+    total_displacement_rounded = graphene.Int()
 
 
 class GiddEventType(graphene.ObjectType):
     event_name = graphene.String(required=True)
     new_displacement = graphene.Int()
     new_displacement_rounded = graphene.Int()
+    total_displacement = graphene.Int()
+    total_displacement_rounded = graphene.Int()
     start_date = graphene.Date(required=True)
     end_date = graphene.Date(required=True)
     event_codes = graphene.List(
@@ -412,6 +416,12 @@ class GiddCountryYearDisplacementType(graphene.ObjectType):
     disaster_new_displacement_rounded = graphene.Int()
     disaster_total_displacement = graphene.Int()
     disaster_total_displacement_rounded = graphene.Int()
+    # Both causes added together: a flow summed with a flow, a stock with a stock -- valid, unlike
+    # crossing the two metrics. Mirrors GiddCombinedStatisticsType's internal/total displacements.
+    total_internal_displacements = graphene.Int()
+    total_internal_displacements_rounded = graphene.Int()
+    total_idps = graphene.Int()
+    total_idps_rounded = graphene.Int()
 
 
 GIDD_COUNTRY_YEAR_DEFAULT_PAGE_SIZE = 50
@@ -428,6 +438,8 @@ GIDD_COUNTRY_YEAR_SORTABLE = frozenset(
         "disaster_new_displacement",
         "disaster_total_displacement",
         "iso3",
+        "total_idps",
+        "total_internal_displacements",
         "year",
     }
 )
@@ -487,6 +499,9 @@ class Query(graphene.ObjectType):
     gidd_public_event = graphene.Field(
         GiddEventType,
         event_id=graphene.ID(required=True),
+        # Pins the IDP stock figure to one year (stock is point-in-time, so it cannot sum across
+        # years). Omitted -> the event's latest year within the released window.
+        end_year=graphene.Int(),
         **get_filtering_args_from_filterset(ReleaseMetadataFilter, GiddEventType),
         client_id=graphene.String(required=True),
     )
@@ -936,6 +951,9 @@ class Query(graphene.ObjectType):
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_EVENT_GRAPHQL)
 
         event_id = kwargs["event_id"]
+        # Popped before the filterset runs: end_year pins the YEAR both figures are read at, not a
+        # `year <=` window over the whole queryset.
+        requested_end_year = kwargs.pop("end_year", None)
         # Not cause-scoped: an event is resolved across conflict and disaster rows alike, and
         # carries one row per country it touched.
         event_qs = GiddEventDisplacementFilter(data=kwargs).qs.filter(event_raw_id=event_id)
@@ -950,7 +968,17 @@ class Query(graphene.ObjectType):
             "all_country_event_codes",
             "all_country_event_codes_type",
         ).first()
-        total_new_displacement = event_qs.aggregate(total=models.Sum("new_displacement"))["total"]
+        # The year both the flow and the stock are read at: the requested end_year, or the event's
+        # latest year within the released window. Stock is point-in-time and flow is pinned the same
+        # way, so both figures describe the event at one consistent year rather than mixing years.
+        figure_year = requested_end_year or event_qs.aggregate(latest=models.Max("year"))["latest"]
+        at_year = Q(year=figure_year)
+        totals = event_qs.aggregate(
+            new_displacement=models.Sum("new_displacement", filter=at_year),
+            total_displacement=models.Sum("total_displacement", filter=at_year),
+        )
+        total_new_displacement = totals["new_displacement"]
+        total_stock_displacement = totals["total_displacement"]
 
         # The all-country columns, not the row-scoped `event_codes`: a country that registered a
         # code but produced no figures has no row here, so aggregating rows would drop its code.
@@ -964,7 +992,10 @@ class Query(graphene.ObjectType):
             )
             .order_by()
             .annotate(
-                total_new_displacement=models.Sum("new_displacement"),
+                # Both figures at the same pinned year, so each event total equals the sum of its
+                # per-country figures.
+                total_new_displacement=models.Sum("new_displacement", filter=at_year),
+                total_stock_displacement=models.Sum("total_displacement", filter=at_year),
             )
         )
 
@@ -979,6 +1010,8 @@ class Query(graphene.ObjectType):
             event_name=base.get("event_name"),
             new_displacement_rounded=round_and_remove_zero(total_new_displacement),
             new_displacement=total_new_displacement,
+            total_displacement_rounded=round_and_remove_zero(total_stock_displacement),
+            total_displacement=total_stock_displacement,
             start_date=base.get("start_date"),
             end_date=base.get("end_date"),
             event_codes=event_codes,
@@ -989,6 +1022,8 @@ class Query(graphene.ObjectType):
                     country_name=country_data["country_name"],
                     new_displacement_rounded=round_and_remove_zero(country_data["total_new_displacement"]),
                     new_displacement=country_data["total_new_displacement"],
+                    total_displacement_rounded=round_and_remove_zero(country_data["total_stock_displacement"]),
+                    total_displacement=country_data["total_stock_displacement"],
                 )
                 for country_data in affected_countries_qs
             ],
@@ -1185,6 +1220,12 @@ class Query(graphene.ObjectType):
                 conflict_total_displacement=Coalesce(models.Sum("total_displacement", filter=conflict_filter), 0),
                 disaster_new_displacement=Coalesce(models.Sum("new_displacement", filter=disaster_filter), 0),
                 disaster_total_displacement=Coalesce(models.Sum("total_displacement", filter=disaster_filter), 0),
+                # conflict + disaster of the same metric. Filtered by both typologies at once so a
+                # hazard/violence narrowing scopes the combined total the same way it scopes each side.
+                total_internal_displacements=Coalesce(
+                    models.Sum("new_displacement", filter=conflict_filter | disaster_filter), 0
+                ),
+                total_idps=Coalesce(models.Sum("total_displacement", filter=conflict_filter | disaster_filter), 0),
             )
             .filter(
                 Q(conflict_new_displacement__gt=0)
@@ -1217,6 +1258,10 @@ class Query(graphene.ObjectType):
                     disaster_new_displacement_rounded=round_and_remove_zero(row["disaster_new_displacement"]),
                     disaster_total_displacement=row["disaster_total_displacement"] or None,
                     disaster_total_displacement_rounded=round_and_remove_zero(row["disaster_total_displacement"]),
+                    total_internal_displacements=row["total_internal_displacements"] or None,
+                    total_internal_displacements_rounded=round_and_remove_zero(row["total_internal_displacements"]),
+                    total_idps=row["total_idps"] or None,
+                    total_idps_rounded=round_and_remove_zero(row["total_idps"]),
                 )
                 for row in rows[offset : offset + page_size]
             ],

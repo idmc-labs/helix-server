@@ -332,3 +332,160 @@ class TestGiddDisplacementEventsEventCodes(HelixGraphQLTestCase):
         results = response.json()["data"]["giddPublicDisplacementEvents"]["results"]
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]["eventCodes"], ["GLIDE-1", "GLIDE-2"])
+
+
+DISPLACEMENT_EVENTS_FILTERED = """
+    query($clientId: String!, $displacementType: GiddDisplacementTypeEnum, $hasFigures: Boolean) {
+        giddPublicDisplacementEvents(
+            clientId: $clientId
+            filters: { displacementType: $displacementType, hasFigures: $hasFigures }
+        ) {
+            totalCount
+            results { eventName }
+        }
+    }
+"""
+
+
+class TestGiddDisplacementEventsFigureFilters(HelixGraphQLTestCase):
+    """`displacementType` keeps rows carrying the chosen metric; `hasFigures` drops rows with neither.
+
+    A released event can carry a populated 0 in either column, which must read the same as a null --
+    no displacement of that kind -- so the fixture includes both shapes of "empty".
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_code = "GIDD-EVENT-FIGURE-FILTER-TEST"
+        Client.objects.create(name="Gidd Event Figure Filter", code=cls.client_code, is_active=True)
+        ReleaseMetadata.objects.create(release_year=2023, pre_release_year=2022, modified_by=UserFactory.create())
+
+        hazard = DisasterTypeFactory.create(name="Flood")
+        sub_category = DisasterSubCategoryFactory.create(category=DisasterCategoryFactory.create())
+        country = CountryFactory.create(name="Nepal", iso3="NPL")
+
+        def row(event_raw_id, event_name, nd, idps):
+            GiddEventDisplacement.objects.create(
+                country=country,
+                iso3=country.iso3,
+                country_name=country.name,
+                year=2023,
+                cause=Crisis.CRISIS_TYPE.DISASTER,
+                event_raw_id=event_raw_id,
+                event_name=event_name,
+                new_displacement=nd,
+                total_displacement=idps,
+                hazard_category=sub_category.category,
+                hazard_sub_category=sub_category,
+                hazard_type=hazard,
+                hazard_type_name=hazard.name,
+                hazard_sub_type=DisasterSubTypeFactory.create(type=hazard),
+            )
+
+        row(1, "ND only", nd=100, idps=0)
+        row(2, "IDPs only", nd=0, idps=200)
+        row(3, "Both", nd=10, idps=20)
+        row(4, "Zero figures", nd=0, idps=0)
+        row(5, "Null figures", nd=None, idps=None)
+
+    def events(self, **variables):
+        response = self.query(DISPLACEMENT_EVENTS_FILTERED, variables=dict(clientId=self.client_code, **variables))
+        self.assertResponseNoErrors(response)
+        data = response.json()["data"]["giddPublicDisplacementEvents"]
+        return {result["eventName"] for result in data["results"]}
+
+    def test_no_figure_filters_returns_every_row(self):
+        self.assertEqual(self.events(), {"ND only", "IDPs only", "Both", "Zero figures", "Null figures"})
+
+    def test_displacement_type_new_displacement_keeps_rows_with_a_flow(self):
+        self.assertEqual(self.events(displacementType="NEW_DISPLACEMENT"), {"ND only", "Both"})
+
+    def test_displacement_type_idps_keeps_rows_with_a_stock(self):
+        self.assertEqual(self.events(displacementType="IDPS"), {"IDPs only", "Both"})
+
+    def test_has_figures_drops_rows_with_neither_metric(self):
+        self.assertEqual(self.events(hasFigures=True), {"ND only", "IDPs only", "Both"})
+
+    def test_has_figures_false_is_a_noop(self):
+        self.assertEqual(len(self.events(hasFigures=False)), 5)
+
+
+SINGLE_EVENT_STOCK = """
+    query($clientId: String!, $eventId: ID!, $endYear: Int) {
+        giddPublicEvent(clientId: $clientId, eventId: $eventId, endYear: $endYear) {
+            eventName
+            newDisplacement
+            totalDisplacement
+            affectedCountries { iso3 newDisplacement totalDisplacement }
+        }
+    }
+"""
+
+
+class TestGiddPublicEventStock(HelixGraphQLTestCase):
+    """`giddPublicEvent` carries IDP stock (totalDisplacement) beside the new-displacement flow.
+
+    Both figures are pinned to one year -- `endYear`, or the event's latest year -- and summed across
+    countries at that year, so the event is described at one consistent year rather than mixing years.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_code = "GIDD-EVENT-STOCK-TEST"
+        Client.objects.create(name="Gidd Event Stock", code=cls.client_code, is_active=True)
+        ReleaseMetadata.objects.create(release_year=2023, pre_release_year=2022, modified_by=UserFactory.create())
+
+        hazard = DisasterTypeFactory.create(name="Flood")
+        sub_category = DisasterSubCategoryFactory.create(category=DisasterCategoryFactory.create())
+        npl = CountryFactory.create(name="Nepal", iso3="NPL")
+        ind = CountryFactory.create(name="India", iso3="IND")
+
+        def row(country, year, nd, idps):
+            GiddEventDisplacement.objects.create(
+                country=country,
+                iso3=country.iso3,
+                country_name=country.name,
+                year=year,
+                cause=Crisis.CRISIS_TYPE.DISASTER,
+                event_raw_id=1,
+                event_name="Monsoon Flood",
+                new_displacement=nd,
+                total_displacement=idps,
+                hazard_category=sub_category.category,
+                hazard_sub_category=sub_category,
+                hazard_type=hazard,
+                hazard_type_name=hazard.name,
+                hazard_sub_type=DisasterSubTypeFactory.create(type=hazard),
+            )
+
+        # One event spanning two years -- the case where summing stock would double-count.
+        row(npl, 2022, nd=50, idps=500)
+        row(npl, 2023, nd=100, idps=1000)
+        row(ind, 2023, nd=40, idps=400)
+
+    def event(self, **variables):
+        response = self.query(SINGLE_EVENT_STOCK, variables=dict(clientId=self.client_code, eventId=1, **variables))
+        self.assertResponseNoErrors(response)
+        return response.json()["data"]["giddPublicEvent"]
+
+    def test_figures_default_to_the_latest_year_not_a_cross_year_sum(self):
+        event = self.event()
+        # Latest year (2023) only, both figures: NOT 50 + 100 + 40 or 500 + 1000 + 400.
+        self.assertEqual(event["newDisplacement"], 140)
+        self.assertEqual(event["totalDisplacement"], 1400)
+        by_iso3 = {country["iso3"]: country for country in event["affectedCountries"]}
+        self.assertEqual(by_iso3["NPL"]["newDisplacement"], 100)
+        self.assertEqual(by_iso3["NPL"]["totalDisplacement"], 1000)
+        self.assertEqual(by_iso3["IND"]["newDisplacement"], 40)
+        self.assertEqual(by_iso3["IND"]["totalDisplacement"], 400)
+
+    def test_end_year_pins_both_figures_to_that_year(self):
+        event = self.event(endYear=2022)
+        # Both flow and stock at 2022: only NPL carried a row that year.
+        self.assertEqual(event["newDisplacement"], 50)
+        self.assertEqual(event["totalDisplacement"], 500)
+        by_iso3 = {country["iso3"]: country for country in event["affectedCountries"]}
+        self.assertEqual(by_iso3["NPL"]["newDisplacement"], 50)
+        self.assertEqual(by_iso3["NPL"]["totalDisplacement"], 500)
+        self.assertIsNone(by_iso3["IND"]["newDisplacement"])
+        self.assertIsNone(by_iso3["IND"]["totalDisplacement"])
