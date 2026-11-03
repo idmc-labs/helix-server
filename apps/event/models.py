@@ -308,6 +308,31 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             SIGNED_OFF_BUT_CHANGED: _("Signed-off but changed"),
         }
 
+    class HAZARD_INTENSITY_UNIT(enum.Enum):
+        # Keys confirmed with IDMC on 29 October 2026 (A6.1.1). A unit IDMC adds later is one more key.
+        M = 0
+        KM_PER_HOUR = 1
+        KNOTS = 2
+
+        __labels__ = {
+            M: _("M"),
+            KM_PER_HOUR: _("km/h"),
+            KNOTS: _("knots"),
+        }
+
+    class HAZARD_FOOTPRINT_GEOMETRY_TYPE(enum.Enum):
+        POINT = 0
+        LINESTRING = 1
+        POLYGON = 2
+        MULTIPOLYGON = 3
+
+        __labels__ = {
+            POINT: _("POINT"),
+            LINESTRING: _("LINESTRING"),
+            POLYGON: _("POLYGON"),
+            MULTIPOLYGON: _("MULTIPOLYGON"),
+        }
+
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = "total_flow_nd_figures"
     IDP_FIGURES_ANNOTATE = "total_stock_idp_figures"
@@ -435,6 +460,33 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     include_triangulation_in_qa = models.BooleanField(
         verbose_name="Include triangulation in qa?",
         default=False,
+    )
+
+    # Hazard intensity and footprint (U6.1). All optional; names as IDMC gave them on 29 October 2026.
+    # One value and one unit per event: the analyst records the measure that defines the event.
+    hazard_intensity_value = models.FloatField(verbose_name=_("Hazard intensity value"), null=True, blank=True)
+    hazard_intensity_unit = enum.EnumField(
+        HAZARD_INTENSITY_UNIT,
+        verbose_name=_("Hazard intensity unit"),
+        null=True,
+        blank=True,
+        default=None,
+    )
+    # Stored as IDMC writes it (e.g. EMDAT); not checked against a list.
+    hazard_source_name = models.CharField(verbose_name=_("Hazard source name"), max_length=256, null=True, blank=True)
+    # Stored, not published.
+    hazard_source_event_id = models.CharField(
+        verbose_name=_("Hazard source event ID"), max_length=256, null=True, blank=True
+    )
+    hazard_footprint_url = models.URLField(verbose_name=_("Hazard footprint URL"), max_length=2048, null=True, blank=True)
+    # Text because IDMC's file writes it as a decimal (e.g. 10177.0).
+    hazard_footprint_id = models.CharField(verbose_name=_("Hazard footprint ID"), max_length=256, null=True, blank=True)
+    hazard_footprint_geometry_type = enum.EnumField(
+        HAZARD_FOOTPRINT_GEOMETRY_TYPE,
+        verbose_name=_("Hazard footprint geometry type"),
+        null=True,
+        blank=True,
+        default=None,
     )
 
     assignee_id: typing.Optional[int]
@@ -772,6 +824,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             context_of_violences="Context of violences",
             event_codes="Event codes (Code:Type:ISO3)",
             event_narrative="Event description",
+            hazard_intensity_value="Hazard intensity value",
+            hazard_intensity_unit="Hazard intensity unit",
+            hazard_source_name="Hazard source name",
+            hazard_source_event_id="Hazard source event ID",
+            hazard_footprint_url="Hazard footprint URL",
+            hazard_footprint_id="Hazard footprint ID",
+            hazard_footprint_geometry_type="Hazard footprint geometry type",
             event_link="Event Link",
         )
         exclude_headers = ["event_link"]
@@ -819,6 +878,12 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum["start_date_accuracy"]), "label", ""),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum["end_date_accuracy"]), "label", ""),
                     event_codes=format_event_codes_as_string(datum["event_codes"]),
+                    hazard_intensity_unit=getattr(
+                        cls.HAZARD_INTENSITY_UNIT.get(datum["hazard_intensity_unit"]), "label", ""
+                    ),
+                    hazard_footprint_geometry_type=getattr(
+                        cls.HAZARD_FOOTPRINT_GEOMETRY_TYPE.get(datum["hazard_footprint_geometry_type"]), "label", ""
+                    ),
                 ),
             }
 

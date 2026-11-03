@@ -15,6 +15,8 @@ from .constants import (
     FIGURE_ROLE,
     FIGURE_TERMS,
     FIGURE_UNIT,
+    HAZARD_FOOTPRINT_GEOMETRY_TYPE,
+    HAZARD_INTENSITY_UNIT,
     HULK_BULK_IMPORT_STATUS,
     PCODE_ACCURACY,
 )
@@ -26,6 +28,8 @@ ListOfIds = Annotated[typing.List[int], json_parser()]
 
 EventType = Annotated[CRISIS_TYPE, enum_parser(CRISIS_TYPE)]
 EventCodeType = Annotated[EVENT_CODE_TYPE, enum_parser(EVENT_CODE_TYPE)]
+EventHazardIntensityUnitType = Annotated[HAZARD_INTENSITY_UNIT, enum_parser(HAZARD_INTENSITY_UNIT)]
+EventHazardFootprintGeometryType = Annotated[HAZARD_FOOTPRINT_GEOMETRY_TYPE, enum_parser(HAZARD_FOOTPRINT_GEOMETRY_TYPE)]
 
 FigureCategoryType = Annotated[FIGURE_CATEGORY_TYPES, enum_parser(FIGURE_CATEGORY_TYPES)]
 FigureTermType = Annotated[FIGURE_TERMS, enum_parser(FIGURE_TERMS)]

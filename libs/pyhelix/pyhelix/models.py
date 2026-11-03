@@ -28,6 +28,8 @@ from .parsers import enum_parser, validate_and_parse_enum
 from .types import (
     DateAccuracy,
     EventCodeType,
+    EventHazardFootprintGeometryType,
+    EventHazardIntensityUnitType,
     EventType,
     FigureCategoryType,
     FigureDisplacementOccurredType,
@@ -172,6 +174,41 @@ class HulkEventImport(HulkBaseModel):
     """
 
     event_codes: typing.List[HulkEventImportEventCode]
+
+    # Hazard intensity and footprint (all optional). Helix's serializer validates these again.
+    hazard_intensity_value: typing.Optional[float] = Field(default=None, allow_inf_nan=False)
+    """A number, e.g. 7.8 or 185. Values with the unit attached, such as "7.8M", are refused."""
+    hazard_intensity_unit: typing.Optional[EventHazardIntensityUnitType] = None
+    hazard_source_name: typing.Optional[str] = Field(default=None, max_length=256)
+    hazard_source_event_id: typing.Optional[str] = Field(default=None, max_length=256)
+    hazard_footprint_url: typing.Optional[str] = Field(default=None, max_length=2048)
+    hazard_footprint_id: typing.Optional[str] = Field(default=None, max_length=256)
+    hazard_footprint_geometry_type: typing.Optional[EventHazardFootprintGeometryType] = None
+
+    @field_validator("hazard_intensity_value", mode="before")
+    @classmethod
+    def _validate_hazard_intensity_value(cls, v):
+        # pydantic's lax float would turn True into 1.0
+        if isinstance(v, bool):
+            raise ValueError("hazard_intensity_value must be a number")
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
+    @field_validator(
+        "hazard_source_name",
+        "hazard_source_event_id",
+        "hazard_footprint_url",
+        "hazard_footprint_id",
+        "hazard_intensity_unit",
+        "hazard_footprint_geometry_type",
+        mode="before",
+    )
+    @classmethod
+    def _blank_hazard_text_to_none(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v.strip() if isinstance(v, str) else v
 
     @field_validator("event_narrative")
     @classmethod

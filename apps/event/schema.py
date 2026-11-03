@@ -5,6 +5,8 @@ from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.enums import (
     EventCodeTypeGrapheneEnum,
+    EventHazardFootprintGeometryTypeEnum,
+    EventHazardIntensityUnitEnum,
     EventReviewStatusEnum,
     QaRecommendedFigureEnum,
 )
@@ -290,6 +292,10 @@ class EventType(RelationBatchedDjangoObjectType):
     figure_typology = graphene.List(graphene.String)
     review_status = graphene.Field(EventReviewStatusEnum)
     review_status_display = EnumDescription(source="get_review_status_display")
+    hazard_intensity_unit = graphene.Field(EventHazardIntensityUnitEnum)
+    hazard_intensity_unit_display = EnumDescription(source="get_hazard_intensity_unit_display")
+    hazard_footprint_geometry_type = graphene.Field(EventHazardFootprintGeometryTypeEnum)
+    hazard_footprint_geometry_type_display = EnumDescription(source="get_hazard_footprint_geometry_type_display")
     review_count = graphene.Field(EventReviewCountType)
     event_codes = graphene.List(graphene.NonNull(EventCodeType))
     crisis = graphene.Field("apps.crisis.schema.CrisisType")

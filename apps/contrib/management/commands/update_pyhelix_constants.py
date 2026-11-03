@@ -39,7 +39,7 @@ from apps.contrib.commons import DATE_ACCURACY
 from apps.contrib.models import Attachment
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, FigureLocation
-from apps.event.models import EventCode
+from apps.event.models import Event, EventCode
 from apps.hulk.models import HulkBulkImport
 from utils.validations import MAX_FUTURE_YEARS
 
@@ -81,6 +81,13 @@ ENUM_SPECS: List[EnumSpec] = [
     ("DATE_ACCURACY", "DATE_ACCURACY", DATE_ACCURACY, set()),
     ("CRISIS_TYPE", "Crisis.CRISIS_TYPE", Crisis.CRISIS_TYPE, set()),
     ("EVENT_CODE_TYPE", "EventCode.EVENT_CODE_TYPE", EventCode.EVENT_CODE_TYPE, set()),
+    ("HAZARD_INTENSITY_UNIT", "Event.HAZARD_INTENSITY_UNIT", Event.HAZARD_INTENSITY_UNIT, set()),
+    (
+        "HAZARD_FOOTPRINT_GEOMETRY_TYPE",
+        "Event.HAZARD_FOOTPRINT_GEOMETRY_TYPE",
+        Event.HAZARD_FOOTPRINT_GEOMETRY_TYPE,
+        set(),
+    ),
     (
         "FIGURE_CATEGORY_TYPES",
         "Figure.FIGURE_CATEGORY_TYPES",
