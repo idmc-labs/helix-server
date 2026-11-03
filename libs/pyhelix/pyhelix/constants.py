@@ -55,6 +55,34 @@ class EVENT_CODE_TYPE(enum.Enum):
     }
 
 
+# Clone of Event.HAZARD_INTENSITY_UNIT
+class HAZARD_INTENSITY_UNIT(enum.Enum):
+    M = 0
+    KM_PER_HOUR = 1
+    KNOTS = 2
+
+    __labels__ = {
+        M: _("M"),
+        KM_PER_HOUR: _("km/h"),
+        KNOTS: _("knots"),
+    }
+
+
+# Clone of Event.HAZARD_FOOTPRINT_GEOMETRY_TYPE
+class HAZARD_FOOTPRINT_GEOMETRY_TYPE(enum.Enum):
+    POINT = 0
+    LINESTRING = 1
+    POLYGON = 2
+    MULTIPOLYGON = 3
+
+    __labels__ = {
+        POINT: _("POINT"),
+        LINESTRING: _("LINESTRING"),
+        POLYGON: _("POLYGON"),
+        MULTIPOLYGON: _("MULTIPOLYGON"),
+    }
+
+
 # Clone of Figure.FIGURE_CATEGORY_TYPES
 class FIGURE_CATEGORY_TYPES(enum.Enum):
     IDPS = 0
