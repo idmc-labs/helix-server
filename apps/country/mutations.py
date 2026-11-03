@@ -7,6 +7,7 @@ from apps.country.filters import (
     HouseholdSizeFilterDataTypeInputType,
     MonitoringSubRegionFilterDataInputType,
 )
+from apps.country.models import HouseholdSize
 from apps.country.schema import (
     ContextualAnalysisType,
     CountryHouseholdSizeType,
@@ -111,6 +112,24 @@ class CreateHouseholdSize(graphene.Mutation):
         return CreateHouseholdSize(result=instance, errors=None, ok=True)
 
 
+class CarryOverHouseholdSize(graphene.Mutation):
+    class Arguments:
+        target_year = graphene.Int(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.List(graphene.NonNull(CountryHouseholdSizeType))
+
+    @staticmethod
+    @permission_checker(["country.add_householdsize"])
+    def mutate(root, info, target_year):
+        try:
+            instances = HouseholdSize.carry_over(target_year=target_year, user=info.context.user)
+        except HouseholdSize.CarryOverRefused as e:
+            return CarryOverHouseholdSize(errors=[dict(field="nonFieldErrors", messages=str(e))], ok=False)
+        return CarryOverHouseholdSize(result=instances, errors=None, ok=True)
+
+
 class ExportCountries(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         filters = CountryFilterDataInputType(required=True)
@@ -136,6 +155,7 @@ class Mutation:
     create_summary = CreateSummary.Field()
     create_contextual_analysis = CreateContextualAnalysis.Field()
     create_household_size = CreateHouseholdSize.Field()
+    carry_over_household_size = CarryOverHouseholdSize.Field()
     export_countries = ExportCountries.Field()
     export_monitoring_sub_regions = ExportMonitoringSubRegions.Field()
     export_household_size = ExportHouseholdSize.Field()

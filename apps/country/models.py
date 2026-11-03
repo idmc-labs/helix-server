@@ -774,6 +774,48 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
         cls.objects.filter(country=country, year=year, is_active=True).update(**archive_update)
         return cls.objects.create(**{**fields, "country": country, "year": year, "is_active": True})
 
+    class CarryOverRefused(Exception):
+        pass
+
+    @classmethod
+    @transaction.atomic
+    def carry_over(cls, *, target_year: int, user: User) -> typing.List["HouseholdSize"]:
+        """
+        Copy every country's latest active value from before target_year into target_year.
+        NOTE: Refuses the whole operation if target_year has any value, active or archived, so a year
+        is never populated partly by a carry-over and partly from another source.
+        gap_filling_method is derived from target_year and reference_date, the same as the update_ahhs command.
+        """
+        # NOTE: Lock every country so a concurrent carry-over or edit can't add a value to target_year
+        # between the check below and the insert (replace_active takes the same lock)
+        list(Country.objects.select_for_update().order_by("pk").values_list("pk", flat=True))
+        if existing_count := cls.objects.filter(year=target_year).count():
+            raise cls.CarryOverRefused(f"Year {target_year} already has {existing_count} household size value(s).")
+
+        latest_values = (
+            cls.objects.filter(year__lt=target_year, is_active=True)
+            .order_by("country_id", "-year", "-id")
+            .distinct("country_id")
+        )
+        carried_values = [
+            cls(
+                **{field: getattr(value, field) for field in cls.DATA_FIELDS},
+                country_id=value.country_id,
+                year=target_year,
+                is_active=True,
+                created_by=user,
+                last_modified_by=user,
+            )
+            for value in latest_values
+        ]
+        if not carried_values:
+            raise cls.CarryOverRefused(f"No household size values before {target_year} to carry over.")
+        for value in carried_values:
+            value.gap_filling_method = (
+                cls.calculate_gap_filling_method(target_year, value.reference_date.year) if value.reference_date else None
+            )
+        return cls.objects.bulk_create(carried_values)
+
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.country.filters import HouseholdSizeFilter

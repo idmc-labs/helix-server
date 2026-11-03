@@ -251,6 +251,12 @@ enum CRISIS_TYPE {
   OTHER
 }
 
+type CarryOverHouseholdSize {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: [CountryHouseholdSizeType!]
+}
+
 type ChangeUserPassword {
   errors: [GenericScalar!]
   ok: Boolean
@@ -1997,6 +2003,7 @@ input FigureExtractionBulkOperationFilterDataInputType {
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   filterFigureEntry: String
+  householdSizeId: ID
   filterFigureIds: [ID!]
   filterFigureExcludeIds: [ID!]
 }
@@ -2037,6 +2044,7 @@ type FigureExtractionBulkOperationFilterDataType {
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   filterFigureEntry: String
+  householdSizeId: ID
 }
 
 input FigureExtractionFilterDataInputType {
@@ -2073,6 +2081,7 @@ input FigureExtractionFilterDataInputType {
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   filterFigureEntry: String
+  householdSizeId: ID
 }
 
 input FigureFilterDataInputType {
@@ -2974,6 +2983,7 @@ type Mutation {
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
   createHouseholdSize(data: HouseholdSizeCreateInputType!): CreateHouseholdSize
+  carryOverHouseholdSize(targetYear: Int!): CarryOverHouseholdSize
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
   exportMonitoringSubRegions(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegions
   exportHouseholdSize(filters: HouseholdSizeFilterDataTypeInputType!): ExportHouseholdSize
