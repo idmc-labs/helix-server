@@ -44,6 +44,12 @@ ADMIN_MODELS = REGIONAL_COORDINATOR_MODELS | {
     PERMISSION_ENTITY.portfolio,
     PERMISSION_ENTITY.client,
     PERMISSION_ENTITY.hulkbulkimport,
+    PERMISSION_ENTITY.householdsize,
+}
+
+# NOTE: AHHS values are archived on edit and can never be deleted
+ADMIN_UNDELETABLE_MODELS = {
+    PERMISSION_ENTITY.householdsize,
 }
 
 # NOTE: To add custom permissions, add `bla_model` like `sign_off_model`.
@@ -51,7 +57,7 @@ PERMISSIONS = {
     USER_ROLE.ADMIN: {
         PERMISSION_ACTION.add: ADMIN_MODELS,
         PERMISSION_ACTION.change: ADMIN_MODELS,
-        PERMISSION_ACTION.delete: ADMIN_MODELS,
+        PERMISSION_ACTION.delete: ADMIN_MODELS - ADMIN_UNDELETABLE_MODELS,
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report, PERMISSION_ENTITY.figure},
         PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.report, PERMISSION_ENTITY.event},
         PERMISSION_ACTION.assign: {PERMISSION_ENTITY.event},
