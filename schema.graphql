@@ -2288,7 +2288,9 @@ type FigureType {
   flowStartDate: Date
   flowEndDate: Date
   geolocations: String
-  sourcesReliability: SOURCES_RELIABILITY
+  sourcesReliability: SOURCES_RELIABILITY @deprecated(reason: "Use sourcesClassification (Source Type Classification).")
+  sourcesClassification: SOURCE_TYPE_CLASSIFICATION
+  sourcesClassificationDisplay: String
   reviewStatusDisplay: EnumDescription
   lastReviewCommentStatus: [FigureLastReviewCommentStatusType!]
   eventId: ID!
@@ -3055,10 +3057,12 @@ input OrganizationKindCreateInputType {
   versionId: String
   name: String!
   reliability: ORGANIZATION_RELIABILITY
+  sourceType: ID
 }
 
 input OrganizationKindFilterDataInputType {
   ids: [ID!]
+  sourceTypes: [ID!]
 }
 
 type OrganizationKindListType {
@@ -3077,9 +3081,10 @@ type OrganizationKindObjectType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  reliability: ORGANIZATION_RELIABILITY
+  reliability: ORGANIZATION_RELIABILITY @deprecated(reason: "Use sourceType.level (Source Type Classification).")
+  sourceType: SourceTypeObjectType
   organizations(filters: OrganizationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
-  reliabilityDisplay: EnumDescription
+  reliabilityDisplay: EnumDescription @deprecated(reason: "Use sourceType.levelDisplay.")
 }
 
 input OrganizationKindUpdateInputType {
@@ -3088,6 +3093,7 @@ input OrganizationKindUpdateInputType {
   versionId: String
   name: String
   reliability: ORGANIZATION_RELIABILITY
+  sourceType: ID
 }
 
 type OrganizationListType {
@@ -3429,6 +3435,8 @@ type Query {
   monitoringSubRegionList(filters: MonitoringSubRegionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): MonitoringSubRegionListType
   organization(id: ID!): OrganizationType
   organizationList(filters: OrganizationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
+  sourceType(id: ID!): SourceTypeObjectType
+  sourceTypeList(filters: SourceTypeFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): SourceTypeListType
   organizationKind(id: ID!): OrganizationKindObjectType
   organizationKindList(filters: OrganizationKindFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
   attachment(id: ID!): AttachmentType
@@ -3898,6 +3906,12 @@ enum SOURCES_RELIABILITY {
   MEDIUM_TO_HIGH
 }
 
+enum SOURCE_TYPE_CLASSIFICATION {
+  LEVEL_1
+  LEVEL_2
+  LEVEL_3
+}
+
 type SetAssigneeToEvent {
   errors: [GenericScalar!]
   ok: Boolean
@@ -3952,6 +3966,30 @@ type SourcePreviewType {
   contextualUpdate: [ContextualUpdateType!]!
   statusDisplay: EnumDescription
   hulkUuid: UUID
+}
+
+input SourceTypeFilterDataInputType {
+  ids: [ID!]
+}
+
+type SourceTypeListType {
+  results: [SourceTypeObjectType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type SourceTypeObjectType {
+  id: ID!
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  name: String!
+  level: SOURCE_TYPE_CLASSIFICATION!
+  levelDisplay: EnumDescription
 }
 
 input SummaryCreateInputType {

@@ -8,6 +8,7 @@ from graphene.types.generic import GenericScalar
 from graphene_django_extras import DjangoObjectField
 from graphene_django_extras.converter import convert_django_field
 
+from apps.common.utils import get_enum_label
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.contrib.enums import PreviewStatusGrapheneEnum
 from apps.contrib.models import SourcePreview
@@ -48,6 +49,8 @@ from apps.extraction.filters import (
     FigureExtractionFilterSet,
     ReportFigureExtractionFilterSet,
 )
+from apps.organization.enums import SourceTypeLevelEnum
+from apps.organization.models import SourceType
 from apps.organization.schema import OrganizationListType
 from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
 from utils.graphene.enums import EnumDescription
@@ -173,7 +176,13 @@ class FigureType(RelationBatchedDjangoObjectType):
     flow_start_date = graphene.Date()
     flow_end_date = graphene.Date()
     geolocations = graphene.String()
-    sources_reliability = graphene.Field(FigureSourcesReliabilityEnum)
+    # NOTE: deprecated, will be removed after A7.2.3 (E7) and helix-client needs to read
+    # sourcesClassification instead.
+    sources_reliability = graphene.Field(
+        FigureSourcesReliabilityEnum, deprecation_reason="Use sourcesClassification (Source Type Classification)."
+    )
+    sources_classification = graphene.Field(SourceTypeLevelEnum)
+    sources_classification_display = graphene.String()
     review_status = graphene.Field(FigureReviewStatusEnum)
     review_status_display = EnumDescription(source="get_review_status_display")
     last_review_comment_status = graphene.List(graphene.NonNull(FigureLastReviewCommentStatusType))
@@ -213,6 +222,14 @@ class FigureType(RelationBatchedDjangoObjectType):
 
     def resolve_sources_reliability(root, info, **kwargs):
         return info.context.figure_sources_reliability_loader.load(root.id)
+
+    def resolve_sources_classification(root, info, **kwargs):
+        return info.context.figure_sources_classification_loader.load(root.id)
+
+    def resolve_sources_classification_display(root, info, **kwargs):
+        return info.context.figure_sources_classification_loader.load(root.id).then(
+            lambda level: get_enum_label(SourceType.SOURCE_TYPE_CLASSIFICATION.get(level)) if level is not None else None
+        )
 
     def resolve_last_review_comment_status(root, info, **kwargs):
         return info.context.last_review_comment_status_loader.load(root.id)

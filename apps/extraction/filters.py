@@ -686,6 +686,8 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
 
             # NOTE: expensive annotation for ordering and filtering.
             # we can't use elif here as ordering params can be multiple; is it practical?
+            # NOTE: sources_reliability ordering is deprecated and will be removed after A7.2.3 (E7).
+            # Use sources_classification instead.
             if "sources_reliability" in self.ordering_fields:
                 cte = With(
                     Figure.objects.values("id").annotate(**Figure.annotate_sources_reliability()),
@@ -695,6 +697,17 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
                     cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
                     .with_cte(cte)
                     .annotate(sources_reliability=cte.col.sources_reliability)
+                )
+
+            if "sources_classification" in self.ordering_fields:
+                cte = With(
+                    Figure.objects.values("id").annotate(**Figure.annotate_sources_classification()),
+                    name="figure_sources_classification_agg",
+                )
+                queryset = (
+                    cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
+                    .with_cte(cte)
+                    .annotate(sources_classification=cte.col.sources_classification)
                 )
 
             stock_and_flow_annotations = {
