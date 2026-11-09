@@ -80,6 +80,10 @@ env = environ.Env(
     ADDITIONAL_TRUSTED_ORIGINS=(list, []),
     # MISC
     DEFAULT_FROM_EMAIL=(str, "contact@idmcdb.org"),
+    AWS_SES_REGION_NAME=(str, None),
+    AWS_SES_REGION_ENDPOINT=(str, None),
+    AWS_DEFAULT_REGION=(str, None),
+    AWS_REGION=(str, None),
     INTERNAL_BOT_EMAIL=(str, "helix-internal-bot@idmc.ch"),
     BACKEND_BASE_URL=str,  # http://localhost:9000
     FRONTEND_BASE_URL=str,  # http://localhost:3000
@@ -438,6 +442,9 @@ if DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:
     EMAIL_BACKEND = "django_ses.SESBackend"
+
+AWS_SES_REGION_NAME = env("AWS_SES_REGION_NAME") or env("AWS_DEFAULT_REGION") or env("AWS_REGION") or "us-east-1"
+AWS_SES_REGION_ENDPOINT = env("AWS_SES_REGION_ENDPOINT") or f"email.{AWS_SES_REGION_NAME}.amazonaws.com"
 
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 INTERNAL_BOT_EMAIL = env("INTERNAL_BOT_EMAIL")
