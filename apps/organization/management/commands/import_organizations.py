@@ -1,7 +1,6 @@
 from apps.contrib.management.base import (
     BaseImportCommand,
     EnumLookup,
-    FKByName,
     M2MByName,
     QualifiedFKByName,
 )
@@ -22,7 +21,18 @@ class Command(BaseImportCommand):
 
     lookups = [
         EnumLookup("category", Organization.ORGANIZATION_CATEGORY),
-        FKByName("organization_kind", OrganizationKind, "name"),
+        # A kind is written "<source type> - <subtype>" (e.g. "Government - Other"): subtype names
+        # repeat across types ("Other" is under Government and Civilians), and the new subtypes share
+        # names with old kinds ("Media").
+        # NOTE: a kind without a source type is still matched by its name alone; only the kinds
+        # retires have none.
+        QualifiedFKByName(
+            "organization_kind",
+            OrganizationKind,
+            parent_lookup="source_type__name",
+            child_lookup="name",
+            separator=" - ",
+        ),
         # NOTE: Not used because "parent" is in EXTRA_EXCLUDED_FIELDS
         # organization names are not unique, so disambiguating as
         # "<org name> - <country name>"

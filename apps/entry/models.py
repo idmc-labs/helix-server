@@ -25,7 +25,7 @@ from django.db.models import (
 )
 from django.db.models.constraints import UniqueConstraint
 from django.db.models.expressions import RawSQL
-from django.db.models.functions import Cast, Concat, ExtractYear
+from django.db.models.functions import Cast, Coalesce, Concat, ExtractYear
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -269,6 +269,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             "id",
             "modified_at",
             "role",
+            "sources_classification",
+            # NOTE: "sources_reliability" is deprecated and will be removed after A7.2.3 (E7).
             "sources_reliability",
             "stock_date",
             "stock_reporting_date",
@@ -323,6 +325,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             UNKNOWN: _("Unknown"),
         }
 
+    # NOTE: deprecated, will be removed after A7.2.3 (E7). Range values ("Low to high" ...) are
+    # replaced by one level: SourceType.SOURCE_TYPE_CLASSIFICATION via annotate_sources_classification.
     class SOURCES_RELIABILITY(enum.Enum):
         LOW = 0
         MEDIUM = 1
@@ -978,7 +982,43 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         }
 
     @classmethod
+    def annotate_sources_classification(cls):
+        """Source Type Classification of a figure: the lowest classification among its sources.
+
+        Level 1 is High and Level 3 is Low, so the lowest classification is the highest level
+        number. One value per figure (SourceType.SOURCE_TYPE_CLASSIFICATION); null when no source has a classification.
+        """
+        from apps.organization.models import OrganizationKind, SourceType
+
+        RELIABILITY = OrganizationKind.ORGANIZATION_RELIABILITY
+        LEVEL = SourceType.SOURCE_TYPE_CLASSIFICATION
+        return {
+            "sources_classification": Max(
+                Coalesce(
+                    "sources__organization_kind__source_type__level",
+                    # TODO(E7): remove this fallback (keep only the source_type level) once A7.2.3 has
+                    # removed the retired kinds. Until then a kind without a source type uses its old
+                    # reliability: HIGH -> Level 1, MEDIUM -> Level 2, LOW -> Level 3.
+                    Case(
+                        *[
+                            When(sources__organization_kind__reliability=reliability.value, then=Value(level.value))
+                            for reliability, level in (
+                                (RELIABILITY.HIGH, LEVEL.LEVEL_1),
+                                (RELIABILITY.MEDIUM, LEVEL.LEVEL_2),
+                                (RELIABILITY.LOW, LEVEL.LEVEL_3),
+                            )
+                        ],
+                        output_field=models.IntegerField(),
+                    ),
+                ),
+                output_field=models.IntegerField(),
+            ),
+        }
+
+    @classmethod
     def annotate_sources_reliability(cls):
+        # NOTE: deprecated, will be removed after A7.2.3 (E7). Only the deprecated GraphQL field
+        # sourcesReliability uses it. Use annotate_sources_classification instead.
         from apps.organization.models import OrganizationKind
 
         return {
@@ -1140,6 +1180,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
     @classmethod
     def get_figure_excel_sheets_data(cls, figures: models.QuerySet):
         from apps.crisis.models import Crisis
+        from apps.organization.models import SourceType
 
         headers = OrderedDict(
             id="ID",
@@ -1189,7 +1230,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             publishers_name="Publishers",
             sources_name="Sources",
             sources_type="Sources type",
-            sources_reliability="Sources reliability",
+            sources_classification="Source type classification",
             sources_methodology="Sources methodology",
             source_excerpt="Source excerpt",
             entry_url_or_document_url="Source url",
@@ -1239,7 +1280,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         values = (
             figures.annotate(
                 **Figure.annotate_stock_and_flow_dates(),
-                **Figure.annotate_sources_reliability(),
+                **Figure.annotate_sources_classification(),
                 hulk_uuid=models.F("hulkfigure__uuid"),
                 centroid_lat=RawSQL("country_country.centroid[2]", params=()),
                 centroid_lon=RawSQL("country_country.centroid[1]", params=()),
@@ -1353,7 +1394,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 "category": get_enum_label("category", Figure.FIGURE_CATEGORY_TYPES),
                 "displacement_occurred": get_enum_label("displacement_occurred", Figure.DISPLACEMENT_OCCURRED),
                 "figure_cause": get_enum_label("figure_cause", Crisis.CRISIS_TYPE),
-                "sources_reliability": get_enum_label("sources_reliability", Figure.SOURCES_RELIABILITY),
+                "sources_classification": get_enum_label("sources_classification", SourceType.SOURCE_TYPE_CLASSIFICATION),
                 "source_document": generate_full_media_url(datum["source_document"], absolute=True),
                 "centroid": datum["centroid"],
                 "entry_link": urljoin(settings.FRONTEND_BASE_URL, f"entries/{datum['entry__id']}"),

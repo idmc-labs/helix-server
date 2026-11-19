@@ -3,9 +3,13 @@ from graphene_django_extras import DjangoObjectField
 
 from apps.contact.schema import ContactListType
 from apps.country.schema import CountryType
-from apps.organization.enums import OrganizationCategoryTypeGrapheneEnum, OrganizationReliablityEnum
-from apps.organization.filters import OrganizationFilter, OrganizationKindFilter
-from apps.organization.models import Organization, OrganizationKind
+from apps.organization.enums import (
+    OrganizationCategoryTypeGrapheneEnum,
+    OrganizationReliablityEnum,
+    SourceTypeLevelEnum,
+)
+from apps.organization.filters import OrganizationFilter, OrganizationKindFilter, SourceTypeFilter
+from apps.organization.models import Organization, OrganizationKind, SourceType
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
@@ -55,6 +59,21 @@ class OrganizationListType(CustomDjangoListObjectType):
         model = Organization
 
 
+class SourceTypeObjectType(RelationBatchedDjangoObjectType):
+    class Meta:
+        model = SourceType
+        exclude_fields = ("organization_kinds",)
+
+    level = graphene.Field(SourceTypeLevelEnum, required=True)
+    level_display = EnumDescription(source="get_level_display")
+
+
+class SourceTypeListType(CustomDjangoListObjectType):
+    class Meta:
+        model = SourceType
+        filterset_class = SourceTypeFilter
+
+
 class OrganizationKindObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = OrganizationKind
@@ -62,8 +81,16 @@ class OrganizationKindObjectType(RelationBatchedDjangoObjectType):
     organizations = DjangoPaginatedListObjectField(
         OrganizationListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
     )
-    reliability = graphene.Field(OrganizationReliablityEnum)
-    reliability_display = EnumDescription(source="get_reliability_display_display")
+    # NOTE: reliability and reliability_display are deprecated and will be removed after A7.2.3 (E7 PR 2)
+    # and helix-client reads sourceType.level instead.
+    reliability = graphene.Field(
+        OrganizationReliablityEnum, deprecation_reason="Use sourceType.level (Source Type Classification)."
+    )
+    reliability_display = EnumDescription(
+        source="get_reliability_display_display", deprecation_reason="Use sourceType.levelDisplay."
+    )
+    source_type = graphene.Field(SourceTypeObjectType)
+    # source_type (forward FK) is auto-wired via RelationBatchedDjangoObjectType -> RelationNodeLoader.
 
 
 class OrganizationKindListType(CustomDjangoListObjectType):
@@ -76,6 +103,10 @@ class Query:
     organization = DjangoObjectField(OrganizationType)
     organization_list = DjangoPaginatedListObjectField(
         OrganizationListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
+    )
+    source_type = DjangoObjectField(SourceTypeObjectType)
+    source_type_list = DjangoPaginatedListObjectField(
+        SourceTypeListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
     )
     organization_kind = DjangoObjectField(OrganizationKindObjectType)
     organization_kind_list = DjangoPaginatedListObjectField(

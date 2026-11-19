@@ -21,6 +21,7 @@ from apps.crisis.dataloaders import (
 from apps.entry.dataloaders import (
     FigureGeoLocationLoader,
     FigureLastReviewCommentStatusLoader,
+    FigureSourcesClassification,
     FigureSourcesReliability,
     FigureTypologyLoader,
 )
@@ -191,9 +192,14 @@ class GQLContext:
     def figure_geolocations_loader(self):
         return FigureGeoLocationLoader()
 
+    # NOTE: deprecated, will be removed after A7.2.3 (E7). Use figure_sources_classification_loader.
     @cached_property
     def figure_sources_reliability_loader(self):
         return FigureSourcesReliability()
+
+    @cached_property
+    def figure_sources_classification_loader(self):
+        return FigureSourcesClassification()
 
     @cached_property
     def last_review_comment_status_loader(self):

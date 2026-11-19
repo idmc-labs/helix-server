@@ -69,6 +69,28 @@ class UpdateOrganizationKind(graphene.Mutation):
         return UpdateOrganizationKind(result=instance, errors=None, ok=True)
 
 
+BLOCKING_ORGANIZATIONS_SHOWN = 10
+
+
+def organization_kind_in_use_error(organization_kind):
+    """Error naming the organizations that still use this kind, or None when it is unused.
+
+    Archived organizations count too: they keep their kind (Organization.organization_kind is PROTECT).
+    """
+    organizations = Organization.objects.filter(organization_kind=organization_kind).order_by("name")
+    count = organizations.count()
+    if not count:
+        return None
+    names = list(organizations.values_list("name", flat=True)[:BLOCKING_ORGANIZATIONS_SHOWN])
+    listed = ", ".join(names)
+    if count > len(names):
+        listed = gettext("%(names)s and %(more)s more") % {"names": listed, "more": count - len(names)}
+    return gettext(
+        "%(kind)s is used by %(count)s organization(s) and cannot be deleted. "
+        "Move them to another organization type first: %(organizations)s."
+    ) % {"kind": organization_kind.name, "count": count, "organizations": listed}
+
+
 class DeleteOrganizationKind(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -86,6 +108,8 @@ class DeleteOrganizationKind(graphene.Mutation):
             return DeleteOrganizationKind(
                 errors=[dict(field="nonFieldErrors", messages=gettext("Organization type does not exist."))]
             )
+        if blocking_error := organization_kind_in_use_error(instance):
+            return DeleteOrganizationKind(errors=[dict(field="nonFieldErrors", messages=blocking_error)], ok=False)
         instance.delete()
         instance.id = id
         return DeleteOrganizationKind(result=instance, errors=None, ok=True)

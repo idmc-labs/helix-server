@@ -204,6 +204,7 @@ EXPECTED = {
         "id",
         "modified_at",
         "role",
+        "sources_classification",
         "sources_reliability",
         "stock_date",
         "stock_reporting_date",
@@ -367,6 +368,13 @@ EXPECTED = {
         "modified_at",
         "name",
         "reliability",
+        "source_type__level",
+        "source_type__name",
+    ],
+    "organization.SourceType": [
+        "id",
+        "level",
+        "name",
     ],
     "parking_lot.ParkedItem": [
         "assigned_to__full_name",

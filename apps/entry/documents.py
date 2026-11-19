@@ -68,7 +68,10 @@ readme_data_raw = [
     ("Publishers", "Publisher of the figure"),
     ("Sources", "Source of the figure"),
     ("Sources type", "Type of source"),
-    ("Sources reliability", "Reliability of the source "),
+    (
+        "Source type classification",
+        "Lowest Source Type Classification among the figure's sources: Level 1 (High), Level 2 (Medium) or Level 3 (Low)",
+    ),
     ("Sources methodology", "Methodology used by the source of the figure"),
     ("Source excerpt", "Source excerpt"),
     ("Source url", "Source url"),

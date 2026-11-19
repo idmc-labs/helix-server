@@ -9,7 +9,7 @@ from apps.organization.models import Organization, OrganizationKind
 from apps.users.enums import USER_ROLE
 from apps.users.utils import HelixInternalBot
 from utils.factories import CountryFactory, OrganizationFactory, OrganizationKindFactory
-from utils.tests import HelixTestCase, create_user_with_role
+from utils.tests import HelixTestCase, create_user_with_role, ensure_source_type_taxonomy
 
 
 def write_sheet(headers, rows, sheet_name="Data"):
@@ -294,3 +294,50 @@ class TestImportOrganizationsCommand(HelixTestCase):
         call_command("import_organizations", path, stdout=StringIO())
 
         self.assertEqual(Organization.objects.get(name="Plain Org").organization_kind, self.kind)
+
+    def _import_kinds(self, kinds_by_org):
+        path = write_sheet(
+            ["name", "category", "methodology", "organization_kind"],
+            [
+                {"name": name, "category": "NATIONAL", "methodology": "probe methodology", "organization_kind": kind}
+                for name, kind in kinds_by_org.items()
+            ],
+        )
+        call_command("import_organizations", path, stdout=StringIO())
+        return {name: Organization.objects.get(name=name).organization_kind for name in kinds_by_org}
+
+    def test_kind_with_source_type_is_matched_as_type_and_subtype(self):
+        # IDMC taxonomy: "Other" is a subtype of both Government and Civilians, and "Media" is also
+        # the name of an old kind (no type).
+        ensure_source_type_taxonomy()
+        old_media = OrganizationKindFactory.create(name="Media")
+        kinds = self._import_kinds(
+            {
+                "Gov Org": "Government - Other",
+                "Civ Org": "Civilians - Other",
+                "New Media Org": "Media - Media",
+                "Old Media Org": "Media",
+            }
+        )
+        self.assertEqual((kinds["Gov Org"].source_type.name, kinds["Gov Org"].name), ("Government", "Other"))
+        self.assertEqual((kinds["Civ Org"].source_type.name, kinds["Civ Org"].name), ("Civilians", "Other"))
+        self.assertEqual(kinds["New Media Org"].source_type.name, "Media")
+        self.assertEqual(kinds["Old Media Org"], old_media)
+
+    def test_subtype_name_alone_does_not_match_a_typed_kind(self):
+        ensure_source_type_taxonomy()
+        path = write_sheet(
+            ["name", "category", "methodology", "organization_kind"],
+            [
+                {
+                    "name": "Probe Org",
+                    "category": "NATIONAL",
+                    "methodology": "probe methodology",
+                    "organization_kind": "Other",
+                }
+            ],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_organizations", path, stdout=out)
+        self.assertIn("Expected 'Parent - Child'", out.getvalue())

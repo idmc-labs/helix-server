@@ -12,6 +12,40 @@ from apps.contrib.models import MetaInformationArchiveAbstractModel, SoftDeleteM
 User = get_user_model()
 
 
+class SourceType(MetaInformationArchiveAbstractModel, models.Model):
+    """IDMC source type. Each OrganizationKind is one of its subtypes.
+    Its level is the Source Type Classification of every organization whose kind links here.
+    """
+
+    ORDERING_ALLOWLIST = frozenset(
+        {
+            "id",
+            "level",
+            "name",
+        }
+    )
+
+    class SOURCE_TYPE_CLASSIFICATION(enum.Enum):
+        LEVEL_1 = 1
+        LEVEL_2 = 2
+        LEVEL_3 = 3
+
+        __labels__ = {
+            LEVEL_1: _("Level 1 (High)"),
+            LEVEL_2: _("Level 2 (Medium)"),
+            LEVEL_3: _("Level 3 (Low)"),
+        }
+
+    name = models.CharField(verbose_name=_("Name"), max_length=256)
+    level = enum.EnumField(SOURCE_TYPE_CLASSIFICATION, verbose_name=_("Source type classification"))
+
+    class Meta:
+        ordering = ["level", "name"]
+
+    def __str__(self):
+        return self.name
+
+
 class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
     # organizationKindList
     ORDERING_ALLOWLIST = frozenset(
@@ -20,10 +54,15 @@ class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
             "id",
             "modified_at",
             "name",
+            # NOTE: "reliability" is deprecated and will be removed after A7.2.3 (E7).
             "reliability",
+            "source_type__level",
+            "source_type__name",
         }
     )
 
+    # NOTE: ORGANIZATION_RELIABILITY and the reliability field are deprecated and will be removed
+    # after A7.2.3 (E7). Use source_type.level (Source Type Classification) instead.
     class ORGANIZATION_RELIABILITY(enum.Enum):
         LOW = 0
         MEDIUM = 1
@@ -32,6 +71,16 @@ class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
     name = models.CharField(verbose_name=_("Title"), max_length=256)
     reliability = enum.EnumField(
         ORGANIZATION_RELIABILITY, verbose_name=_("Reliability"), default=ORGANIZATION_RELIABILITY.LOW
+    )
+    # TODO(E7): make source_type required (null=False, blank=False) once A7.2.3 has removed the
+    # retired kinds, which are the only ones without a source type.
+    source_type = models.ForeignKey(
+        SourceType,
+        verbose_name=_("Source type"),
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="organization_kinds",
     )
 
     class Meta:
@@ -89,7 +138,7 @@ class Organization(MetaInformationArchiveAbstractModel, SoftDeleteModel, models.
         verbose_name=_("Organization Type"),
         blank=True,
         null=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,  # A kind still used by an organization cannot be deleted.
         related_name="organizations",
     )
     methodology = models.TextField(verbose_name=_("Methodology"), blank=True, null=True)

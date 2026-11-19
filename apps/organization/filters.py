@@ -2,7 +2,7 @@ import django_filters
 from django.db.models import Case, Exists, Max, Min, OuterRef, Subquery, When
 
 from apps.country.models import Country
-from apps.organization.models import Organization, OrganizationKind
+from apps.organization.models import Organization, OrganizationKind, SourceType
 from utils.filters import (
     AcceptsOrdering,
     IDListFilter,
@@ -85,8 +85,17 @@ class OrganizationFilter(AcceptsOrdering, MultiWordSearchFilterSet):
         return queryset
 
 
+class SourceTypeFilter(django_filters.FilterSet):
+    ids = IDListFilter(field_name="id")
+
+    class Meta:
+        model = SourceType
+        fields = []
+
+
 class OrganizationKindFilter(django_filters.FilterSet):
     ids = IDListFilter(field_name="id")
+    source_types = IDListFilter(field_name="source_type")
 
     class Meta:
         model = OrganizationKind
