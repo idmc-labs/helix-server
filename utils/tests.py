@@ -284,3 +284,19 @@ class CommonUtilTest(TestCase):
         fdata = generate_nested(data, 5)
         edata = generate_nested(expected_data, 5)
         assert convert_date_object_to_string_in_dict(fdata) == edata
+
+
+def ensure_source_type_taxonomy():
+    """Insert IDMC's 7 source types and 20 subtypes (organization migration 0012), if not already there.
+
+    Migration 0012 seeds them in the test database, but a test that flushes the database removes
+    them for every test after it, so a test relying on them inserts them itself.
+    """
+    import importlib
+
+    from django.apps import apps as django_apps
+    from django.db import connection
+
+    taxonomy_migration = importlib.import_module("apps.organization.migrations.0012_source_type")
+    with connection.schema_editor() as schema_editor:
+        taxonomy_migration.insert_source_types(django_apps, schema_editor)

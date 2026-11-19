@@ -303,8 +303,10 @@ class CodeLookup(BaseLookup):
 
 class QualifiedFKByName(BaseLookup):
     """
-    Resolves a foreign key for a hierarchical lookup written as 'Parent > Child'
-    (e.g. an org disambiguated by country). Matches the full key string against the DB.
+    Resolves a foreign key for a hierarchical lookup written as 'Parent<separator>Child'
+    (e.g. an org disambiguated by country, or an organization kind by its source type).
+    Matches the full key string against the DB. A row with no child, or no parent, is keyed
+    on the other part alone.
     """
 
     def __init__(
@@ -330,7 +332,13 @@ class QualifiedFKByName(BaseLookup):
             cache: typing.Dict[str, typing.List[int]] = {}
             for parent, child, pk in self.model.objects.values_list(self.parent_lookup, self.child_lookup, "pk"):
                 # With no child (e.g. an org with no country), key on the parent alone, not "<parent> - None".
-                key = str(parent) if child is None else f"{parent}{self.separator}{child}"
+                # With no parent (e.g. a kind with no source type), key on the child alone.
+                if child is None:
+                    key = str(parent)
+                elif parent is None:
+                    key = str(child)
+                else:
+                    key = f"{parent}{self.separator}{child}"
                 cache.setdefault(key, []).append(pk)
             self._cache = cache
         return self._cache
