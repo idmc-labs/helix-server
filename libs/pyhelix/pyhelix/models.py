@@ -28,8 +28,6 @@ from .parsers import enum_parser, validate_and_parse_enum
 from .types import (
     DateAccuracy,
     EventCodeType,
-    EventHazardFootprintGeometryType,
-    EventHazardIntensityUnitType,
     EventType,
     FigureCategoryType,
     FigureDisplacementOccurredType,
@@ -178,12 +176,12 @@ class HulkEventImport(HulkBaseModel):
     # Hazard intensity and footprint (all optional). Helix's serializer validates these again.
     hazard_intensity_value: typing.Optional[float] = Field(default=None, allow_inf_nan=False)
     """A number, e.g. 7.8 or 185. Values with the unit attached, such as "7.8M", are refused."""
-    hazard_intensity_unit: typing.Optional[EventHazardIntensityUnitType] = None
+    hazard_intensity_unit: typing.Optional[str] = None
     hazard_source_name: typing.Optional[str] = Field(default=None, max_length=256)
     hazard_source_event_id: typing.Optional[str] = Field(default=None, max_length=256)
     hazard_footprint_url: typing.Optional[str] = Field(default=None, max_length=2048)
     hazard_footprint_id: typing.Optional[str] = Field(default=None, max_length=256)
-    hazard_footprint_geometry_type: typing.Optional[EventHazardFootprintGeometryType] = None
+    hazard_footprint_geometry_type: typing.Optional[str] = None
 
     @field_validator("hazard_intensity_value", mode="before")
     @classmethod

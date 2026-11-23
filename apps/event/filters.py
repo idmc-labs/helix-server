@@ -131,11 +131,7 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     def filter_hazard_intensity_units(self, qs, name, value):
         if not value:
             return qs
-        if isinstance(value[0], int):
-            # internal filtering
-            return qs.filter(hazard_intensity_unit__in=value)
-        units = [Event.HAZARD_INTENSITY_UNIT.get(item) for item in value]
-        return qs.filter(hazard_intensity_unit__in=[unit.value for unit in units if unit is not None])
+        return qs.filter(hazard_intensity_unit__in=value)
 
     def filter_hazard_source_names(self, qs, name, value):
         names = [item.strip() for item in value or [] if item and item.strip()]
@@ -149,11 +145,7 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     def filter_hazard_footprint_geometry_types(self, qs, name, value):
         if not value:
             return qs
-        if isinstance(value[0], int):
-            # internal filtering
-            return qs.filter(hazard_footprint_geometry_type__in=value)
-        types = [Event.HAZARD_FOOTPRINT_GEOMETRY_TYPE.get(item) for item in value]
-        return qs.filter(hazard_footprint_geometry_type__in=[item.value for item in types if item is not None])
+        return qs.filter(hazard_footprint_geometry_type__in=value)
 
     def filter_review_status(self, qs, name, value):
         # Filter out *_BUT_CHANGED values from user input

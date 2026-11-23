@@ -1528,12 +1528,12 @@ input EventCreateInputType {
   eventNarrative: String!
   includeTriangulationInQa: Boolean
   hazardIntensityValue: Float
-  hazardIntensityUnit: HAZARD_INTENSITY_UNIT
+  hazardIntensityUnit: String
   hazardSourceName: String
   hazardSourceEventId: String
   hazardFootprintUrl: String
   hazardFootprintId: String
-  hazardFootprintGeometryType: HAZARD_FOOTPRINT_GEOMETRY_TYPE
+  hazardFootprintGeometryType: String
   crisis: ID
   otherSubType: ID
   violenceSubType: ID
@@ -1635,12 +1635,12 @@ type EventType {
   reviewStatus: EVENT_REVIEW_STATUS
   includeTriangulationInQa: Boolean!
   hazardIntensityValue: Float
-  hazardIntensityUnit: HAZARD_INTENSITY_UNIT
+  hazardIntensityUnit: String
   hazardSourceName: String
   hazardSourceEventId: String
   hazardFootprintUrl: String
   hazardFootprintId: String
-  hazardFootprintGeometryType: HAZARD_FOOTPRINT_GEOMETRY_TYPE
+  hazardFootprintGeometryType: String
   notifications: [GenericNotificationType!]!
   eventReviews: [UnifiedReviewCommentType!]!
   eventCode: [EventCodeType!]!
@@ -1656,8 +1656,6 @@ type EventType {
   eventTypology: String
   figureTypology: [String]
   reviewStatusDisplay: EnumDescription
-  hazardIntensityUnitDisplay: EnumDescription
-  hazardFootprintGeometryTypeDisplay: EnumDescription
   reviewCount: EventReviewCountType
   eventCodes: [EventCodeType!]
   crisisId: ID!
@@ -1676,12 +1674,12 @@ input EventUpdateInputType {
   eventNarrative: String
   includeTriangulationInQa: Boolean
   hazardIntensityValue: Float
-  hazardIntensityUnit: HAZARD_INTENSITY_UNIT
+  hazardIntensityUnit: String
   hazardSourceName: String
   hazardSourceEventId: String
   hazardFootprintUrl: String
   hazardFootprintId: String
-  hazardFootprintGeometryType: HAZARD_FOOTPRINT_GEOMETRY_TYPE
+  hazardFootprintGeometryType: String
   crisis: ID
   otherSubType: ID
   violenceSubType: ID
@@ -2722,19 +2720,6 @@ type GiddViolenceSubType {
 
 type GiddYearType {
   year: Int!
-}
-
-enum HAZARD_FOOTPRINT_GEOMETRY_TYPE {
-  POINT
-  LINESTRING
-  POLYGON
-  MULTIPOLYGON
-}
-
-enum HAZARD_INTENSITY_UNIT {
-  M
-  KM_PER_HOUR
-  KNOTS
 }
 
 enum HULK_BULK_IMPORT_DATASET_IMPORT_TYPE {

@@ -23,7 +23,6 @@ from utils.tests import HelixGraphQLTestCase, HelixTestCase, create_user_with_ro
 HAZARD_FIELDS_GQL = """
     hazardIntensityValue
     hazardIntensityUnit
-    hazardIntensityUnitDisplay
     hazardSourceName
     hazardSourceEventId
     hazardFootprintUrl
@@ -99,11 +98,10 @@ class TestEventHazardMutations(HelixGraphQLTestCase):
         result = content["data"]["createEvent"]["result"]
         for field, value in FULL_HAZARD_INPUT.items():
             self.assertEqual(result[field], value, field)
-        self.assertEqual(result["hazardIntensityUnitDisplay"], "M")
 
         event = Event.objects.get(pk=result["id"])
-        self.assertEqual(event.hazard_intensity_unit, Event.HAZARD_INTENSITY_UNIT.M)
-        self.assertEqual(event.hazard_footprint_geometry_type, Event.HAZARD_FOOTPRINT_GEOMETRY_TYPE.POLYGON)
+        self.assertEqual(event.hazard_intensity_unit, "M")
+        self.assertEqual(event.hazard_footprint_geometry_type, "POLYGON")
 
     def test_update_without_hazard_fields_keeps_them(self):
         _, content = self._create(**FULL_HAZARD_INPUT)
@@ -118,18 +116,6 @@ class TestEventHazardMutations(HelixGraphQLTestCase):
     def test_non_numeric_intensity_value_refused(self):
         count = Event.objects.count()
         response, content = self._create(hazardIntensityValue="7.8M")
-        self.assertIsNotNone(content.get("errors"), content)
-        self.assertEqual(Event.objects.count(), count)
-
-    def test_unknown_geometry_type_refused(self):
-        count = Event.objects.count()
-        response, content = self._create(hazardFootprintGeometryType="CIRCLE")
-        self.assertIsNotNone(content.get("errors"), content)
-        self.assertEqual(Event.objects.count(), count)
-
-    def test_unknown_unit_refused(self):
-        count = Event.objects.count()
-        response, content = self._create(hazardIntensityUnit="MPH")
         self.assertIsNotNone(content.get("errors"), content)
         self.assertEqual(Event.objects.count(), count)
 
@@ -164,8 +150,8 @@ class TestEventHazardSerializer(HelixTestCase):
         self.assertEqual(
             self._errors(
                 hazard_intensity_value="185",
-                hazard_intensity_unit=Event.HAZARD_INTENSITY_UNIT.KM_PER_HOUR.value,
-                hazard_footprint_geometry_type=Event.HAZARD_FOOTPRINT_GEOMETRY_TYPE.MULTIPOLYGON.value,
+                hazard_intensity_unit="KM_PER_HOUR",
+                hazard_footprint_geometry_type="MULTIPOLYGON",
             ),
             {},
         )
@@ -173,9 +159,6 @@ class TestEventHazardSerializer(HelixTestCase):
     def test_non_numeric_value_refused(self):
         for value in ["7.8M", "nan", "inf", "-inf", "185 km/h"]:
             self.assertIn("hazard_intensity_value", self._errors(hazard_intensity_value=value), value)
-
-    def test_unknown_geometry_type_refused(self):
-        self.assertIn("hazard_footprint_geometry_type", self._errors(hazard_footprint_geometry_type=99))
 
 
 class TestHulkEventImportHazard(HelixTestCase):
@@ -228,20 +211,20 @@ class TestHulkEventImportHazard(HelixTestCase):
         self.assertEqual(payload["hazardSourceEventId"], "2016-0389-CHN")
         self.assertEqual(payload["hazardFootprintUrl"], "https://example.org/footprint.geojson")
         self.assertEqual(payload["hazardFootprintId"], "10177.0")
-        self.assertEqual(payload["hazardFootprintGeometryType"], "POLYGON")
+        self.assertEqual(payload["hazardFootprintGeometryType"], "polygon")
 
-    def test_unit_accepts_label(self):
+    def test_unit_accepts_free_text(self):
         payload = HulkEventImport(**self._row(hazard_intensity_unit="km/h")).generate_for_graphql_mutation()
-        self.assertEqual(payload["hazardIntensityUnit"], "KM_PER_HOUR")
+        self.assertEqual(payload["hazardIntensityUnit"], "km/h")
 
     def test_non_numeric_value_refused(self):
         for value in ["7.8M", "nan", "inf", True]:
             with self.assertRaises(PydanticValidationError, msg=value):
                 HulkEventImport(**self._row(hazard_intensity_value=value))
 
-    def test_unknown_geometry_type_refused(self):
-        with self.assertRaises(PydanticValidationError):
-            HulkEventImport(**self._row(hazard_footprint_geometry_type="CIRCLE"))
+    def test_unknown_geometry_type_accepted_as_free_text(self):
+        payload = HulkEventImport(**self._row(hazard_footprint_geometry_type="CIRCLE")).generate_for_graphql_mutation()
+        self.assertEqual(payload["hazardFootprintGeometryType"], "CIRCLE")
 
 
 class TestEventHazardFilterAndExport(HelixTestCase):
@@ -249,19 +232,15 @@ class TestEventHazardFilterAndExport(HelixTestCase):
         self.user = create_user_with_role(USER_ROLE.ADMIN.name)
         self.quake = EventFactory.create(
             hazard_intensity_value=7.8,
-            hazard_intensity_unit=Event.HAZARD_INTENSITY_UNIT.M,
+            hazard_intensity_unit="M",
             hazard_source_name="EMDAT",
             hazard_source_event_id="2016-0389-CHN",
             hazard_footprint_url="https://example.org/footprint.geojson",
             hazard_footprint_id="10177.0",
-            hazard_footprint_geometry_type=Event.HAZARD_FOOTPRINT_GEOMETRY_TYPE.POINT,
+            hazard_footprint_geometry_type="POINT",
         )
-        self.small_quake = EventFactory.create(
-            hazard_intensity_value=4.1, hazard_intensity_unit=Event.HAZARD_INTENSITY_UNIT.M
-        )
-        self.cyclone = EventFactory.create(
-            hazard_intensity_value=185, hazard_intensity_unit=Event.HAZARD_INTENSITY_UNIT.KM_PER_HOUR
-        )
+        self.small_quake = EventFactory.create(hazard_intensity_value=4.1, hazard_intensity_unit="M")
+        self.cyclone = EventFactory.create(hazard_intensity_value=185, hazard_intensity_unit="KM_PER_HOUR")
         self.no_intensity = EventFactory.create()
 
     def _filter(self, **data):
@@ -292,7 +271,7 @@ class TestEventHazardFilterAndExport(HelixTestCase):
         self.assertEqual(self._filter(hazard_source_names=["EM"]), set())
 
     def test_filter_by_geometry_type(self):
-        self.cyclone.hazard_footprint_geometry_type = Event.HAZARD_FOOTPRINT_GEOMETRY_TYPE.POLYGON
+        self.cyclone.hazard_footprint_geometry_type = "POLYGON"
         self.cyclone.save()
         self.assertEqual(self._filter(hazard_footprint_geometry_types=["POINT"]), {self.quake.id})
         self.assertEqual(
@@ -346,13 +325,13 @@ class TestEventHazardFilterAndExport(HelixTestCase):
         rows = {row["id"]: sheet["transformer"](row) for row in sheet["data"]}
         quake = rows[self.quake.id]
         self.assertEqual(quake["hazard_intensity_value"], 7.8)
-        self.assertEqual(str(quake["hazard_intensity_unit"]), "M")
+        self.assertEqual(quake["hazard_intensity_unit"], "M")
         self.assertEqual(quake["hazard_source_name"], "EMDAT")
         self.assertEqual(quake["hazard_source_event_id"], "2016-0389-CHN")
         self.assertEqual(quake["hazard_footprint_url"], "https://example.org/footprint.geojson")
         self.assertEqual(quake["hazard_footprint_id"], "10177.0")
-        self.assertEqual(str(quake["hazard_footprint_geometry_type"]), "POINT")
-        self.assertEqual(str(rows[self.cyclone.id]["hazard_intensity_unit"]), "km/h")
+        self.assertEqual(quake["hazard_footprint_geometry_type"], "POINT")
+        self.assertEqual(rows[self.cyclone.id]["hazard_intensity_unit"], "KM_PER_HOUR")
 
         empty = rows[self.no_intensity.id]
         self.assertIsNone(empty["hazard_intensity_value"])
