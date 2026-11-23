@@ -17,6 +17,7 @@ from utils.factories import (
     DisasterSubTypeFactory,
     EventFactory,
 )
+from utils.graphene.pagination import nulls_last_order_queryset
 from utils.tests import HelixGraphQLTestCase, HelixTestCase, create_user_with_role
 
 HAZARD_FIELDS_GQL = """
@@ -280,6 +281,53 @@ class TestEventHazardFilterAndExport(HelixTestCase):
             {self.quake.id},
         )
         self.assertEqual(self._filter(hazard_intensity_units=["KM_PER_HOUR"]), {self.cyclone.id})
+
+    def test_filter_by_source_name(self):
+        self.cyclone.hazard_source_name = "GDACS"
+        self.cyclone.save()
+        self.assertEqual(self._filter(hazard_source_names=["EMDAT"]), {self.quake.id})
+        self.assertEqual(self._filter(hazard_source_names=["emdat"]), {self.quake.id})
+        self.assertEqual(self._filter(hazard_source_names=["EMDAT", "gdacs"]), {self.quake.id, self.cyclone.id})
+        # Whole names only: a fragment does not match.
+        self.assertEqual(self._filter(hazard_source_names=["EM"]), set())
+
+    def test_filter_by_geometry_type(self):
+        self.cyclone.hazard_footprint_geometry_type = Event.HAZARD_FOOTPRINT_GEOMETRY_TYPE.POLYGON
+        self.cyclone.save()
+        self.assertEqual(self._filter(hazard_footprint_geometry_types=["POINT"]), {self.quake.id})
+        self.assertEqual(
+            self._filter(hazard_footprint_geometry_types=["POINT", "POLYGON"]),
+            {self.quake.id, self.cyclone.id},
+        )
+        self.assertEqual(self._filter(hazard_footprint_geometry_types=["MULTIPOLYGON"]), set())
+
+    def test_hazard_columns_are_sortable(self):
+        class DummyRequest:
+            user = self.user
+
+        for key in [
+            "hazard_intensity_value",
+            "hazard_intensity_unit",
+            "hazard_source_name",
+            "hazard_footprint_geometry_type",
+        ]:
+            for token in (key, f"-{key}"):
+                with self.subTest(ordering=token):
+                    self.assertIn(key, Event.ORDERING_ALLOWLIST)
+                    qs = nulls_last_order_queryset(
+                        EventFilter(data={}, request=DummyRequest(), ordering=token).qs,
+                        "ordering",
+                        ordering=token,
+                    )
+                    self.assertEqual(len(list(qs)), 4)
+
+        qs = nulls_last_order_queryset(
+            EventFilter(data={}, request=DummyRequest()).qs, "ordering", ordering="-hazard_intensity_value"
+        )
+        self.assertEqual(
+            [event.id for event in qs],
+            [self.cyclone.id, self.quake.id, self.small_quake.id, self.no_intensity.id],
+        )
 
     def test_export_has_the_seven_fields(self):
         sheet = Event.get_excel_sheets_data(self.user.id, {})

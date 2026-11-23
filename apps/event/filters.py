@@ -64,6 +64,9 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     # Intensity values are only comparable within one unit, so the range filter
     # (hazard_intensity_value__gte/lte in Meta.fields) is meant to be used with this one.
     hazard_intensity_units = StringListFilter(method="filter_hazard_intensity_units")
+    # Source names are free text as IDMC writes them, so match whole names ignoring case.
+    hazard_source_names = StringListFilter(method="filter_hazard_source_names")
+    hazard_footprint_geometry_types = StringListFilter(method="filter_hazard_footprint_geometry_types")
 
     filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method="filter_by_figures")
     aggregate_figures = SimpleInputFilter(FigureAggregateFilterDataInputType, method="noop")
@@ -133,6 +136,24 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
             return qs.filter(hazard_intensity_unit__in=value)
         units = [Event.HAZARD_INTENSITY_UNIT.get(item) for item in value]
         return qs.filter(hazard_intensity_unit__in=[unit.value for unit in units if unit is not None])
+
+    def filter_hazard_source_names(self, qs, name, value):
+        names = [item.strip() for item in value or [] if item and item.strip()]
+        if not names:
+            return qs
+        condition = Q()
+        for item in names:
+            condition |= Q(hazard_source_name__iexact=item)
+        return qs.filter(condition)
+
+    def filter_hazard_footprint_geometry_types(self, qs, name, value):
+        if not value:
+            return qs
+        if isinstance(value[0], int):
+            # internal filtering
+            return qs.filter(hazard_footprint_geometry_type__in=value)
+        types = [Event.HAZARD_FOOTPRINT_GEOMETRY_TYPE.get(item) for item in value]
+        return qs.filter(hazard_footprint_geometry_type__in=[item.value for item in types if item is not None])
 
     def filter_review_status(self, qs, name, value):
         # Filter out *_BUT_CHANGED values from user input

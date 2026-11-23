@@ -1579,6 +1579,8 @@ input EventFilterDataInputType {
   assignees: [ID!]
   assigners: [ID!]
   hazardIntensityUnits: [String!]
+  hazardSourceNames: [String!]
+  hazardFootprintGeometryTypes: [String!]
   filterFigures: FigureExtractionFilterDataInputType
   aggregateFigures: FigureAggregateFilterDataInputType
 }
