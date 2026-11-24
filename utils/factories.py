@@ -9,6 +9,7 @@ from apps.contact.models import Contact
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, FigureLocation
 from apps.event.models import Event, EventCode
+from apps.organization.models import SourceType
 
 
 class AttachmentFactory(DjangoModelFactory):
@@ -77,11 +78,20 @@ class SummaryFactory(DjangoModelFactory):
     country = factory.SubFactory(CountryFactory)
 
 
+class SourceTypeFactory(DjangoModelFactory):
+    class Meta:
+        model = "organization.SourceType"
+
+    name = factory.Sequence(lambda n: "Source type %d" % n)
+    level = SourceType.SOURCE_TYPE_CLASSIFICATION.LEVEL_3
+
+
 class OrganizationKindFactory(DjangoModelFactory):
     class Meta:
         model = "organization.OrganizationKind"
 
     name = factory.Faker("company_suffix")
+    source_type = factory.SubFactory(SourceTypeFactory)
 
 
 class OrganizationFactory(DjangoModelFactory):

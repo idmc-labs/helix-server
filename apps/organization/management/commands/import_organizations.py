@@ -22,10 +22,7 @@ class Command(BaseImportCommand):
     lookups = [
         EnumLookup("category", Organization.ORGANIZATION_CATEGORY),
         # A kind is written "<source type> - <subtype>" (e.g. "Government - Other"): subtype names
-        # repeat across types ("Other" is under Government and Civilians), and the new subtypes share
-        # names with old kinds ("Media").
-        # NOTE: a kind without a source type is still matched by its name alone; only the kinds
-        # retires have none.
+        # repeat across types ("Other" is under Government and Civilians).
         QualifiedFKByName(
             "organization_kind",
             OrganizationKind,

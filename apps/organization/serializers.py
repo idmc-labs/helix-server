@@ -1,10 +1,12 @@
 from rest_framework import serializers
 
 from apps.contrib.serializers import IntegerIDField, MetaInformationSerializerMixin, UpdateSerializerMixin
-from apps.organization.models import Organization, OrganizationKind
+from apps.organization.models import Organization, OrganizationKind, SourceType
 
 
 class OrganizationKindSerializer(serializers.ModelSerializer, MetaInformationSerializerMixin):
+    source_type = serializers.PrimaryKeyRelatedField(queryset=SourceType.objects.all(), allow_null=False)
+
     class Meta:
         model = OrganizationKind
         fields = "__all__"
