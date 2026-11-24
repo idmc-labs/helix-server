@@ -27,8 +27,6 @@ AccuracyGrapheneEnum = graphene.Enum.from_enum(FigureLocation.ACCURACY, descript
 IdentifierGrapheneEnum = graphene.Enum.from_enum(FigureLocation.IDENTIFIER, description=enum_description)
 FigureCategoryTypeEnum = graphene.Enum.from_enum(Figure.FIGURE_CATEGORY_TYPES, description=enum_description)
 FigureTermsEnum = graphene.Enum.from_enum(Figure.FIGURE_TERMS, description=enum_description)
-# NOTE: deprecated, will be removed after A7.2.3 (E7). Use SourceTypeLevelEnum instead.
-FigureSourcesReliabilityEnum = graphene.Enum.from_enum(Figure.SOURCES_RELIABILITY, description=enum_description)
 FigureReviewStatusEnum = graphene.Enum.from_enum(Figure.FIGURE_REVIEW_STATUS, description=enum_description)
 ExternalApiTypeEnum = graphene.Enum.from_enum(ExternalApiDump.ExternalApiType, description=enum_description)
 GeocoderGrapheneEnum = graphene.Enum.from_enum(FigureLocation.GEOCODER, description=enum_description)
@@ -47,7 +45,6 @@ enum_map = dict(
     PCODE_ACCURACY=PcodeAccuracyGrapheneEnum,
     FIGURE_CATEGORY_TYPES=FigureCategoryTypeEnum,
     FIGURE_TERMS=FigureTermsEnum,
-    SOURCES_RELIABILITY=FigureSourcesReliabilityEnum,
     FIGURE_REVIEW_STATUS=FigureReviewStatusEnum,
     EXTERNAL_API_TYPE=ExternalApiTypeEnum,
 )

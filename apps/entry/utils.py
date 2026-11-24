@@ -1,6 +1,6 @@
 import typing
 from datetime import date
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, FigureLocation
@@ -137,33 +137,34 @@ def format_date_range(
     return f"between {get_full_date_str(start_date)} and {get_full_date_str(end_date)}"
 
 
+IDU_SOURCE_PHRASES: Tuple[Tuple[str, Tuple[str, str]], ...] = (
+    ("local authorities", ("Government", "Local Authorities")),
+    ("national authorities", ("Government", "National Government")),
+    ("media sources", ("Media", "Media")),
+)
+
+
 def format_source(sources: Optional[Sequence[Dict[str, Any]]]) -> str:
-    """Authority/media kinds collapse to fixed labels in a fixed order; every other
-    kind keeps its own name. The fixed order makes output independent of input order.
+    """Sources of the subtypes in IDU_SOURCE_PHRASES collapse to fixed phrases in a fixed order;
+    every other source keeps its own name. The fixed order makes output independent of input order.
+
+    Each source: {"name", "organization_kind" (subtype name), "source_type" (type name)}.
     """
     sources = list(sources or [])
 
-    def has_kind(kind: str) -> bool:
-        return any(s.get("organization_kind") == kind for s in sources)
+    def kind_of(source: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
+        return (source.get("source_type"), source.get("organization_kind"))
 
-    labels: List[str] = []
-    if has_kind("Local Authority"):
-        labels.append("local authorities")
-    if has_kind("Government"):
-        labels.append("national authorities")
-    if has_kind("Media"):
-        labels.append("media sources")
+    labels = [phrase for phrase, kind in IDU_SOURCE_PHRASES if any(kind_of(s) == kind for s in sources)]
+    collapsed = {kind for _, kind in IDU_SOURCE_PHRASES}
 
-    named_sources = [
-        s.get("name")
-        for s in sources
-        if s.get("organization_kind") not in ("Local Authority", "Government", "Media") and s.get("name") is not None
-    ]
     seen: typing.Set[str] = set()
-    for name in named_sources:
-        if name not in seen:
-            seen.add(name)
-            labels.append(name)
+    for source in sources:
+        name = source.get("name")
+        if kind_of(source) in collapsed or name is None or name in seen:
+            continue
+        seen.add(name)
+        labels.append(name)
 
     # Empty -> ""; the "(Source)" placeholder is applied once, when assembling the sentence.
     return join_with_and(labels)
@@ -334,7 +335,7 @@ def generate_excerpt_idu_text(input_data: Dict[str, Any]) -> str:
 def _sources_from_ids(source_ids: Optional[Sequence[int]]) -> List[Dict[str, Optional[str]]]:
     if not source_ids:
         return []
-    organizations = Organization.objects.filter(id__in=source_ids).select_related("organization_kind")
+    organizations = Organization.objects.filter(id__in=source_ids).select_related("organization_kind__source_type")
     by_id = {org.id: org for org in organizations}
     # Preserve the caller's order.
     result: List[Dict[str, Optional[str]]] = []
@@ -342,8 +343,14 @@ def _sources_from_ids(source_ids: Optional[Sequence[int]]) -> List[Dict[str, Opt
         org = by_id.get(int(source_id)) if source_id is not None else None
         if org is None:
             continue
-        kind = org.organization_kind.name if org.organization_kind_id else None
-        result.append({"name": org.name, "organization_kind": kind})
+        kind = org.organization_kind
+        result.append(
+            {
+                "name": org.name,
+                "organization_kind": kind.name if kind else None,
+                "source_type": kind.source_type.name if kind and kind.source_type_id else None,
+            }
+        )
     return result
 
 

@@ -19,7 +19,6 @@ from apps.entry.enums import (
     DisplacementOccurredGrapheneEnum,
     FigureCategoryTypeEnum,
     FigureReviewStatusEnum,
-    FigureSourcesReliabilityEnum,
     FigureTermsEnum,
     GenderTypeGrapheneEnum,
     GeocoderGrapheneEnum,
@@ -176,11 +175,6 @@ class FigureType(RelationBatchedDjangoObjectType):
     flow_start_date = graphene.Date()
     flow_end_date = graphene.Date()
     geolocations = graphene.String()
-    # NOTE: deprecated, will be removed after A7.2.3 (E7) and helix-client needs to read
-    # sourcesClassification instead.
-    sources_reliability = graphene.Field(
-        FigureSourcesReliabilityEnum, deprecation_reason="Use sourcesClassification (Source Type Classification)."
-    )
     sources_classification = graphene.Field(SourceTypeLevelEnum)
     sources_classification_display = graphene.String()
     review_status = graphene.Field(FigureReviewStatusEnum)
@@ -219,9 +213,6 @@ class FigureType(RelationBatchedDjangoObjectType):
 
     def resolve_geolocations(root, info, **kwargs):
         return info.context.figure_geolocations_loader.load(root.id)
-
-    def resolve_sources_reliability(root, info, **kwargs):
-        return info.context.figure_sources_reliability_loader.load(root.id)
 
     def resolve_sources_classification(root, info, **kwargs):
         return info.context.figure_sources_classification_loader.load(root.id)
