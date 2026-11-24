@@ -16,13 +16,18 @@ from utils.factories import (
     EventFactory,
     FigureFactory,
     OrganizationFactory,
-    OrganizationKindFactory,
     TagFactory,
     ViolenceFactory,
     ViolenceSubTypeFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
-from utils.tests import HelixGraphQLTestCase, HelixTestCase, create_user_with_role, snapshot_in_class  # noqa: F401
+from utils.tests import (
+    HelixGraphQLTestCase,
+    HelixTestCase,
+    create_user_with_role,
+    get_subtype,
+    snapshot_in_class,  # noqa: F401
+)
 
 
 class TestEntryQuery(HelixGraphQLTestCase):
@@ -401,8 +406,8 @@ class TestIDUGenerate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(self.editor)
-        self.org_kind_gov = OrganizationKindFactory.create(name="Government")
-        self.org_kind_local_auth = OrganizationKindFactory.create(name="Local Authority")
+        self.org_kind_gov = get_subtype("Government", "National Government")
+        self.org_kind_local_auth = get_subtype("Government", "Local Authorities")
         self.source_local = OrganizationFactory.create(name="City Hall", organization_kind=self.org_kind_local_auth)
         self.source_gov = OrganizationFactory.create(name="Ministry", organization_kind=self.org_kind_gov)
         self.disaster_sub_type = DisasterSubTypeFactory.create(idu_name="an earthquake")

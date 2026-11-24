@@ -5,7 +5,6 @@ from apps.contact.schema import ContactListType
 from apps.country.schema import CountryType
 from apps.organization.enums import (
     OrganizationCategoryTypeGrapheneEnum,
-    OrganizationReliablityEnum,
     SourceTypeLevelEnum,
 )
 from apps.organization.filters import OrganizationFilter, OrganizationKindFilter, SourceTypeFilter
@@ -81,16 +80,7 @@ class OrganizationKindObjectType(RelationBatchedDjangoObjectType):
     organizations = DjangoPaginatedListObjectField(
         OrganizationListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
     )
-    # NOTE: reliability and reliability_display are deprecated and will be removed after A7.2.3 (E7 PR 2)
-    # and helix-client reads sourceType.level instead.
-    reliability = graphene.Field(
-        OrganizationReliablityEnum, deprecation_reason="Use sourceType.level (Source Type Classification)."
-    )
-    reliability_display = EnumDescription(
-        source="get_reliability_display_display", deprecation_reason="Use sourceType.levelDisplay."
-    )
-    source_type = graphene.Field(SourceTypeObjectType)
-    # source_type (forward FK) is auto-wired via RelationBatchedDjangoObjectType -> RelationNodeLoader.
+    source_type = graphene.Field(SourceTypeObjectType, required=True)
 
 
 class OrganizationKindListType(CustomDjangoListObjectType):

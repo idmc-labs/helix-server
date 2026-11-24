@@ -46,18 +46,6 @@ class FigureGeoLocationLoader(DataLoader):
         return Promise.resolve([batch_load.get(key) for key in keys])
 
 
-# NOTE: deprecated, will be removed after A7.2.3 (E7). Use FigureSourcesClassification instead.
-class FigureSourcesReliability(DataLoader):
-    def batch_load_fn(self, keys):
-        qs = (
-            Figure.objects.filter(id__in=keys)
-            .annotate(**Figure.annotate_sources_reliability())
-            .values("id", "sources_reliability")
-        )
-        batch_load = {item["id"]: item["sources_reliability"] for item in qs}
-        return Promise.resolve([batch_load.get(key) for key in keys])
-
-
 class FigureSourcesClassification(DataLoader):
     def batch_load_fn(self, keys):
         qs = (

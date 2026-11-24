@@ -3,7 +3,7 @@ from datetime import date
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 from apps.extraction.filters import FigureExtractionFilterSet
-from apps.organization.models import OrganizationKind
+from apps.organization.models import SourceType
 from utils.factories import (
     CountryFactory,
     EventFactory,
@@ -11,8 +11,11 @@ from utils.factories import (
     FigureLocationFactory,
     OrganizationFactory,
     OrganizationKindFactory,
+    SourceTypeFactory,
 )
 from utils.tests import HelixTestCase
+
+LEVEL = SourceType.SOURCE_TYPE_CLASSIFICATION
 
 
 def _figure_ids(data):
@@ -192,7 +195,7 @@ class TestFigureExtractionDateWindow(HelixTestCase):
 
 
 class TestFigureExtractionSortKeys(HelixTestCase):
-    """The computed sort keys (geolocations, sources reliability): values and
+    """The computed sort keys (geolocations, sources classification): values and
     the relative order they produce. Exact string equality of the location
     key is deliberately NOT asserted (older versions assemble it with
     repeated names), only containment and the resulting order."""
@@ -218,19 +221,19 @@ class TestFigureExtractionSortKeys(HelixTestCase):
         )
 
         low = OrganizationFactory.create(
-            organization_kind=OrganizationKindFactory.create(reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW)
+            organization_kind=OrganizationKindFactory.create(source_type=SourceTypeFactory.create(level=LEVEL.LEVEL_3))
         )
         high = OrganizationFactory.create(
-            organization_kind=OrganizationKindFactory.create(reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH)
+            organization_kind=OrganizationKindFactory.create(source_type=SourceTypeFactory.create(level=LEVEL.LEVEL_1))
         )
         cls.fig_alpha.sources.set([low, high])
         cls.fig_beta.sources.set([high])
 
     def _rows(self):
-        qs = _ordered_filterset_qs("geolocations,sources_reliability")
+        qs = _ordered_filterset_qs("geolocations,sources_classification")
         # only the fields BOTH old and new code expose (newer code computes
         # the min/max intermediates inside its aggregation, not on the row)
-        return {row["id"]: row for row in qs.values("id", "geolocations", "sources_reliability")}
+        return {row["id"]: row for row in qs.values("id", "geolocations", "sources_classification")}
 
     def test_geolocations_key_contains_location_name(self):
         rows = self._rows()
@@ -249,23 +252,14 @@ class TestFigureExtractionSortKeys(HelixTestCase):
             [self.fig_gamma.id, self.fig_beta.id, self.fig_alpha.id],
         )
 
-    def test_sources_reliability_values(self):
-        # NOTE: no source filter is active here — a figure's reliability key
-        # derives from all its sources.
+    def test_sources_classification_values(self):
+        # NOTE: no source filter is active here — a figure's classification
+        # derives from all its sources: the lowest classification (highest level number).
         rows = self._rows()
-        # mixed low/high sources -> the LOW_TO_HIGH bucket; a single high
-        # source -> HIGH. Compare as strings: the enum integer comes back as
-        # text or int depending on how the version computes the key.
-        self.assertEqual(
-            str(rows[self.fig_alpha.id]["sources_reliability"]),
-            str(Figure.SOURCES_RELIABILITY.LOW_TO_HIGH.value),
-        )
-        self.assertEqual(
-            str(rows[self.fig_beta.id]["sources_reliability"]),
-            str(Figure.SOURCES_RELIABILITY.HIGH.value),
-        )
-        # no sources -> no reliability
-        self.assertIsNone(rows[self.fig_gamma.id]["sources_reliability"])
+        self.assertEqual(rows[self.fig_alpha.id]["sources_classification"], LEVEL.LEVEL_3.value)
+        self.assertEqual(rows[self.fig_beta.id]["sources_classification"], LEVEL.LEVEL_1.value)
+        # no sources -> no classification
+        self.assertIsNone(rows[self.fig_gamma.id]["sources_classification"])
 
 
 class TestFigureExtractionExplicitOrdering(HelixTestCase):

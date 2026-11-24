@@ -38,7 +38,7 @@ class CreateOrganizationKind(graphene.Mutation):
     @staticmethod
     @permission_checker(["organization.add_organizationkind"])
     def mutate(root, info, data):
-        serializer = OrganizationKindSerializer(data=data)
+        serializer = OrganizationKindSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateOrganizationKind(errors=errors, ok=False)
         instance = serializer.save()
@@ -62,7 +62,9 @@ class UpdateOrganizationKind(graphene.Mutation):
             return UpdateOrganizationKind(
                 errors=[dict(field="nonFieldErrors", messages=gettext("Organization type does not exist."))]
             )
-        serializer = OrganizationKindSerializer(instance=instance, data=data, partial=True)
+        serializer = OrganizationKindSerializer(
+            instance=instance, data=data, partial=True, context={"request": info.context.request}
+        )
         if errors := mutation_is_not_valid(serializer):
             return UpdateOrganizationKind(errors=errors, ok=False)
         instance = serializer.save()

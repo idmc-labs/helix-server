@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from unittest.mock import patch
 
+from apps.organization.models import SourceType
 from apps.users.enums import USER_ROLE
 from utils.factories import OrganizationFactory, OrganizationKindFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
@@ -144,8 +145,10 @@ class TestCreateOrganizationKind(HelixGraphQLTestCase):
             }
         }
         """
+        source_type = SourceType.objects.create(name="Media", level=SourceType.SOURCE_TYPE_CLASSIFICATION.LEVEL_3)
         self.input = {
             "name": "Title1",
+            "sourceType": str(source_type.id),
         }
 
     def test_valid_organization_kind_creation(self) -> None:

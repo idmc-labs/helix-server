@@ -10,6 +10,7 @@ from django.test import TestCase
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, FigureLocation
 from apps.entry.utils import (
+    _sources_from_ids,
     format_date_range,
     format_source,
     generate_excerpt_idu_text,
@@ -20,14 +21,14 @@ from apps.entry.utils import (
     to_ordinal,
 )
 from apps.event.models import OtherSubType
+from apps.organization.models import OrganizationKind
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     DisasterSubTypeFactory,
     OrganizationFactory,
-    OrganizationKindFactory,
     ViolenceSubTypeFactory,
 )
-from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from utils.tests import HelixGraphQLTestCase, HelixTestCase, create_user_with_role, ensure_source_type_taxonomy, get_subtype
 
 
 # --- source / location shorthands (mirror the frontend test helpers) ---------
@@ -35,12 +36,12 @@ def geo(identifier, display_name):
     return {"identifier": FigureLocation.IDENTIFIER[identifier], "display_name": display_name}
 
 
-gov = [{"name": "Ministry", "organization_kind": "Government"}]
+gov = [{"name": "Ministry", "organization_kind": "National Government", "source_type": "Government"}]
 gov2 = [
-    {"name": "A", "organization_kind": "Government"},
-    {"name": "B", "organization_kind": "Local Authority"},
+    {"name": "A", "organization_kind": "National Government", "source_type": "Government"},
+    {"name": "B", "organization_kind": "Local Authorities", "source_type": "Government"},
 ]
-media = [{"name": "El Capital", "organization_kind": "Media"}]
+media = [{"name": "El Capital", "organization_kind": "Media", "source_type": "Media"}]
 iom = [{"name": "International Organization for Migration (IOM)", "organization_kind": None}]
 two_named = [
     {"name": "the Red Cross", "organization_kind": None},
@@ -609,8 +610,8 @@ class TestIDUCoreGenerator(TestCase):
                     "geo_locations": [geo("ORIGIN", "Beira, Mozambique")],
                     **self.disaster("13"),
                     "sources": [
-                        {"name": "Ministry", "organization_kind": "Government"},
-                        {"name": "El Capital", "organization_kind": "Media"},
+                        {"name": "Ministry", "organization_kind": "National Government", "source_type": "Government"},
+                        {"name": "El Capital", "organization_kind": "Media", "source_type": "Media"},
                     ],
                     "start_date": "2025-07-04",
                 },
@@ -875,7 +876,9 @@ class TestIDUCoreGenerator(TestCase):
                 "quantifier": Figure.QUANTIFIER.EXACT,
                 "geo_locations": [geo("ORIGIN", "Beira, Mozambique")],
                 **self.disaster("13"),
-                "sources": [{"name": "City of Beira", "organization_kind": "Local Authority"}],
+                "sources": [
+                    {"name": "City of Beira", "organization_kind": "Local Authorities", "source_type": "Government"}
+                ],
                 "start_date": "2025-07-04",
             }
         )
@@ -1007,7 +1010,10 @@ class TestIDUHelpers(TestCase):
         # No recognized source -> empty; the "(Source)" placeholder is applied at assembly time.
         self.assertEqual(format_source([]), "")
         self.assertEqual(format_source(gov), "national authorities")
-        self.assertEqual(format_source([{"name": "City Hall", "organization_kind": "Local Authority"}]), "local authorities")
+        self.assertEqual(
+            format_source([{"name": "City Hall", "organization_kind": "Local Authorities", "source_type": "Government"}]),
+            "local authorities",
+        )
         self.assertEqual(format_source(gov2), "local authorities and national authorities")
         self.assertEqual(format_source(media), "media sources")
         self.assertEqual(format_source(iom), "International Organization for Migration (IOM)")
@@ -1094,7 +1100,7 @@ class TestIDUGenerateMutation(HelixGraphQLTestCase):
     def setUp(self):
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(self.editor)
-        self.org_kind_gov = OrganizationKindFactory.create(name="Government")
+        self.org_kind_gov = get_subtype("Government", "National Government")
         self.org_gov = OrganizationFactory.create(name="Ministry", organization_kind=self.org_kind_gov)
         self.disaster_sub_type = DisasterSubTypeFactory.create(idu_name="flooding")
         self.mutation = """
@@ -1161,3 +1167,40 @@ class TestIDUGenerateMutation(HelixGraphQLTestCase):
         content = response.json()
         self.assertTrue(content["data"]["generateIdu"]["ok"])
         self.assertIsNotNone(content["data"]["generateIdu"]["result"])
+
+
+class TestIDUSourceSubtypes(HelixTestCase):
+    def setUp(self):
+        ensure_source_type_taxonomy()
+
+    def wording(self, *subtypes):
+        sources = [
+            OrganizationFactory.create(
+                name=f"Org {i}",
+                organization_kind=OrganizationKind.objects.get(source_type__name=type_name, name=subtype_name),
+            ).id
+            for i, (type_name, subtype_name) in enumerate(subtypes)
+        ]
+        return format_source(_sources_from_ids(sources))
+
+    def test_local_authorities(self):
+        self.assertEqual(self.wording(("Government", "Local Authorities")), "local authorities")
+
+    def test_national_government(self):
+        self.assertEqual(self.wording(("Government", "National Government")), "national authorities")
+
+    def test_media(self):
+        self.assertEqual(self.wording(("Media", "Media")), "media sources")
+
+    def test_phrases_keep_their_order(self):
+        self.assertEqual(
+            self.wording(("Media", "Media"), ("Government", "National Government"), ("Government", "Local Authorities")),
+            "local authorities, national authorities, and media sources",
+        )
+
+    def test_other_subtypes_keep_the_organization_name(self):
+        # "Other" under Government is not "national authorities", and differs from Civilians' "Other".
+        self.assertEqual(
+            self.wording(("Government", "Other"), ("Civilians", "Other"), ("United Nations", "United Nations")),
+            "Org 0, Org 1, and Org 2",
+        )

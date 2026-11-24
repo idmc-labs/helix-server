@@ -31,9 +31,9 @@ class SourceType(MetaInformationArchiveAbstractModel, models.Model):
         LEVEL_3 = 3
 
         __labels__ = {
-            LEVEL_1: _("Level 1 (High)"),
-            LEVEL_2: _("Level 2 (Medium)"),
-            LEVEL_3: _("Level 3 (Low)"),
+            LEVEL_1: _("High"),
+            LEVEL_2: _("Medium"),
+            LEVEL_3: _("Low"),
         }
 
     name = models.CharField(verbose_name=_("Name"), max_length=256)
@@ -54,31 +54,22 @@ class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
             "id",
             "modified_at",
             "name",
-            # NOTE: "reliability" is deprecated and will be removed after A7.2.3 (E7).
-            "reliability",
             "source_type__level",
             "source_type__name",
         }
     )
 
-    # NOTE: ORGANIZATION_RELIABILITY and the reliability field are deprecated and will be removed
-    # after A7.2.3 (E7). Use source_type.level (Source Type Classification) instead.
+    # NOTE: the reliability field removed. The enum stays only because migration 0008
+    # imports it (migrations are not edited). Do not use it.
     class ORGANIZATION_RELIABILITY(enum.Enum):
         LOW = 0
         MEDIUM = 1
         HIGH = 2
 
     name = models.CharField(verbose_name=_("Title"), max_length=256)
-    reliability = enum.EnumField(
-        ORGANIZATION_RELIABILITY, verbose_name=_("Reliability"), default=ORGANIZATION_RELIABILITY.LOW
-    )
-    # TODO(E7): make source_type required (null=False, blank=False) once A7.2.3 has removed the
-    # retired kinds, which are the only ones without a source type.
     source_type = models.ForeignKey(
         SourceType,
         verbose_name=_("Source type"),
-        null=True,
-        blank=True,
         on_delete=models.PROTECT,
         related_name="organization_kinds",
     )
@@ -86,7 +77,6 @@ class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["name"]),
-            models.Index(fields=["reliability"]),
         ]
 
     def __str__(self):

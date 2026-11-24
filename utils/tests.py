@@ -294,9 +294,20 @@ def ensure_source_type_taxonomy():
     """
     import importlib
 
-    from django.apps import apps as django_apps
-    from django.db import connection
+    from apps.organization.models import OrganizationKind, SourceType
 
-    taxonomy_migration = importlib.import_module("apps.organization.migrations.0012_source_type")
-    with connection.schema_editor() as schema_editor:
-        taxonomy_migration.insert_source_types(django_apps, schema_editor)
+    # The taxonomy data from 0012, inserted with the current models (0012's own function also sets the
+    # kind's reliability, removed in 0014).
+    taxonomy = importlib.import_module("apps.organization.migrations.0012_source_type").SOURCE_TYPE_TAXONOMY
+    for level, type_name, subtype_names in taxonomy:
+        source_type, _ = SourceType.objects.get_or_create(name=type_name, defaults={"level": level})
+        for subtype_name in subtype_names:
+            OrganizationKind.objects.get_or_create(name=subtype_name, source_type=source_type)
+
+
+def get_subtype(type_name, subtype_name):
+    """An organization kind (subtype) from IDMC's taxonomy, e.g. get_subtype("Government", "Other")."""
+    from apps.organization.models import OrganizationKind
+
+    ensure_source_type_taxonomy()
+    return OrganizationKind.objects.get(source_type__name=type_name, name=subtype_name)

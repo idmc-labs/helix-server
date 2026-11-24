@@ -1,17 +1,3 @@
-"""A7.2.6: check that the published GIDD figures change only in source wording after A7.2.3.
-
-The disaggregated Excel and GeoJSON downloads read GiddFigure (DISAGGREGATION_EXPORT_VALUES), which
-the publish step (update_gidd_data / force_update_gidd_data) regenerates.
-
-Outside production, on the same data:
-1. publish, then `snapshot_gidd_figures before.csv`
-2. deploy E7 PR 2 (A7.2.3 runs), publish, then `snapshot_gidd_figures after.csv`
-3. `compare_gidd_figures before.csv after.csv <out_dir>` must PASS: the rows match, only `sources_type`
-   changes, and `sources_sub_type` is the only new column.
-In production, after the first release published after A7.2.3:
-4. `snapshot_gidd_figures release.csv`, then `check_gidd_source_wording release.csv` must PASS.
-"""
-
 import csv
 import datetime
 import json
@@ -19,9 +5,11 @@ import os
 import typing
 from collections import Counter
 
-from django.db import models
+from django.core.management.base import CommandError
+from django.db import connection, models
 from django.db.models import Case, F, When
 
+from apps.contrib.management.base.snapshot import no_log
 from apps.crisis.models import Crisis
 from apps.gidd.models import GiddFigure
 from apps.gidd.views import DISAGGREGATION_EXPORT_VALUES
@@ -30,16 +18,21 @@ from apps.organization.models import OrganizationKind, SourceType
 KEY = "key"
 SOURCES_TYPE = "sources_type"
 SOURCES_SUB_TYPE = "sources_sub_type"
-# The only published change A7.2.3 may cause: the type column carries the type name ...
-ALLOWED_CHANGED_COLUMNS = {SOURCES_TYPE}
-# ... and the subtype column is new (added in E7 PR 2).
-ALLOWED_NEW_COLUMNS = {SOURCES_SUB_TYPE}
+SNAPSHOT_FILE = "gidd_figures.csv"
+PROGRESS_EVERY = 50_000
 
 
-def _published_columns() -> typing.List[str]:
-    columns: typing.List[str] = list(DISAGGREGATION_EXPORT_VALUES)
-    field_names = {field.name for field in GiddFigure._meta.get_fields()}
-    if SOURCES_SUB_TYPE in field_names and SOURCES_SUB_TYPE not in columns:
+def _has_sub_type_column() -> bool:
+    """True once gidd 0047 has added GiddFigure.sources_sub_type."""
+    with connection.cursor() as cursor:
+        columns = connection.introspection.get_table_description(cursor, GiddFigure._meta.db_table)
+    return any(column.name == SOURCES_SUB_TYPE for column in columns)
+
+
+def _published_columns(before=False) -> typing.List[str]:
+    columns: typing.List[str] = [column for column in DISAGGREGATION_EXPORT_VALUES if column != SOURCES_SUB_TYPE]
+    # Before gidd 0047 the table has no sources_sub_type column.
+    if not before:
         columns.append(SOURCES_SUB_TYPE)
     return columns
 
@@ -54,9 +47,25 @@ def _cell(value) -> str:
     return str(value)
 
 
-def take_snapshot(path) -> int:
-    """Write every GiddFigure's published columns to a CSV keyed by "<figure_raw_id>:<year>"."""
-    columns = _published_columns()
+def take_snapshot(path, before=False, log=no_log) -> int:
+    """Write every GiddFigure's published columns to a CSV keyed by "<figure_raw_id>:<year>".
+
+    before: the database is not migrated yet (gidd 0047), so sources_sub_type is left out.
+    log(kind, message): kind is "step", "progress" or "done".
+    """
+    # NOTE: each snapshot only works on the database state it is meant for (see the command).
+    if before and _has_sub_type_column():
+        raise CommandError(
+            "gidd 0047 has already run (sources_sub_type exists): the before snapshot must be taken before migrate."
+        )
+    if not before and not _has_sub_type_column():
+        raise CommandError("gidd 0047 has not run yet (no sources_sub_type): use --before, or run migrate first.")
+    columns = _published_columns(before)
+    log(
+        "step",
+        f"Writing {os.path.basename(path)}: one row per published GIDD figure and year "
+        f"(GiddFigure, what the GIDD downloads show; {len(columns)} published columns)",
+    )
     seen: typing.Counter[str] = Counter()
     # Every row, not only those with locations: a row the exports drop must not hide a change.
     qs = (
@@ -84,6 +93,9 @@ def take_snapshot(path) -> int:
                 key = f"{key}#{seen[key]}"
             writer.writerow([key, *[_cell(row[column]) for column in columns]])
             count += 1
+            if count % PROGRESS_EVERY == 0:
+                log("progress", f"{count} GIDD figures written...")
+    log("done", f"{count} GIDD figures written to {path}")
     return count
 
 
@@ -92,79 +104,6 @@ def _read(path) -> typing.Tuple[typing.List[str], typing.Dict[str, typing.Dict[s
         reader = csv.DictReader(f)
         columns = [column for column in reader.fieldnames or [] if column != KEY]
         return columns, {row[KEY]: row for row in reader}
-
-
-def compare_snapshots(before_path, after_path, out_dir) -> typing.Tuple[bool, typing.List[str]]:
-    """Write report.md and changed_cells.csv to out_dir; return (passed, failure reasons)."""
-    os.makedirs(out_dir, exist_ok=True)
-    before_columns, before = _read(before_path)
-    after_columns, after = _read(after_path)
-
-    removed_columns = sorted(set(before_columns) - set(after_columns))
-    new_columns = sorted(set(after_columns) - set(before_columns))
-    missing_rows = sorted(set(before) - set(after))
-    added_rows = sorted(set(after) - set(before))
-    common_columns = [column for column in before_columns if column in after_columns]
-
-    changed_by_column: typing.Counter[str] = Counter()
-    with open(os.path.join(out_dir, "changed_cells.csv"), "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow([KEY, "column", "before", "after"])
-        for key in sorted(set(before) & set(after)):
-            for column in common_columns:
-                if before[key][column] != after[key][column]:
-                    changed_by_column[column] += 1
-                    writer.writerow([key, column, before[key][column], after[key][column]])
-
-    failures = []
-    if removed_columns:
-        failures.append(f"columns removed: {', '.join(removed_columns)}")
-    unexpected_new = sorted(set(new_columns) - ALLOWED_NEW_COLUMNS)
-    if unexpected_new:
-        failures.append(f"unexpected new columns: {', '.join(unexpected_new)}")
-    missing_new = sorted(ALLOWED_NEW_COLUMNS - set(after_columns))
-    if missing_new:
-        failures.append(f"expected new columns missing: {', '.join(missing_new)}")
-    if missing_rows:
-        failures.append(f"{len(missing_rows)} rows missing after")
-    if added_rows:
-        failures.append(f"{len(added_rows)} rows added after")
-    unexpected_changes = {column: n for column, n in changed_by_column.items() if column not in ALLOWED_CHANGED_COLUMNS}
-    if unexpected_changes:
-        failures.append(
-            "unexpected changes in: " + ", ".join(f"{column} ({n})" for column, n in sorted(unexpected_changes.items()))
-        )
-
-    passed = not failures
-    lines = [
-        f"# GIDD published figures: before vs after (A7.2.6) — {'PASS' if passed else 'FAIL'}",
-        "",
-        f"- Rows: {len(before)} before, {len(after)} after",
-        f"- Missing after: {len(missing_rows)}, added after: {len(added_rows)}",
-        f"- New columns: {', '.join(new_columns) or '-'}; removed columns: {', '.join(removed_columns) or '-'}",
-        "",
-        "## Changed cells by column",
-        "",
-        "| Column | Cells changed | Allowed |",
-        "|---|---|---|",
-        *[
-            f"| {column} | {n} | {'yes' if column in ALLOWED_CHANGED_COLUMNS else 'no'} |"
-            for column, n in sorted(changed_by_column.items())
-        ],
-        "",
-    ]
-    if failures:
-        lines += ["## Failures", "", *[f"- {failure}" for failure in failures], ""]
-    if missing_rows or added_rows:
-        lines += [
-            f"Missing after (first 20): {', '.join(missing_rows[:20]) or '-'}",
-            f"Added after (first 20): {', '.join(added_rows[:20]) or '-'}",
-            "",
-        ]
-    lines.append("Details: changed_cells.csv")
-    with open(os.path.join(out_dir, "report.md"), "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
-    return passed, failures
 
 
 def check_source_wording(path) -> typing.List[str]:

@@ -8,8 +8,8 @@ from openpyxl import Workbook, load_workbook
 from apps.organization.models import Organization, OrganizationKind
 from apps.users.enums import USER_ROLE
 from apps.users.utils import HelixInternalBot
-from utils.factories import CountryFactory, OrganizationFactory, OrganizationKindFactory
-from utils.tests import HelixTestCase, create_user_with_role, ensure_source_type_taxonomy
+from utils.factories import CountryFactory, OrganizationFactory, OrganizationKindFactory, SourceTypeFactory
+from utils.tests import HelixTestCase, create_user_with_role, get_subtype
 
 
 def write_sheet(headers, rows, sheet_name="Data"):
@@ -27,7 +27,7 @@ def write_sheet(headers, rows, sheet_name="Data"):
 
 class TestImportOrganizationsCommand(HelixTestCase):
     def setUp(self):
-        self.kind = OrganizationKindFactory.create(name="Government")
+        self.kind = get_subtype("Government", "National Government")
         self.bot_user = HelixInternalBot().user
 
     def test_create_rows(self):
@@ -41,7 +41,7 @@ class TestImportOrganizationsCommand(HelixTestCase):
                     "category": "NATIONAL",
                     "methodology": "Field survey",
                     "countries": "NPL",
-                    "organization_kind": "Government",
+                    "organization_kind": "Government - National Government",
                 },
             ],
         )
@@ -230,9 +230,51 @@ class TestImportOrganizationsCommand(HelixTestCase):
         self.assertEqual((readme["A2"].font.name, readme["A2"].font.size), ("Arial", 10))  # metadata line
         self.assertEqual(workbook["Data"]["A1"].font.name, "Arial")  # data header
 
+    def test_make_template_lists_each_organization_with_its_kind(self):
+        with_kind = OrganizationFactory.create(
+            name="Ministry",
+            organization_kind=self.kind,
+            short_name="MIN",
+            category=Organization.ORGANIZATION_CATEGORY.NATIONAL,
+        )
+        without_kind = OrganizationFactory.create(name="No Kind Org", organization_kind=None)
+        out = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+        call_command("import_organizations", "--make-template", out.name, stdout=StringIO())
+
+        sheet = load_workbook(out.name)["Data"]
+        headers = [cell.value for cell in sheet[1]]
+        rows = [dict(zip(headers, (cell.value for cell in row))) for row in sheet.iter_rows(min_row=2)]
+        by_id = {row["id"]: row for row in rows}
+        self.assertEqual(
+            (by_id[with_kind.id]["name"], by_id[with_kind.id]["organization_kind"]),
+            ("Ministry", "Government - National Government"),
+        )
+        self.assertIsNone(by_id[without_kind.id]["organization_kind"])
+        # Only id, name and kind are filled, so importing the sheet back leaves the rest unchanged.
+        self.assertIsNone(by_id[with_kind.id]["short_name"])
+        self.assertIsNone(by_id[with_kind.id]["category"])
+
+    def test_filled_template_changes_only_the_kind(self):
+        organization = OrganizationFactory.create(name="Ministry", organization_kind=self.kind, short_name="MIN")
+        organization.countries.set([CountryFactory.create(iso3="NPL")])
+        out = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+        call_command("import_organizations", "--make-template", out.name, stdout=StringIO())
+        workbook = load_workbook(out.name)
+        sheet = workbook["Data"]
+        kind_column = [cell.value for cell in sheet[1]].index("organization_kind") + 1
+        sheet.cell(row=2, column=kind_column, value="Government - Local Authorities")
+        workbook.save(out.name)
+
+        call_command("import_organizations", out.name, stdout=StringIO())
+        organization.refresh_from_db()
+        self.assertEqual(organization.organization_kind, get_subtype("Government", "Local Authorities"))
+        self.assertEqual((organization.name, organization.short_name), ("Ministry", "MIN"))
+        self.assertEqual(list(organization.countries.values_list("iso3", flat=True)), ["NPL"])
+
     def test_make_template_warns_on_duplicate_allowed_values(self):
-        OrganizationKindFactory.create(name="Dup Kind")
-        OrganizationKindFactory.create(name="Dup Kind")  # duplicate organization_kind name
+        source_type = SourceTypeFactory.create(name="Dup Type")
+        OrganizationKindFactory.create(name="Dup Kind", source_type=source_type)
+        OrganizationKindFactory.create(name="Dup Kind", source_type=source_type)  # duplicate organization_kind
         err = StringIO()
         out = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
         call_command("import_organizations", "--make-template", out.name, stderr=err)
@@ -258,8 +300,9 @@ class TestImportOrganizationsCommand(HelixTestCase):
     def test_an_ambiguous_organization_kind_fails_the_row(self):
         # ADR 0006 says a name matching multiple rows raises rather than guessing. FKByName
         # defaulted to picking the first match, unlike M2MByName, so it silently linked one of them.
-        OrganizationKindFactory.create(name="Ambiguous Kind")
-        OrganizationKindFactory.create(name="Ambiguous Kind")
+        source_type = SourceTypeFactory.create(name="Ambiguous Type")
+        OrganizationKindFactory.create(name="Ambiguous Kind", source_type=source_type)
+        OrganizationKindFactory.create(name="Ambiguous Kind", source_type=source_type)
 
         path = write_sheet(
             ["name", "category", "methodology", "organization_kind"],
@@ -268,7 +311,7 @@ class TestImportOrganizationsCommand(HelixTestCase):
                     "name": "Probe Org",
                     "category": "INTERNATIONAL",
                     "methodology": "probe methodology",
-                    "organization_kind": "Ambiguous Kind",
+                    "organization_kind": "Ambiguous Type - Ambiguous Kind",
                 }
             ],
         )
@@ -287,7 +330,7 @@ class TestImportOrganizationsCommand(HelixTestCase):
                     "name": "Plain Org",
                     "category": "INTERNATIONAL",
                     "methodology": "probe methodology",
-                    "organization_kind": "Government",
+                    "organization_kind": "Government - National Government",
                 }
             ],
         )
@@ -307,25 +350,19 @@ class TestImportOrganizationsCommand(HelixTestCase):
         return {name: Organization.objects.get(name=name).organization_kind for name in kinds_by_org}
 
     def test_kind_with_source_type_is_matched_as_type_and_subtype(self):
-        # IDMC taxonomy: "Other" is a subtype of both Government and Civilians, and "Media" is also
-        # the name of an old kind (no type).
-        ensure_source_type_taxonomy()
-        old_media = OrganizationKindFactory.create(name="Media")
+        # IDMC taxonomy: "Other" is a subtype of both Government and Civilians.
         kinds = self._import_kinds(
             {
                 "Gov Org": "Government - Other",
                 "Civ Org": "Civilians - Other",
-                "New Media Org": "Media - Media",
-                "Old Media Org": "Media",
+                "Media Org": "Media - Media",
             }
         )
         self.assertEqual((kinds["Gov Org"].source_type.name, kinds["Gov Org"].name), ("Government", "Other"))
         self.assertEqual((kinds["Civ Org"].source_type.name, kinds["Civ Org"].name), ("Civilians", "Other"))
-        self.assertEqual(kinds["New Media Org"].source_type.name, "Media")
-        self.assertEqual(kinds["Old Media Org"], old_media)
+        self.assertEqual((kinds["Media Org"].source_type.name, kinds["Media Org"].name), ("Media", "Media"))
 
     def test_subtype_name_alone_does_not_match_a_typed_kind(self):
-        ensure_source_type_taxonomy()
         path = write_sheet(
             ["name", "category", "methodology", "organization_kind"],
             [

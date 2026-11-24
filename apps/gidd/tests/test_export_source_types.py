@@ -29,10 +29,9 @@ from utils.factories import (
     EventFactory,
     FigureFactory,
     OrganizationFactory,
-    OrganizationKindFactory,
     ReportFactory,
 )
-from utils.tests import create_user_with_role
+from utils.tests import create_user_with_role, get_subtype
 
 
 class GiddExportSourceTypeTestCase(TestCase):
@@ -77,11 +76,11 @@ class GiddExportSourceTypeTestCase(TestCase):
         )
         # The FIRST source carries no kind, so a dropped slot shows as the second source's kind
         # moving to the front rather than only as a length change.
-        for name, kind in (("Alpha Agency", None), ("Beta Bureau", "Media")):
+        for name, kind in (("Alpha Agency", None), ("Beta Bureau", ("Media", "Media"))):
             figure.sources.add(
                 OrganizationFactory.create(
                     name=name,
-                    organization_kind=None if kind is None else OrganizationKindFactory.create(name=kind),
+                    organization_kind=None if kind is None else get_subtype(*kind),
                 )
             )
         return figure
@@ -113,3 +112,31 @@ class GiddExportSourceTypeTestCase(TestCase):
         assert len(types) == len(sources), f"{len(types)} kind slots against {len(sources)} sources"
         assert types[sources.index("Alpha Agency")] == "", f"the empty slot was dropped: {types}"
         assert types[sources.index("Beta Bureau")] == "Media", f"the kind moved slot: {types}"
+
+    def test_type_and_subtype_of_reclassified_sources(self):
+        """E7: `Sources type` carries the type name and `Sources sub type` the subtype, slot by slot."""
+        figure = self.figure_with_sources()
+        figure.sources.add(
+            OrganizationFactory.create(
+                name="Gamma Ministry", organization_kind=get_subtype("Government", "National Government")
+            )
+        )
+        gidd_figure = self.generate(figure)
+
+        by_source = {
+            source: (source_type, sub_type)
+            for source, source_type, sub_type in zip(
+                gidd_figure.sources, gidd_figure.sources_type, gidd_figure.sources_sub_type
+            )
+        }
+        assert by_source == {
+            "Alpha Agency": (None, None),
+            "Beta Bureau": ("Media", "Media"),
+            "Gamma Ministry": ("Government", "National Government"),
+        }, by_source
+
+        position, row = self.export_row()
+        sources = row[position["Sources"]].split(EXTERNAL_ARRAY_SEPARATOR)
+        sub_types = row[position["Sources sub type"]].split(EXTERNAL_ARRAY_SEPARATOR)
+        assert sub_types[sources.index("Gamma Ministry")] == "National Government", sub_types
+        assert sub_types[sources.index("Alpha Agency")] == "", sub_types

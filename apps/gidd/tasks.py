@@ -338,9 +338,12 @@ def update_gidd_event_and_gidd_figure_data():
             .annotate(
                 ids=ArrayAgg("sources__id", ordering=sources_order, filter=sources_filter),
                 names=ArrayAgg("sources__name", ordering=sources_order, filter=sources_filter),
-                types=ArrayAgg("sources__organization_kind__name", ordering=sources_order, filter=sources_filter),
+                types=ArrayAgg(
+                    "sources__organization_kind__source_type__name", ordering=sources_order, filter=sources_filter
+                ),
+                sub_types=ArrayAgg("sources__organization_kind__name", ordering=sources_order, filter=sources_filter),
             )
-            .values("id", "ids", "names", "types"),
+            .values("id", "ids", "names", "types", "sub_types"),
             name="gidd_figure_sources_agg",
         )
 
@@ -493,6 +496,7 @@ def update_gidd_event_and_gidd_figure_data():
                 sources=Coalesce(sources_cte.col.names, empty_char_array()),
                 sources_ids=Coalesce(sources_cte.col.ids, empty_int_array()),
                 sources_type=Coalesce(sources_cte.col.types, empty_char_array()),
+                sources_sub_type=Coalesce(sources_cte.col.sub_types, empty_char_array()),
                 total_figures=F("total_figures"),
                 household_size=F("household_size"),
                 reported=F("reported"),

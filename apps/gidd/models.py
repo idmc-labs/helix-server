@@ -421,6 +421,10 @@ class GiddFigure(MetaInformationAbstractModel):
         models.TextField(verbose_name=_("Sources Type")),
         default=list,
     )
+    sources_sub_type = ArrayField(
+        models.TextField(verbose_name=_("Sources Sub Type")),
+        default=list,
+    )
     publishers_ids = ArrayField(
         models.IntegerField(
             verbose_name=_("Publishers IDs"),

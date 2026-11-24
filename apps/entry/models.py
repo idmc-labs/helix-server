@@ -25,7 +25,7 @@ from django.db.models import (
 )
 from django.db.models.constraints import UniqueConstraint
 from django.db.models.expressions import RawSQL
-from django.db.models.functions import Cast, Coalesce, Concat, ExtractYear
+from django.db.models.functions import Cast, Concat, ExtractYear
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -270,8 +270,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             "modified_at",
             "role",
             "sources_classification",
-            # NOTE: "sources_reliability" is deprecated and will be removed after A7.2.3 (E7).
-            "sources_reliability",
             "stock_date",
             "stock_reporting_date",
             "term",
@@ -323,25 +321,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             AFTER: _("After"),
             DURING: _("During"),
             UNKNOWN: _("Unknown"),
-        }
-
-    # NOTE: deprecated, will be removed after A7.2.3 (E7). Range values ("Low to high" ...) are
-    # replaced by one level: SourceType.SOURCE_TYPE_CLASSIFICATION via annotate_sources_classification.
-    class SOURCES_RELIABILITY(enum.Enum):
-        LOW = 0
-        MEDIUM = 1
-        HIGH = 2
-        LOW_TO_HIGH = 3
-        LOW_TO_MEDIUM = 4
-        MEDIUM_TO_HIGH = 5
-
-        __labels__ = {
-            LOW: _("Low"),
-            MEDIUM: _("Medium"),
-            HIGH: _("High"),
-            LOW_TO_HIGH: _("Low to high"),
-            LOW_TO_MEDIUM: _("Low to medium"),
-            MEDIUM_TO_HIGH: _("Medium to high"),
         }
 
     class FIGURE_CATEGORY_TYPES(enum.Enum):
@@ -988,78 +967,10 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         Level 1 is High and Level 3 is Low, so the lowest classification is the highest level
         number. One value per figure (SourceType.SOURCE_TYPE_CLASSIFICATION); null when no source has a classification.
         """
-        from apps.organization.models import OrganizationKind, SourceType
-
-        RELIABILITY = OrganizationKind.ORGANIZATION_RELIABILITY
-        LEVEL = SourceType.SOURCE_TYPE_CLASSIFICATION
         return {
             "sources_classification": Max(
-                Coalesce(
-                    "sources__organization_kind__source_type__level",
-                    # TODO(E7): remove this fallback (keep only the source_type level) once A7.2.3 has
-                    # removed the retired kinds. Until then a kind without a source type uses its old
-                    # reliability: HIGH -> Level 1, MEDIUM -> Level 2, LOW -> Level 3.
-                    Case(
-                        *[
-                            When(sources__organization_kind__reliability=reliability.value, then=Value(level.value))
-                            for reliability, level in (
-                                (RELIABILITY.HIGH, LEVEL.LEVEL_1),
-                                (RELIABILITY.MEDIUM, LEVEL.LEVEL_2),
-                                (RELIABILITY.LOW, LEVEL.LEVEL_3),
-                            )
-                        ],
-                        output_field=models.IntegerField(),
-                    ),
-                ),
+                "sources__organization_kind__source_type__level",
                 output_field=models.IntegerField(),
-            ),
-        }
-
-    @classmethod
-    def annotate_sources_reliability(cls):
-        # NOTE: deprecated, will be removed after A7.2.3 (E7). Only the deprecated GraphQL field
-        # sourcesReliability uses it. Use annotate_sources_classification instead.
-        from apps.organization.models import OrganizationKind
-
-        return {
-            "lowest_source_reliability": models.Min(
-                "sources__organization_kind__reliability", output_field=models.IntegerField()
-            ),
-            "highest_source_reliability": models.Max(
-                "sources__organization_kind__reliability", output_field=models.IntegerField()
-            ),
-            "sources_reliability": Case(
-                When(
-                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW.value,
-                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW.value,
-                    then=Value(Figure.SOURCES_RELIABILITY.LOW),
-                ),
-                When(
-                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.MEDIUM.value,
-                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.MEDIUM.value,
-                    then=Value(Figure.SOURCES_RELIABILITY.MEDIUM),
-                ),
-                When(
-                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH.value,
-                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH.value,
-                    then=Value(Figure.SOURCES_RELIABILITY.HIGH),
-                ),
-                When(
-                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW.value,
-                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH.value,
-                    then=Value(Figure.SOURCES_RELIABILITY.LOW_TO_HIGH),
-                ),
-                When(
-                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.MEDIUM.value,
-                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH.value,
-                    then=Value(Figure.SOURCES_RELIABILITY.MEDIUM_TO_HIGH),
-                ),
-                When(
-                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW.value,
-                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.MEDIUM.value,
-                    then=Value(Figure.SOURCES_RELIABILITY.LOW_TO_MEDIUM),
-                ),
-                output_field=models.CharField(),
             ),
         }
 
