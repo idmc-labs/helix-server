@@ -1490,7 +1490,7 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                     item["gidd_event__hazard_source_name"],
                     item["gidd_event__hazard_footprint_url"],
                     item["gidd_event__hazard_footprint_id"],
-                    item["gidd_event__hazard_footprint_geometry_type"],
+                    item["gidd_event__hazard_footprint_geometry_type"] or "",
                 ]
             )
 
