@@ -27,6 +27,7 @@ This endpoint provides quality-controlled, annually validated data on internal d
 | Publishers                    | Organizations responsible for distributing and disseminating internal displacement data. |
 | Sources                       | This field lists the names of the primary data providers or the original sources for the internal displacement data reported by IDMC. |
 | Sources type                  | This field categorizes the type of source as defined by IDMC. |
+| Sources sub type              | This field further categorizes each source within its type, as defined by IDMC. |
 | Event ID                      | Unique identifier for events as assigned by IDMC. |
 | Event name                    | This field includes the event's coded name, which is based on the country, type of hazard, location, and start date. It also incorporates the common or official name of the event, when available. |
 | Event cause                   | Identifies the trigger of displacement, such as conflict or disasters. |

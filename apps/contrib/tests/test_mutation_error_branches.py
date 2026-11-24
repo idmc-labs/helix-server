@@ -86,7 +86,7 @@ class TestMutationErrorBranches(HelixGraphQLTestCase):
             ("createActor", '{name: "Actor", country: "%s"}' % NONEXISTENT_ID, "country"),
             ("createContextOfViolence", '{name: ""}', "name"),
             ("createFigureTag", '{name: ""}', "name"),
-            ("createOrganizationKind", '{name: ""}', "name"),
+            ("createOrganizationKind", '{name: "", sourceType: "%s"}' % NONEXISTENT_ID, "name"),
             ("createResourceGroup", '{name: ""}', "name"),
             (
                 "createResource",

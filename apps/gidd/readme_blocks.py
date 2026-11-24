@@ -300,6 +300,7 @@ DISAGGREGATION_FIELD_ROWS: Rows = [
         "internal displacement data reported by IDMC."
     ],
     ["Sources type: This field categorizes the type of source as defined by IDMC."],
+    ["Sources sub type: This field further categorizes each source within its type, as defined by IDMC."],
     ["Event ID: Unique identifier for events as assigned by IDMC."],
     [
         "Event name: This field includes the event's coded name, which is based on the country, type of hazard, "

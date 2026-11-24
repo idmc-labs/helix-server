@@ -1,17 +1,16 @@
-"""Compare GIDD published figures before and after, and check the published wording."""
+"""Snapshot the GIDD published figures, and check the published wording."""
 
 import csv
 import json
 import os
 import tempfile
 from io import StringIO
-from unittest import mock
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
 
-from apps.gidd import publish_check
-from apps.gidd.tests.test_export_source_types import GiddExportSourceTypeTestCase
+from apps.gidd.tests import test_export_source_types
 from utils.tests import HelixTestCase, ensure_source_type_taxonomy
 
 COLUMNS = ["key", "figure_raw_id", "year", "sources", "sources_type", "reported"]
@@ -35,64 +34,6 @@ def row(figure_id, sources, types, reported=10, **extra):
         "reported": reported,
         **{key: json.dumps(value) for key, value in extra.items()},
     }
-
-
-class TestCompareGiddFigures(HelixTestCase):
-    def setUp(self):
-        self.tmp = tempfile.mkdtemp()
-        self.before = os.path.join(self.tmp, "before.csv")
-        self.after = os.path.join(self.tmp, "after.csv")
-        self.out_dir = os.path.join(self.tmp, "out")
-        write_snapshot(self.before, [row(1, ["Ministry"], ["Government"]), row(2, ["Paper"], ["Media"])])
-
-    def compare(self):
-        call_command("compare_gidd_figures", self.before, self.after, self.out_dir, stdout=StringIO())
-
-    def test_pass_when_only_source_wording_changes(self):
-        write_snapshot(
-            self.after,
-            [
-                row(1, ["Ministry"], ["Government"], sources_sub_type=["National Government"]),
-                row(2, ["Paper"], ["Media"], sources_sub_type=["Media"]),
-            ],
-            COLUMNS + ["sources_sub_type"],
-        )
-        # The type column changes too when an old kind was named differently from its new type.
-        write_snapshot(
-            self.before,
-            [row(1, ["Ministry"], ["Local Authority"]), row(2, ["Paper"], ["Media"])],
-        )
-        self.compare()
-        with open(os.path.join(self.out_dir, "report.md"), encoding="utf-8") as f:
-            self.assertIn("PASS", f.readline())
-
-    def test_fail_without_subtype_column(self):
-        write_snapshot(self.after, [row(1, ["Ministry"], ["Government"]), row(2, ["Paper"], ["Media"])])
-        with self.assertRaisesMessage(CommandError, "expected new columns missing: sources_sub_type"):
-            self.compare()
-
-    def test_fail_when_another_column_changes(self):
-        write_snapshot(
-            self.after,
-            [
-                row(1, ["Ministry"], ["Government"], reported=11, sources_sub_type=["National Government"]),
-                row(2, ["Paper"], ["Media"], sources_sub_type=["Media"]),
-            ],
-            COLUMNS + ["sources_sub_type"],
-        )
-        with self.assertRaisesMessage(CommandError, "unexpected changes in: reported (1)"):
-            self.compare()
-        changed = list(csv.DictReader(open(os.path.join(self.out_dir, "changed_cells.csv"), encoding="utf-8")))
-        self.assertEqual(changed, [{"key": "1:2024", "column": "reported", "before": "10", "after": "11"}])
-
-    def test_fail_when_rows_differ(self):
-        write_snapshot(
-            self.after,
-            [row(1, ["Ministry"], ["Government"], sources_sub_type=["National Government"])],
-            COLUMNS + ["sources_sub_type"],
-        )
-        with self.assertRaisesMessage(CommandError, "1 rows missing after"):
-            self.compare()
 
 
 class TestCheckGiddSourceWording(HelixTestCase):
@@ -140,16 +81,19 @@ class TestCheckGiddSourceWording(HelixTestCase):
 class TestSnapshotGiddFigures(HelixTestCase):
     """The snapshot reads the published columns of real generated GIDD figures."""
 
-    # Borrowed, not inherited, so pytest does not collect that file's tests a second time here.
-    setUp = GiddExportSourceTypeTestCase.setUp
-    generate = GiddExportSourceTypeTestCase.generate
-    figure_with_sources = GiddExportSourceTypeTestCase.figure_with_sources
+    # Borrowed through the module, not imported or inherited, so pytest does not collect that
+    # file's tests a second time here.
+    setUp = test_export_source_types.GiddExportSourceTypeTestCase.setUp
+    generate = test_export_source_types.GiddExportSourceTypeTestCase.generate
+    figure_with_sources = test_export_source_types.GiddExportSourceTypeTestCase.figure_with_sources
 
     def test_snapshot_of_generated_figures(self):
         figure = self.figure_with_sources()
         self.generate(figure)
-        path = os.path.join(tempfile.mkdtemp(), "snapshot.csv")
-        call_command("snapshot_gidd_figures", path, stdout=StringIO())
+        # The output directory does not exist yet: the command creates it.
+        output_dir = os.path.join(tempfile.mkdtemp(), "before")
+        call_command("snapshot_gidd_figures", output_dir=output_dir, stdout=StringIO())
+        path = os.path.join(output_dir, "gidd_figures.csv")
 
         rows = list(csv.DictReader(open(path, encoding="utf-8")))
         self.assertEqual(len(rows), 1)
@@ -157,7 +101,28 @@ class TestSnapshotGiddFigures(HelixTestCase):
         self.assertEqual(json.loads(rows[0]["sources"]), ["Alpha Agency", "Beta Bureau"])
         self.assertEqual(json.loads(rows[0]["sources_type"]), [None, "Media"])
 
-        # The same data snapshotted twice compares equal; it fails only on the missing subtype column.
-        with mock.patch.object(publish_check, "ALLOWED_NEW_COLUMNS", set()):
-            passed, failures = publish_check.compare_snapshots(path, path, os.path.join(tempfile.mkdtemp(), "out"))
-        self.assertTrue(passed, failures)
+    def test_before_snapshot_without_subtype_column(self):
+        figure = self.figure_with_sources()
+        self.generate(figure)
+        # Before gidd 0047 the table has no sources_sub_type column (rolled back after the test).
+        with connection.cursor() as cursor:
+            cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")
+            cursor.execute("ALTER TABLE gidd_giddfigure DROP COLUMN sources_sub_type")
+        output_dir = os.path.join(tempfile.mkdtemp(), "before")
+        call_command("snapshot_gidd_figures", output_dir=output_dir, before=True, stdout=StringIO())
+
+        rows = list(csv.DictReader(open(os.path.join(output_dir, "gidd_figures.csv"), encoding="utf-8")))
+        self.assertEqual(len(rows), 1)
+        self.assertNotIn("sources_sub_type", rows[0])
+        self.assertEqual(json.loads(rows[0]["sources_type"]), [None, "Media"])
+
+    def test_before_refused_once_migrated(self):
+        with self.assertRaisesMessage(CommandError, "gidd 0047 has already run"):
+            call_command("snapshot_gidd_figures", output_dir=tempfile.mkdtemp(), before=True, stdout=StringIO())
+
+    def test_after_refused_before_migrating(self):
+        with connection.cursor() as cursor:
+            cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")
+            cursor.execute("ALTER TABLE gidd_giddfigure DROP COLUMN sources_sub_type")
+        with self.assertRaisesMessage(CommandError, "gidd 0047 has not run yet"):
+            call_command("snapshot_gidd_figures", output_dir=tempfile.mkdtemp(), stdout=StringIO())

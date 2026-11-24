@@ -2288,7 +2288,6 @@ type FigureType {
   flowStartDate: Date
   flowEndDate: Date
   geolocations: String
-  sourcesReliability: SOURCES_RELIABILITY @deprecated(reason: "Use sourcesClassification (Source Type Classification).")
   sourcesClassification: SOURCE_TYPE_CLASSIFICATION
   sourcesClassificationDisplay: String
   reviewStatusDisplay: EnumDescription
@@ -3024,12 +3023,6 @@ enum ORGANIZATION_CATEGORY {
   OTHER
 }
 
-enum ORGANIZATION_RELIABILITY {
-  LOW
-  MEDIUM
-  HIGH
-}
-
 input OrganizationCreateInputType {
   oldId: String
   versionId: String
@@ -3053,11 +3046,10 @@ input OrganizationFilterDataInputType {
 }
 
 input OrganizationKindCreateInputType {
+  sourceType: ID!
   oldId: String
   versionId: String
   name: String!
-  reliability: ORGANIZATION_RELIABILITY
-  sourceType: ID
 }
 
 input OrganizationKindFilterDataInputType {
@@ -3081,19 +3073,16 @@ type OrganizationKindObjectType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  reliability: ORGANIZATION_RELIABILITY @deprecated(reason: "Use sourceType.level (Source Type Classification).")
-  sourceType: SourceTypeObjectType
+  sourceType: SourceTypeObjectType!
   organizations(filters: OrganizationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
-  reliabilityDisplay: EnumDescription @deprecated(reason: "Use sourceType.levelDisplay.")
 }
 
 input OrganizationKindUpdateInputType {
   id: ID!
+  sourceType: ID
   oldId: String
   versionId: String
   name: String
-  reliability: ORGANIZATION_RELIABILITY
-  sourceType: ID
 }
 
 type OrganizationListType {
@@ -3895,15 +3884,6 @@ input ResourceUpdateInputType {
   lastAccessedOn: DateTime
   group: ID
   countries: [ID!]
-}
-
-enum SOURCES_RELIABILITY {
-  LOW
-  MEDIUM
-  HIGH
-  LOW_TO_HIGH
-  LOW_TO_MEDIUM
-  MEDIUM_TO_HIGH
 }
 
 enum SOURCE_TYPE_CLASSIFICATION {
