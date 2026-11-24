@@ -230,6 +230,47 @@ class TestImportOrganizationsCommand(HelixTestCase):
         self.assertEqual((readme["A2"].font.name, readme["A2"].font.size), ("Arial", 10))  # metadata line
         self.assertEqual(workbook["Data"]["A1"].font.name, "Arial")  # data header
 
+    def test_make_template_lists_each_organization_with_its_kind(self):
+        with_kind = OrganizationFactory.create(
+            name="Ministry",
+            organization_kind=self.kind,
+            short_name="MIN",
+            category=Organization.ORGANIZATION_CATEGORY.NATIONAL,
+        )
+        without_kind = OrganizationFactory.create(name="No Kind Org", organization_kind=None)
+        out = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+        call_command("import_organizations", "--make-template", out.name, stdout=StringIO())
+
+        sheet = load_workbook(out.name)["Data"]
+        headers = [cell.value for cell in sheet[1]]
+        rows = [dict(zip(headers, (cell.value for cell in row))) for row in sheet.iter_rows(min_row=2)]
+        by_id = {row["id"]: row for row in rows}
+        self.assertEqual(
+            (by_id[with_kind.id]["name"], by_id[with_kind.id]["organization_kind"]),
+            ("Ministry", "Government - National Government"),
+        )
+        self.assertIsNone(by_id[without_kind.id]["organization_kind"])
+        # Only id, name and kind are filled, so importing the sheet back leaves the rest unchanged.
+        self.assertIsNone(by_id[with_kind.id]["short_name"])
+        self.assertIsNone(by_id[with_kind.id]["category"])
+
+    def test_filled_template_changes_only_the_kind(self):
+        organization = OrganizationFactory.create(name="Ministry", organization_kind=self.kind, short_name="MIN")
+        organization.countries.set([CountryFactory.create(iso3="NPL")])
+        out = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+        call_command("import_organizations", "--make-template", out.name, stdout=StringIO())
+        workbook = load_workbook(out.name)
+        sheet = workbook["Data"]
+        kind_column = [cell.value for cell in sheet[1]].index("organization_kind") + 1
+        sheet.cell(row=2, column=kind_column, value="Government - Local Authorities")
+        workbook.save(out.name)
+
+        call_command("import_organizations", out.name, stdout=StringIO())
+        organization.refresh_from_db()
+        self.assertEqual(organization.organization_kind, get_subtype("Government", "Local Authorities"))
+        self.assertEqual((organization.name, organization.short_name), ("Ministry", "MIN"))
+        self.assertEqual(list(organization.countries.values_list("iso3", flat=True)), ["NPL"])
+
     def test_make_template_warns_on_duplicate_allowed_values(self):
         source_type = SourceTypeFactory.create(name="Dup Type")
         OrganizationKindFactory.create(name="Dup Kind", source_type=source_type)
