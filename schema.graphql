@@ -2635,7 +2635,6 @@ input GiddReleaseCreateInputType {
   releaseDate: Date!
   notes: String!
   citation: String
-  isVisibleInGidd: Boolean
 }
 
 enum GiddReleaseEnvironmentsEnum {
@@ -2686,7 +2685,6 @@ input GiddReleaseUpdateInputType {
   releaseDate: Date
   notes: String
   citation: String
-  isVisibleInGidd: Boolean
 }
 
 input GiddStatusLogFilterDataInputType {
