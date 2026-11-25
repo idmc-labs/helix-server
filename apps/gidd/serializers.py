@@ -322,11 +322,18 @@ class PublicFigureAnalysisSerializer(serializers.ModelSerializer):
 
 
 class StatusLogSerializer(serializers.ModelSerializer):
+    """Input validation for triggering a GIDD run (release required and must exist).
+
+    Only validates; the run itself is started by tasks.start_gidd_update_run, which locks the
+    release and applies the edit-window and active-run checks.
+    """
+
     release = serializers.PrimaryKeyRelatedField(queryset=GiddRelease.objects.all(), required=True)
 
     class Meta:
         model = StatusLog
         fields = ("id", "triggered_by", "triggered_at", "completed_at", "status", "release")
+        read_only_fields = ("triggered_at", "completed_at", "status")
 
 
 class ReleaseMetadataSerializer(serializers.ModelSerializer):
@@ -359,7 +366,7 @@ class IdpsSaddEstimateSerializer(serializers.ModelSerializer):
 
 
 class GiddReleaseSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
-    """Authored fields of a release. `is_live` is absent on purpose: only generation sets it."""
+    """Authored fields of a release. `is_live` and `is_visible_in_gidd` are absent on purpose: only generation sets them."""
 
     class Meta:
         model = GiddRelease
@@ -369,7 +376,6 @@ class GiddReleaseSerializer(MetaInformationSerializerMixin, serializers.ModelSer
             "release_date",
             "notes",
             "citation",
-            "is_visible_in_gidd",
         )
 
 

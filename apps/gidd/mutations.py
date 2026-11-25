@@ -6,15 +6,14 @@ from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.mutation import generate_input_type_for_serializer
 from utils.permissions import is_authenticated, permission_checker
 
-from .models import GiddRelease, StatusLog
+from .models import GiddRelease
 from .schema import GiddReleaseMetadataType, GiddReleaseType, GiddStatusLogType
 from .serializers import (
     GiddReleaseSerializer,
     GiddReleaseUpdateSerializer,
     ReleaseMetadataSerializer,
-    StatusLogSerializer,
 )
-from .tasks import update_gidd_data
+from .tasks import GiddRunRefused, start_gidd_update_run
 
 
 class GiddUpdateData(graphene.Mutation):
@@ -29,28 +28,18 @@ class GiddUpdateData(graphene.Mutation):
     @is_authenticated()
     @permission_checker(["gidd.update_gidd_data_gidd"])
     def mutate(root, info, release_id):
-        user = info.context.user
-        # Check if any pending updates
-        if StatusLog.has_active_run():
+        try:
+            instance = start_gidd_update_run(
+                release_id=release_id,
+                user=info.context.user,
+            )
+        except GiddRunRefused as e:
             return GiddUpdateData(
-                errors=[
-                    dict(
-                        field="nonFieldErrors",
-                        messages=gettext(
-                            "Generating GIDD data in background, you can re-generate once generation will complete"
-                        ),
-                    )
-                ],
+                errors=[dict(field="nonFieldErrors", messages=str(e))],
                 ok=False,
             )
 
-        serializer = StatusLogSerializer(data=dict(triggered_by=user.id, release=release_id))
-        if errors := mutation_is_not_valid(serializer):
-            return GiddUpdateData(errors=errors, ok=False)
-        instance = serializer.save()
-        # Update date in background
-        transaction.on_commit(lambda: update_gidd_data.delay(log_id=instance.id))
-        return GiddUpdateData(result=instance, errors=None, ok=True)
+        return GiddUpdateData(result=instance, ok=True)
 
 
 GiddReleaseMetadataInputType = generate_input_type_for_serializer(
@@ -126,21 +115,27 @@ class UpdateGiddRelease(graphene.Mutation):
     @is_authenticated()
     @permission_checker(["gidd.manage_release_gidd"])
     def mutate(root, info, data):
-        instance = GiddRelease.objects.filter(id=data["id"]).first()
-        if instance is None:
-            return UpdateGiddRelease(
-                errors=[dict(field="nonFieldErrors", messages=gettext("GIDD release does not exist."))],
-                ok=False,
+        with transaction.atomic():
+            instance = GiddRelease.objects.select_for_update().filter(id=data["id"]).first()
+            if instance is None:
+                return UpdateGiddRelease(
+                    errors=[dict(field="nonFieldErrors", messages=gettext("GIDD release does not exist."))],
+                    ok=False,
+                )
+            if instance.is_edit_window_closed():
+                return UpdateGiddRelease(
+                    errors=[dict(field="nonFieldErrors", messages=str(GiddRelease.EDIT_WINDOW_CLOSED_MESSAGE))],
+                    ok=False,
+                )
+            serializer = GiddReleaseUpdateSerializer(
+                instance=instance,
+                data=data,
+                partial=True,
+                context={"request": info.context.request},
             )
-        serializer = GiddReleaseUpdateSerializer(
-            instance=instance,
-            data=data,
-            partial=True,
-            context={"request": info.context.request},
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return UpdateGiddRelease(errors=errors, ok=False)
-        instance = serializer.save()
+            if errors := mutation_is_not_valid(serializer):
+                return UpdateGiddRelease(errors=errors, ok=False)
+            instance = serializer.save()
         return UpdateGiddRelease(result=instance, errors=None, ok=True)
 
 

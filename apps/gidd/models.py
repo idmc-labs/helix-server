@@ -818,8 +818,37 @@ class GiddRelease(MetaInformationAbstractModel):
     )  # NOTE: Set by generation only, never by an input.
     is_visible_in_gidd = models.BooleanField(
         verbose_name=_("Is visible in GIDD"),
-        default=True,
+        default=False,
     )
+
+    EDIT_WINDOW = datetime.timedelta(days=7)
+    EDIT_WINDOW_CLOSED_MESSAGE = _(
+        "This release was first published more than 7 days ago and can no longer be changed. "
+        "Create a new release for new figures."
+    )
+
+    def first_published_at(self) -> typing.Optional[datetime.datetime]:
+        """Completion time of the first successful run; None while the release is a draft."""
+        return (
+            self.status_logs.filter(
+                status=StatusLog.Status.SUCCESS,
+                completed_at__isnull=False,
+            )
+            .order_by("completed_at")
+            .values_list("completed_at", flat=True)
+            .first()
+        )
+
+    def is_edit_window_closed(self, now: typing.Optional[datetime.datetime] = None) -> bool:
+        """True once EDIT_WINDOW has passed since the first successful run.
+
+        Failed runs never start the window and re-publishing does not extend it.
+        Callers editing the release should hold a row lock (select_for_update) when checking.
+        """
+        first_published_at = self.first_published_at()
+        if first_published_at is None:
+            return False
+        return (now or timezone.now()) > first_published_at + self.EDIT_WINDOW
 
     class Meta:
         verbose_name = _("GIDD Release")

@@ -17,6 +17,7 @@ from django.db.models import (
 from django.db.models.functions import Cast, Coalesce, Concat
 from django.db.models.sql.constants import LOUTER
 from django.utils import timezone
+from django.utils.translation import gettext
 from django_cte import With
 
 from apps.common.utils import EXTERNAL_TUPLE_SEPARATOR
@@ -794,6 +795,10 @@ def _all_country_event_code_cte():
     )
 
 
+class GiddRunRefused(Exception):
+    """A GIDD publish run may not start; the message is user-facing."""
+
+
 def mark_release_live(release_id):
     if release_id is None:
         return
@@ -806,10 +811,27 @@ def mark_release_live(release_id):
     )
 
 
+def mark_release_visible_on_first_publish(release_id):
+    """A draft becomes visible in public metadata on its first successful run.
+
+    Later runs leave the flag alone, so a published release that was hidden stays hidden on republish.
+    """
+    if release_id is None:
+        return
+    if StatusLog.objects.filter(release_id=release_id, status=StatusLog.Status.SUCCESS).exists():
+        return
+    GiddRelease.objects.filter(id=release_id).update(is_visible_in_gidd=True)
+
+
 @redis_lock(GIDD_GENERATION_LOCK_KEY, GIDD_GENERATION_LOCK_TTL)
 def _generate_gidd_data(log_id):
     try:
         with transaction.atomic():
+            release_id = StatusLog.objects.values_list("release_id", flat=True).get(id=log_id)
+            if release_id is not None:
+                release = GiddRelease.objects.select_for_update().get(id=release_id)
+                if release.is_edit_window_closed():
+                    raise GiddRunRefused(str(GiddRelease.EDIT_WINDOW_CLOSED_MESSAGE))
             # DELETE
             # -- Delete all the public figure analysis objects
             PublicFigureAnalysis.objects.all().delete()
@@ -828,7 +850,9 @@ def _generate_gidd_data(log_id):
             update_public_figure_analysis()
             # Inside the rebuild's transaction: a failed run rolls back with the tables, so the
             # live release always describes the data actually published.
-            mark_release_live(StatusLog.objects.values_list("release_id", flat=True).get(id=log_id))
+            mark_release_live(release_id)
+            # Before this log turns SUCCESS, so "first publish" means no earlier successful run.
+            mark_release_visible_on_first_publish(release_id)
             StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.SUCCESS, completed_at=timezone.now())
         logger.info("GIDD data updated.")
     except Exception as e:
@@ -845,6 +869,31 @@ def update_gidd_data(log_id):
     if _generate_gidd_data(log_id=log_id) is False:
         StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.FAILED, completed_at=timezone.now())
         logger.error("Another GIDD generation is already running; refused to run concurrently.")
+
+
+def start_gidd_update_run(release_id, user, run_async=True) -> StatusLog:
+    with transaction.atomic():
+        release = None
+        if str(release_id).isdigit():
+            release = GiddRelease.objects.select_for_update().filter(id=release_id).first()
+
+        if release is None:
+            raise GiddRunRefused(gettext("GIDD release does not exist."))
+
+        if release.is_edit_window_closed():
+            raise GiddRunRefused(str(GiddRelease.EDIT_WINDOW_CLOSED_MESSAGE))
+
+        if StatusLog.has_active_run():
+            raise GiddRunRefused(
+                gettext("Generating GIDD data in background, you can re-generate once generation will complete")
+            )
+
+        log = StatusLog.objects.create(triggered_by=user, release=release)
+
+        run = update_gidd_data.delay if run_async else update_gidd_data
+        transaction.on_commit(lambda: run(log_id=log.id))
+
+    return log
 
 
 @celery_app.task

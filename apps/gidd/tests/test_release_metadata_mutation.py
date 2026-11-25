@@ -37,7 +37,7 @@ class TestGiddUpdateReleaseMetaData(HelixGraphQLTestCase):
         return self.query(MUTATION, variables={"data": {"releaseYear": 2023, "preReleaseYear": 2024}})
 
     def test_saving_metadata_does_not_enqueue_a_generation(self):
-        with patch("apps.gidd.mutations.update_gidd_data") as task:
+        with patch("apps.gidd.tasks.update_gidd_data") as task:
             response = self._run()
         self.assertResponseNoErrors(response)
         content = response.json()["data"]["giddUpdateReleaseMetaData"]
@@ -51,13 +51,13 @@ class TestGiddUpdateReleaseMetaData(HelixGraphQLTestCase):
         run's SUCCESS/FAILED landed on an unrelated row.
         """
         before = StatusLog.objects.count()
-        with patch("apps.gidd.mutations.update_gidd_data"):
+        with patch("apps.gidd.tasks.update_gidd_data"):
             self.assertResponseNoErrors(self._run())
         self.assertEqual(StatusLog.objects.count(), before)
 
     def test_the_saved_metadata_is_active_immediately(self):
         """No gating on a successful run: the newest row is what the public filters read."""
-        with patch("apps.gidd.mutations.update_gidd_data"):
+        with patch("apps.gidd.tasks.update_gidd_data"):
             self.assertResponseNoErrors(self._run())
         latest = ReleaseMetadata.objects.last()
         self.assertEqual((latest.release_year, latest.pre_release_year), (2023, 2024))
