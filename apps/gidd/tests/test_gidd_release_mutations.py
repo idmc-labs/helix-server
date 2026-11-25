@@ -91,7 +91,8 @@ class TestGiddReleaseMutations(HelixGraphQLTestCase):
         self.assertTrue(content["ok"], content)
         self.assertEqual(content["result"]["version"], "4")
         self.assertFalse(content["result"]["isLive"])
-        self.assertTrue(content["result"]["isVisibleInGidd"])
+        # A draft stays out of public metadata until its first successful run.
+        self.assertFalse(content["result"]["isVisibleInGidd"])
         release = GiddRelease.objects.get(id=content["result"]["id"])
         self.assertEqual(release.created_by, self.admin)
 
@@ -131,17 +132,15 @@ class TestGiddReleaseMutations(HelixGraphQLTestCase):
         self.assertEqual(release.name, "GIDD 2025")
         self.assertEqual(release.last_modified_by, self.admin)
 
-    def test_visibility_change_records_who_changed_it(self):
-        release = self._release()
+    def test_is_visible_in_gidd_is_not_an_input(self):
         self.force_login(self.admin)
-        response = self._update(id=release.id, isVisibleInGidd=False)
-        self.assertResponseNoErrors(response)
-        content = response.json()["data"]["updateGiddRelease"]
-        self.assertTrue(content["ok"], content)
-        self.assertEqual(content["result"]["lastModifiedBy"]["id"], str(self.admin.id))
+        self.assertResponseErrors(self._create(isVisibleInGidd=True))
+        self.assertFalse(GiddRelease.objects.exists())
+
+        release = self._release()
+        self.assertResponseErrors(self._update(id=release.id, isVisibleInGidd=True))
         release.refresh_from_db()
         self.assertFalse(release.is_visible_in_gidd)
-        self.assertEqual(release.last_modified_by, self.admin)
 
     def test_update_cannot_set_is_live(self):
         release = self._release()
@@ -197,7 +196,7 @@ class TestGiddUpdateDataMutation(HelixGraphQLTestCase):
         self.force_login(self.admin)
 
     def _trigger(self, release_id):
-        with mock.patch("apps.gidd.mutations.update_gidd_data") as task:
+        with mock.patch("apps.gidd.tasks.update_gidd_data") as task:
             response = self.query(UPDATE_GIDD_DATA_MUTATION, variables={"releaseId": release_id})
         return response, task
 

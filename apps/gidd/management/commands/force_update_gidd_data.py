@@ -1,29 +1,29 @@
-from django.conf import settings
-from django.core.management.base import BaseCommand
-from django.utils import timezone
+from django.core.management.base import BaseCommand, CommandError
 
 from apps.gidd.models import StatusLog
-from apps.gidd.tasks import update_gidd_data
+from apps.gidd.tasks import GiddRunRefused, start_gidd_update_run
 from apps.users.utils import HelixInternalBot
 
 
 class Command(BaseCommand):
-    """
-    Management command to force update GIDD data.
-    """
+    help = "Force update GIDD data for a release"
 
-    help = "Force update GIDD data"
+    def add_arguments(self, parser):
+        parser.add_argument("--release-id", type=int, required=True, help="ID of the GIDD release to publish")
 
-    def handle(self, *args, **kwargs):
-        """
-        Executes the command to force update GIDD data.
-        """
-        if not settings.DEBUG:
-            self.stderr.write("This command is only intended for local development.")
-
+    def handle(self, *args, **options):
         internal_bot = HelixInternalBot()
-        status_log = StatusLog.objects.create(
-            triggered_by=internal_bot.user,
-            triggered_at=timezone.now(),
-        )
-        update_gidd_data(status_log.pk)
+
+        try:
+            status_log = start_gidd_update_run(
+                release_id=options["release_id"],
+                user=internal_bot.user,
+                run_async=False,
+            )
+        except GiddRunRefused as e:
+            raise CommandError(str(e))
+
+        status_log.refresh_from_db()
+        status = StatusLog.Status.get(status_log.status).label
+
+        self.stdout.write(f"GIDD run {status_log.pk} finished with status {status}.")

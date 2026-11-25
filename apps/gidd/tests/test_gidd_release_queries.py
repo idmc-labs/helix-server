@@ -54,8 +54,15 @@ class TestGiddReleaseQueries(HelixGraphQLTestCase):
             monitoring_sub_region=MonitoringSubRegionFactory.create().id,
         )
         self.guest = create_user_with_role(USER_ROLE.GUEST.name)
-        self.old = self._release(name="GIDD 2024", version="2", release_date="2024-05-01")
-        self.live = self._release(name="GIDD 2025", version="3", release_date="2025-05-13", is_live=True)
+        # Published releases: visible (set by their first successful run).
+        self.old = self._release(name="GIDD 2024", version="2", release_date="2024-05-01", is_visible_in_gidd=True)
+        self.live = self._release(
+            name="GIDD 2025",
+            version="3",
+            release_date="2025-05-13",
+            is_live=True,
+            is_visible_in_gidd=True,
+        )
         self.hidden = self._release(
             name="Draft 2026",
             version="4",
