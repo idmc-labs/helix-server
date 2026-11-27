@@ -10,7 +10,7 @@ from openpyxl import Workbook, load_workbook
 from apps.contrib.commons import DATE_ACCURACY
 from apps.contrib.management.base.reader import read_rows
 from apps.entry.management.commands.import_figures import Command as ImportFiguresCommand
-from apps.entry.management.commands.import_figures import FigureRoleAndDatesSerializer
+from apps.entry.management.commands.import_figures import FigureRoleDatesAndValuesSerializer
 from apps.entry.models import Figure
 from utils.factories import CountryFactory, EventFactory, FigureFactory
 from utils.tests import HelixTestCase
@@ -59,25 +59,37 @@ class TestImportFiguresCommand(HelixTestCase):
     def test_only_the_role_and_date_fields_are_importable(self):
         self.assertEqual(
             ImportFiguresCommand().import_columns(),
-            ["id", "uuid", "role", "start_date", "end_date", "start_date_accuracy", "end_date_accuracy"],
+            [
+                "id",
+                "uuid",
+                "role",
+                "start_date",
+                "end_date",
+                "start_date_accuracy",
+                "end_date_accuracy",
+                "unit",
+                "reported",
+                "household_size",
+            ],
         )
 
     def test_a_column_outside_that_surface_is_rejected(self):
-        # reported feeds total_figures, which this importer does not derive, so it is not offered.
-        path = write_sheet(["id", "reported"], [{"id": self.figure.id, "reported": 250}])
+        # total_figures is derived from unit, reported and household_size; a supplied total could
+        # contradict its own inputs, so it is not offered as a column.
+        path = write_sheet(["id", "total_figures"], [{"id": self.figure.id, "total_figures": 250}])
         with self.assertRaises(CommandError) as caught:
             call_command("import_figures", path, stdout=StringIO())
 
-        self.assertIn("Unknown column(s): reported", str(caught.exception))
+        self.assertIn("Unknown column(s): total_figures", str(caught.exception))
         self.figure.refresh_from_db()
-        self.assertEqual(self.figure.reported, 100)
+        self.assertEqual(self.figure.total_figures, 100)
 
     def test_the_serializer_does_not_inherit_figure_cross_field_validation(self):
         # The reason this importer has its own serializer: CommonFigureValidationMixin re-checks a
         # figure's whole stored state, which blocks edits to figures with invalid history.
         from apps.entry.serializers import CommonFigureValidationMixin
 
-        self.assertFalse(issubclass(FigureRoleAndDatesSerializer, CommonFigureValidationMixin))
+        self.assertFalse(issubclass(FigureRoleDatesAndValuesSerializer, CommonFigureValidationMixin))
 
     # ----- core edit path -----
 
@@ -193,7 +205,7 @@ class TestImportFiguresCommand(HelixTestCase):
         workbook = load_workbook(tmp.name)
 
         text = "\n".join(str(cell.value) for row in workbook["README"].iter_rows() for cell in row if cell.value is not None)
-        self.assertIn("exactly one of", text)
+        self.assertIn("at least one of", text)
         # Neither key is marked required on its own, since supplying both is rejected.
         shape = [
             (row[0].value, row[2].value) for row in workbook["README"].iter_rows() if row and row[0].value in ("id", "uuid")
@@ -363,16 +375,46 @@ class TestImportFiguresCommand(HelixTestCase):
 
         self.assertIn("no Figure found with uuid 4a1c9f2e-0000-4000-8000-000000000000", out.getvalue())
 
-    def test_supplying_both_keys_fails_the_row(self):
+    def test_supplying_both_keys_is_allowed_and_cross_checked(self):
+        # Both keys is the safe form: the id resolves the row and the uuid confirms it.
         path = write_sheet(
             ["id", "uuid", "role"],
             [{"id": self.figure.id, "uuid": str(self.figure.uuid), "role": "TRIANGULATION"}],
+        )
+        call_command("import_figures", path)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.TRIANGULATION.value)
+
+    def test_a_uuid_naming_a_different_row_than_the_id_fails(self):
+        # The signature of a sheet built against another database: the id resolves here, but to
+        # the wrong figure. Without the cross-check this edits silently.
+        other = self._figure()
+        path = write_sheet(
+            ["id", "uuid", "role"],
+            [{"id": self.figure.id, "uuid": str(other.uuid), "role": "TRIANGULATION"}],
         )
         out = StringIO()
         with self.assertRaises(CommandError):
             call_command("import_figures", path, stdout=out)
 
-        self.assertIn("exactly one of id · uuid is required; 2 given", out.getvalue())
+        self.assertIn("does not name the same row", out.getvalue())
+        self.assertIn("built against a different database", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.RECOMMENDED.value)
+
+    def test_a_malformed_second_key_fails_the_row(self):
+        path = write_sheet(
+            ["id", "uuid", "role"],
+            [{"id": self.figure.id, "uuid": "not-a-uuid", "role": "TRIANGULATION"}],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn("is not a valid uuid", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.role, Figure.ROLE.RECOMMENDED.value)
         self.figure.refresh_from_db()
         self.assertEqual(self.figure.role, Figure.ROLE.RECOMMENDED.value)
 
@@ -383,7 +425,7 @@ class TestImportFiguresCommand(HelixTestCase):
             call_command("import_figures", path, stdout=out)
         output = out.getvalue()
 
-        self.assertIn("exactly one of id · uuid is required; none given", output)
+        self.assertIn("at least one of id · uuid is required; none given", output)
         self.assertIn("only updates existing Figure rows", output)
 
     def test_a_uuid_shared_by_two_figures_fails_the_row(self):
@@ -481,7 +523,7 @@ class TestImportFiguresCommand(HelixTestCase):
         with self.assertRaises(CommandError):
             call_command("import_figures", path, stdout=out)
 
-        self.assertIn("exactly one of id · uuid is required; none given", out.getvalue())
+        self.assertIn("at least one of id · uuid is required; none given", out.getvalue())
 
     def test_a_sheet_of_only_the_key_column_changes_nothing(self):
         path = write_sheet(["id"], [{"id": self.figure.id}])
@@ -640,8 +682,8 @@ class TestImportFiguresCommand(HelixTestCase):
         self.assertEqual(self.figure.review_status, Figure.FIGURE_REVIEW_STATUS.APPROVED.value)
 
     def test_an_edit_leaves_the_derived_total_alone(self):
-        # total_figures is derived from reported and household_size, neither of which is editable
-        # here, so an edit must not disturb it.
+        # A row that supplies none of unit/reported/household_size must not disturb the stored
+        # total, including on the historical figures where it does not satisfy the current rule.
         path = write_sheet(["id", "role"], [{"id": self.figure.id, "role": "TRIANGULATION"}])
         out = StringIO()
         call_command("import_figures", path, stdout=out)
@@ -649,6 +691,74 @@ class TestImportFiguresCommand(HelixTestCase):
         self.figure.refresh_from_db()
         self.assertEqual(self.figure.total_figures, 100)
         self.assertNotIn("total_figures", out.getvalue())
+
+    # ----- derived total -----
+
+    def test_household_unit_derives_the_total_from_reported_and_household_size(self):
+        path = write_sheet(
+            ["id", "unit", "reported", "household_size"],
+            [{"id": self.figure.id, "unit": "HOUSEHOLD", "reported": 100, "household_size": 4.5}],
+        )
+        call_command("import_figures", path)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.household_size, 4.5)
+        self.assertEqual(self.figure.total_figures, 450)
+
+    def test_the_derived_total_rounds_half_up_like_the_app(self):
+        # 55 x 2.3 = 126.5; the app rounds half up, so 127 rather than banker's 126.
+        path = write_sheet(
+            ["id", "unit", "reported", "household_size"],
+            [{"id": self.figure.id, "unit": "HOUSEHOLD", "reported": 55, "household_size": 2.3}],
+        )
+        call_command("import_figures", path)
+
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.total_figures, 127)
+
+    def test_person_unit_clears_the_household_size_and_totals_the_reported(self):
+        figure = self._figure(unit=Figure.UNIT.HOUSEHOLD, reported=10, household_size=3.0, total_figures=30)
+        path = write_sheet(["id", "unit", "reported"], [{"id": figure.id, "unit": "PERSON", "reported": 10}])
+        call_command("import_figures", path)
+
+        figure.refresh_from_db()
+        self.assertIsNone(figure.household_size)
+        self.assertEqual(figure.total_figures, 10)
+
+    def test_reported_alone_recomputes_against_the_stored_household_size(self):
+        figure = self._figure(unit=Figure.UNIT.HOUSEHOLD, reported=10, household_size=4.0, total_figures=40)
+        path = write_sheet(["id", "reported"], [{"id": figure.id, "reported": 25}])
+        call_command("import_figures", path)
+
+        figure.refresh_from_db()
+        self.assertEqual(figure.total_figures, 100)
+
+    def test_a_zero_household_size_is_refused(self):
+        # Zero would publish a real displacement as 0, so it is refused rather than derived.
+        path = write_sheet(
+            ["id", "unit", "reported", "household_size"],
+            [{"id": self.figure.id, "unit": "HOUSEHOLD", "reported": 100, "household_size": 0}],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn("greater than zero", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.total_figures, 100)
+
+    def test_household_unit_without_a_household_size_is_refused(self):
+        path = write_sheet(
+            ["id", "unit", "reported"],
+            [{"id": self.figure.id, "unit": "HOUSEHOLD", "reported": 100}],
+        )
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command("import_figures", path, stdout=out)
+
+        self.assertIn("required for a household-unit figure", out.getvalue())
+        self.figure.refresh_from_db()
+        self.assertEqual(self.figure.total_figures, 100)
 
     # ----- all-or-nothing -----
 
@@ -689,7 +799,7 @@ class TestImportFiguresCommand(HelixTestCase):
             [{"id": self.figure.id, "role": "TRIANGULATION"}, {"id": other.id, "role": "TRIANGULATION"}],
         )
 
-        real_save = FigureRoleAndDatesSerializer.save
+        real_save = FigureRoleDatesAndValuesSerializer.save
         calls = {"n": 0}
 
         def failing_save(self, **kwargs):
@@ -698,7 +808,7 @@ class TestImportFiguresCommand(HelixTestCase):
                 raise RuntimeError("save blew up on the second row")
             return real_save(self, **kwargs)
 
-        with mock.patch.object(FigureRoleAndDatesSerializer, "save", failing_save):
+        with mock.patch.object(FigureRoleDatesAndValuesSerializer, "save", failing_save):
             with self.assertRaises(RuntimeError):
                 call_command("import_figures", path, stdout=StringIO())
 
@@ -764,13 +874,13 @@ class TestImportFiguresCommand(HelixTestCase):
             ],
         )
         calls = {"n": 0}
-        real_save = FigureRoleAndDatesSerializer.save
+        real_save = FigureRoleDatesAndValuesSerializer.save
 
         def counting_save(self, **kwargs):
             calls["n"] += 1
             return real_save(self, **kwargs)
 
-        with mock.patch.object(FigureRoleAndDatesSerializer, "save", counting_save):
+        with mock.patch.object(FigureRoleDatesAndValuesSerializer, "save", counting_save):
             with self.assertRaises(CommandError):
                 call_command("import_figures", path, stdout=StringIO())
 
