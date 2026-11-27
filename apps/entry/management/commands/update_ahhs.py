@@ -67,26 +67,6 @@ VERIFICATION_HEADLINES = {
     VERIFY_TOTAL_INCONSISTENT: "total_figures does not equal reported x household_size; figure left untouched",
 }
 
-# Data fields that decide whether an incoming AHHS row differs from the current active record.
-# Metadata churn fields (created_at/modified_at/created_by/last_modified_by/is_active) are excluded on purpose.
-HOUSEHOLD_SIZE_COMPARISON_FIELDS = (
-    "size",
-    "reference_date",
-    "gap_filling_method",
-    "data_source_category",
-    "source",
-    "source_link",
-    "notes",
-)
-
-
-def calculate_gap_filling_method(year, reference_year):
-    if year == reference_year:
-        return HouseholdSize.GAP_FILLING_METHOD.EXACT_YEAR
-    if year < reference_year:
-        return HouseholdSize.GAP_FILLING_METHOD.BACKWARD_FILLING
-    return HouseholdSize.GAP_FILLING_METHOD.FORWARD_FILLING
-
 
 def format_date(date: Union[str, datetime]) -> datetime:
     if isinstance(date, datetime):
@@ -302,21 +282,6 @@ class Command(BaseCommand):
     def admin_user(self) -> User:
         return HelixInternalBot().user
 
-    @staticmethod
-    def _normalize_for_comparison(value):
-        if value is None:
-            return ""
-        if isinstance(value, str):
-            return value.strip()
-        return value
-
-    @classmethod
-    def household_size_unchanged(cls, existing: HouseholdSize, item: typing.Dict) -> bool:
-        return all(
-            cls._normalize_for_comparison(getattr(existing, field)) == cls._normalize_for_comparison(item.get(field))
-            for field in HOUSEHOLD_SIZE_COMPARISON_FIELDS
-        )
-
     def update_household_sizes(self, validated_data: typing.List[typing.Dict], tally: Counter) -> typing.List[typing.Dict]:
         """
         Replace the active AHHS records that differ from the incoming rows.
@@ -332,20 +297,16 @@ class Command(BaseCommand):
             )
             active_records = list(existing_active)
             # Only a single clean active record can be judged "unchanged"; dirty duplicates fall through to be replaced.
-            if len(active_records) == 1 and self.household_size_unchanged(active_records[0], item):
+            if len(active_records) == 1 and active_records[0].has_same_data(item):
                 tally["unchanged"] += 1
                 continue
 
             # A country with no active record has no previous value, so its figures are in scope too.
             size_changed = {record.size for record in active_records} != {item["size"]}
 
-            # NOTE: deactivating previous values. The archived row is the record of what this
-            # country-year held before, so the run reports only counts.
-            existing_active.update(is_active=False)
-
-            new_ahhs = HouseholdSize.objects.create(
-                **item,
-            )
+            # NOTE: The archived row is the record of what this country-year held before,
+            # so the run reports only counts.
+            new_ahhs = HouseholdSize.replace_active(**item)
             # NOTE: Because of updates to created_at/modified_at we haven't used bulk_create
             HouseholdSize.objects.filter(pk=new_ahhs.pk).update(
                 created_at=item["created_at"],
@@ -380,7 +341,7 @@ class Command(BaseCommand):
             size = 0
 
         reference_year = datetime.strptime(row["Reference date"], "%Y-%m-%d").year
-        gap_filling_method = calculate_gap_filling_method(int(row["Year"]), reference_year)
+        gap_filling_method = HouseholdSize.calculate_gap_filling_method(int(row["Year"]), reference_year)
 
         return {
             # Data from csv

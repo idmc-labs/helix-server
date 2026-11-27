@@ -7,8 +7,16 @@ from apps.country.filters import (
     HouseholdSizeFilterDataTypeInputType,
     MonitoringSubRegionFilterDataInputType,
 )
-from apps.country.schema import ContextualAnalysisType, SummaryType
-from apps.country.serializers import ContextualAnalysisSerializer, SummarySerializer
+from apps.country.schema import (
+    ContextualAnalysisType,
+    CountryHouseholdSizeType,
+    SummaryType,
+)
+from apps.country.serializers import (
+    ContextualAnalysisSerializer,
+    HouseholdSizeSerializer,
+    SummarySerializer,
+)
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
@@ -32,6 +40,21 @@ class ContextualAnalysisCreateInputType(graphene.InputObjectType):
     country = graphene.ID(required=True)
     publish_date = graphene.Date()
     crisis_type = graphene.NonNull(CrisisTypeGrapheneEnum)
+
+
+class HouseholdSizeCreateInputType(graphene.InputObjectType):
+    """
+    Household Size Create InputType
+    """
+
+    country = graphene.ID(required=True)
+    year = graphene.Int(required=True)
+    size = graphene.Float(required=True)
+    data_source_category = graphene.String(required=True)
+    source = graphene.String(required=True)
+    source_link = graphene.String()
+    notes = graphene.String()
+    reference_date = graphene.Date()
 
 
 class CreateSummary(graphene.Mutation):
@@ -70,6 +93,24 @@ class CreateContextualAnalysis(graphene.Mutation):
         return CreateContextualAnalysis(result=instance, errors=None, ok=True)
 
 
+class CreateHouseholdSize(graphene.Mutation):
+    class Arguments:
+        data = HouseholdSizeCreateInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(CountryHouseholdSizeType)
+
+    @staticmethod
+    @permission_checker(["country.add_householdsize"])
+    def mutate(root, info, data):
+        serializer = HouseholdSizeSerializer(data=data, context={"request": info.context.request})
+        if errors := mutation_is_not_valid(serializer):
+            return CreateHouseholdSize(errors=errors, ok=False)
+        instance = serializer.save()
+        return CreateHouseholdSize(result=instance, errors=None, ok=True)
+
+
 class ExportCountries(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         filters = CountryFilterDataInputType(required=True)
@@ -94,6 +135,7 @@ class ExportHouseholdSize(ExportBaseMutation):
 class Mutation:
     create_summary = CreateSummary.Field()
     create_contextual_analysis = CreateContextualAnalysis.Field()
+    create_household_size = CreateHouseholdSize.Field()
     export_countries = ExportCountries.Field()
     export_monitoring_sub_regions = ExportMonitoringSubRegions.Field()
     export_household_size = ExportHouseholdSize.Field()
