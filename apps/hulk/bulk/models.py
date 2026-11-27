@@ -177,6 +177,13 @@ class HulkEventImport(HulkBaseModel, pyhelix_models.HulkEventImport):
             "endDateAccuracy": self.end_date_accuracy.name,
             "eventNarrative": self.event_narrative,
             "eventCodes": [ec.generate_for_graphql_mutation() for ec in self.event_codes],
+            "hazardIntensityValue": self.hazard_intensity_value,
+            "hazardIntensityUnit": self.hazard_intensity_unit,
+            "hazardSourceName": self.hazard_source_name,
+            "hazardSourceEventId": self.hazard_source_event_id,
+            "hazardFootprintUrl": self.hazard_footprint_url,
+            "hazardFootprintId": self.hazard_footprint_id,
+            "hazardFootprintGeometryType": self.hazard_footprint_geometry_type,
             # TODO: Other fields?
         }
 

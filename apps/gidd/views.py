@@ -381,6 +381,12 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                 "Event Codes (Code:Type)",
                 "Event ID",
                 "Displacement occurred",
+                "Hazard intensity value",
+                "Hazard intensity unit",
+                "Hazard source name",
+                "Hazard footprint URL",
+                "Hazard footprint ID",
+                "Hazard footprint geometry type",
             ]
         )
 
@@ -405,6 +411,12 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                     ),
                     disaster.event_raw_id,
                     self.get_displacement_status(disaster.displacement_occurred),
+                    disaster.hazard_intensity_value,
+                    disaster.hazard_intensity_unit,
+                    disaster.hazard_source_name,
+                    disaster.hazard_footprint_url,
+                    disaster.hazard_footprint_id,
+                    disaster.hazard_footprint_geometry_type,
                 ]
             )
 
@@ -459,6 +471,18 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                 "Displacement Occurred: This field contains values that represent if preventive evacuations were reported. "
                 "These evacuations are the result of existing early warning systems."
             ],
+            [
+                "Hazard intensity value: Recorded measure of the event's severity (e.g. wind speed, earthquake magnitude). "
+                "Empty if no measure was recorded for the event."
+            ],
+            [
+                "Hazard intensity unit: Unit of the hazard intensity value (e.g. km/h, Mw). "
+                "Empty if no intensity value was recorded."
+            ],
+            ["Hazard source name: Name of the external database that supplied the hazard record (e.g. EMDAT)."],
+            ["Hazard footprint URL: Link to the geospatial footprint of the hazard in the source database."],
+            ["Hazard footprint ID: Identifier of the footprint record in the source database."],
+            ["Hazard footprint geometry type: Geometry type of the hazard footprint (e.g. Polygon, MultiPolygon)."],
         ]
 
         for item in readme_text_2:
@@ -468,6 +492,16 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             [],
             # No 2_Context_Displacement_data sheet here, so the intro must not point at one.
             *historical_revisions_block(cause="Disaster", category="Internal Displacements"),
+            [],
+            ["CHANGELOG"],
+            [],
+            ["Version", "Date", "Notes"],
+            [
+                "2.0",
+                "November 2026",
+                "Added hazard intensity and footprint fields: Hazard intensity value, Hazard intensity unit,"
+                " Hazard source name, Hazard footprint URL, Hazard footprint ID, Hazard footprint geometry type.",
+            ],
         ]
 
         for item in readme_text_3:
@@ -1005,6 +1039,12 @@ DISAGGREGATION_EXPORT_VALUES = (
     "gidd_event__event_codes",
     "gidd_event__event_codes_type",
     "gidd_event__event_codes_iso3",
+    "gidd_event__hazard_intensity_value",
+    "gidd_event__hazard_intensity_unit",
+    "gidd_event__hazard_source_name",
+    "gidd_event__hazard_footprint_url",
+    "gidd_event__hazard_footprint_id",
+    "gidd_event__hazard_footprint_geometry_type",
 )
 
 
@@ -1123,6 +1163,16 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                 # A GeoJSON dump is a single document with no tabs, so the intro must not send a
                 # reader to the sheet the companion workbook carries the change account on.
                 *historical_revisions_block(),
+                [],
+                ["CHANGELOG"],
+                [],
+                ["Version", "Date", "Notes"],
+                [
+                    "2.0",
+                    "November 2026",
+                    "Added hazard intensity and footprint fields: Hazard intensity value, Hazard intensity unit,"
+                    " Hazard source name, Hazard footprint URL, Hazard footprint ID, Hazard footprint geometry type.",
+                ],
             ]
         )
         scalar_fields = {
@@ -1193,6 +1243,12 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                             "Pcode accuracy": [_get_pcode_accuracy_label(x) for x in item["locations_pcode_accuracy"]],
                             "Pcode source": item["locations_pcode_source"],
                             "Displacement occurred": self._get_displacement_occurred(item["displacement_occurred"]),
+                            "Hazard intensity value": item["gidd_event__hazard_intensity_value"],
+                            "Hazard intensity unit": item["gidd_event__hazard_intensity_unit"],
+                            "Hazard source name": item["gidd_event__hazard_source_name"],
+                            "Hazard footprint URL": item["gidd_event__hazard_footprint_url"],
+                            "Hazard footprint ID": item["gidd_event__hazard_footprint_id"],
+                            "Hazard footprint geometry type": item["gidd_event__hazard_footprint_geometry_type"],
                         }
                     ),
                 }
@@ -1254,6 +1310,12 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                 "Pcode accuracy",
                 "Pcode source",
                 "Displacement occurred",
+                "Hazard intensity value",
+                "Hazard intensity unit",
+                "Hazard source name",
+                "Hazard footprint URL",
+                "Hazard footprint ID",
+                "Hazard footprint geometry type",
             ]
         )
 
@@ -1344,6 +1406,16 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             [],
             [],
             *historical_revisions_block(context_tab="2_Context_Displacement_data"),
+            [],
+            ["CHANGELOG"],
+            [],
+            ["Version", "Date", "Notes"],
+            [
+                "2.0",
+                "November 2026",
+                "Added hazard intensity and footprint fields: Hazard intensity value, Hazard intensity unit,"
+                " Hazard source name, Hazard footprint URL, Hazard footprint ID, Hazard footprint geometry type.",
+            ],
         ]
 
         for item in data_description_3:
@@ -1413,6 +1485,12 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                     _get_pcode_accuracy_labels(item["locations_pcode_accuracy"]),
                     _join_keeping_gaps(item["locations_pcode_source"]),
                     self._get_displacement_occurred(item["displacement_occurred"]),
+                    item["gidd_event__hazard_intensity_value"],
+                    item["gidd_event__hazard_intensity_unit"],
+                    item["gidd_event__hazard_source_name"],
+                    item["gidd_event__hazard_footprint_url"],
+                    item["gidd_event__hazard_footprint_id"],
+                    item["gidd_event__hazard_footprint_geometry_type"] or "",
                 ]
             )
 

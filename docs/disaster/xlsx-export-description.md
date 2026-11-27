@@ -15,3 +15,9 @@ This dataset provides an excel download with disaster data
 | Event Codes (Code:Type)            | Unique codes such as the GLIDE number and other database-specific codes used to identify and track specific events across various databases. |
 | Event ID                           | Unique identifier for events as assigned by IDMC. |
 | Displacement Occurred              | This field contains values that represent if preventive evacuations were reported. These evacuations are the result of existing early warning systems. |
+| Hazard intensity value             | Recorded measure of the event's severity (e.g. wind speed, earthquake magnitude). Empty if no measure was recorded for the event. |
+| Hazard intensity unit              | Unit of the hazard intensity value (e.g. km/h, Mw). Empty if no intensity value was recorded. |
+| Hazard source name                 | Name of the external database that supplied the hazard record (e.g. EMDAT). |
+| Hazard footprint URL               | Link to the geospatial footprint of the hazard in the source database. |
+| Hazard footprint ID                | Identifier of the footprint record in the source database. |
+| Hazard footprint geometry type     | Geometry type of the hazard footprint (e.g. Polygon, MultiPolygon). |

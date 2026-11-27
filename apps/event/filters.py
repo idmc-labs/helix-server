@@ -61,6 +61,12 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
     review_status = StringListFilter(method="filter_review_status")
     assignees = IDListFilter(method="filter_assignees")
     assigners = IDListFilter(method="filter_assigners")
+    # Intensity values are only comparable within one unit, so the range filter
+    # (hazard_intensity_value__gte/lte in Meta.fields) is meant to be used with this one.
+    hazard_intensity_units = StringListFilter(method="filter_hazard_intensity_units")
+    # Source names are free text as IDMC writes them, so match whole names ignoring case.
+    hazard_source_names = StringListFilter(method="filter_hazard_source_names")
+    hazard_footprint_geometry_types = StringListFilter(method="filter_hazard_footprint_geometry_types")
 
     filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method="filter_by_figures")
     aggregate_figures = SimpleInputFilter(FigureAggregateFilterDataInputType, method="noop")
@@ -74,6 +80,7 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
             "start_date": ["lte", "lt", "gte", "gt"],
             "end_date": ["lte", "lt", "gte", "gt"],
             "ignore_qa": ["exact"],
+            "hazard_intensity_value": ["lte", "lt", "gte", "gt"],
         }
         # NOTE: event_code__event_code is not using exact match
         multi_word_search_fields = ["name", "event_code__event_code"]
@@ -120,6 +127,25 @@ class EventFilter(AcceptsOrdering, MultiWordSearchFilterSet):
                 return qs.filter(event_type__in=value)
             return qs.filter(event_type__in=[Crisis.CRISIS_TYPE.get(item).value for item in value])
         return qs
+
+    def filter_hazard_intensity_units(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(hazard_intensity_unit__in=value)
+
+    def filter_hazard_source_names(self, qs, name, value):
+        names = [item.strip() for item in value or [] if item and item.strip()]
+        if not names:
+            return qs
+        condition = Q()
+        for item in names:
+            condition |= Q(hazard_source_name__iexact=item)
+        return qs.filter(condition)
+
+    def filter_hazard_footprint_geometry_types(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(hazard_footprint_geometry_type__in=value)
 
     def filter_review_status(self, qs, name, value):
         # Filter out *_BUT_CHANGED values from user input

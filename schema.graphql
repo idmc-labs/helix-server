@@ -1527,6 +1527,13 @@ input EventCreateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String!
   includeTriangulationInQa: Boolean
+  hazardIntensityValue: Float
+  hazardIntensityUnit: String
+  hazardSourceName: String
+  hazardSourceEventId: String
+  hazardFootprintUrl: String
+  hazardFootprintId: String
+  hazardFootprintGeometryType: String
   crisis: ID
   otherSubType: ID
   violenceSubType: ID
@@ -1552,6 +1559,10 @@ input EventFilterDataInputType {
   endDate_Gte: Date
   endDate_Gt: Date
   ignoreQa: Boolean
+  hazardIntensityValue_Lte: Float
+  hazardIntensityValue_Lt: Float
+  hazardIntensityValue_Gte: Float
+  hazardIntensityValue_Gt: Float
   search: String
   crisisByIds: [ID!]
   eventTypes: [String!]
@@ -1567,6 +1578,9 @@ input EventFilterDataInputType {
   reviewStatus: [String!]
   assignees: [ID!]
   assigners: [ID!]
+  hazardIntensityUnits: [String!]
+  hazardSourceNames: [String!]
+  hazardFootprintGeometryTypes: [String!]
   filterFigures: FigureExtractionFilterDataInputType
   aggregateFigures: FigureAggregateFilterDataInputType
 }
@@ -1620,6 +1634,13 @@ type EventType {
   assignedAt: DateTime
   reviewStatus: EVENT_REVIEW_STATUS
   includeTriangulationInQa: Boolean!
+  hazardIntensityValue: Float
+  hazardIntensityUnit: String
+  hazardSourceName: String
+  hazardSourceEventId: String
+  hazardFootprintUrl: String
+  hazardFootprintId: String
+  hazardFootprintGeometryType: String
   notifications: [GenericNotificationType!]!
   eventReviews: [UnifiedReviewCommentType!]!
   eventCode: [EventCodeType!]!
@@ -1652,6 +1673,13 @@ input EventUpdateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
   includeTriangulationInQa: Boolean
+  hazardIntensityValue: Float
+  hazardIntensityUnit: String
+  hazardSourceName: String
+  hazardSourceEventId: String
+  hazardFootprintUrl: String
+  hazardFootprintId: String
+  hazardFootprintGeometryType: String
   crisis: ID
   otherSubType: ID
   violenceSubType: ID

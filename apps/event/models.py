@@ -275,6 +275,10 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             "end_date",
             "entry_count",
             "event_type",
+            "hazard_footprint_geometry_type",
+            "hazard_intensity_unit",
+            "hazard_intensity_value",
+            "hazard_source_name",
             "id",
             "modified_at",
             "name",
@@ -435,6 +439,23 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     include_triangulation_in_qa = models.BooleanField(
         verbose_name="Include triangulation in qa?",
         default=False,
+    )
+
+    # Hazard intensity and footprint (U6.1). All optional; names as IDMC gave them on 29 October 2026.
+    # One value and one unit per event: the analyst records the measure that defines the event.
+    hazard_intensity_value = models.FloatField(verbose_name=_("Hazard intensity value"), null=True, blank=True)
+    hazard_intensity_unit = models.CharField(verbose_name=_("Hazard intensity unit"), max_length=64, null=True, blank=True)
+    # Stored as IDMC writes it (e.g. EMDAT); not checked against a list.
+    hazard_source_name = models.CharField(verbose_name=_("Hazard source name"), max_length=256, null=True, blank=True)
+    # Stored, not published.
+    hazard_source_event_id = models.CharField(
+        verbose_name=_("Hazard source event ID"), max_length=256, null=True, blank=True
+    )
+    hazard_footprint_url = models.URLField(verbose_name=_("Hazard footprint URL"), max_length=2048, null=True, blank=True)
+    # Text because IDMC's file writes it as a decimal (e.g. 10177.0).
+    hazard_footprint_id = models.CharField(verbose_name=_("Hazard footprint ID"), max_length=256, null=True, blank=True)
+    hazard_footprint_geometry_type = models.CharField(
+        verbose_name=_("Hazard footprint geometry type"), max_length=64, null=True, blank=True
     )
 
     assignee_id: typing.Optional[int]
@@ -772,6 +793,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             context_of_violences="Context of violences",
             event_codes="Event codes (Code:Type:ISO3)",
             event_narrative="Event description",
+            hazard_intensity_value="Hazard intensity value",
+            hazard_intensity_unit="Hazard intensity unit",
+            hazard_source_name="Hazard source name",
+            hazard_source_event_id="Hazard source event ID",
+            hazard_footprint_url="Hazard footprint URL",
+            hazard_footprint_id="Hazard footprint ID",
+            hazard_footprint_geometry_type="Hazard footprint geometry type",
             event_link="Event Link",
         )
         exclude_headers = ["event_link"]
@@ -819,6 +847,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum["start_date_accuracy"]), "label", ""),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum["end_date_accuracy"]), "label", ""),
                     event_codes=format_event_codes_as_string(datum["event_codes"]),
+                    hazard_intensity_unit=datum["hazard_intensity_unit"] or "",
+                    hazard_footprint_geometry_type=datum["hazard_footprint_geometry_type"] or "",
                 ),
             }
 

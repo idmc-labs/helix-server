@@ -340,6 +340,13 @@ class GiddEvent(MetaInformationAbstractModel):
     other_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
     osv_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
 
+    hazard_intensity_value = models.FloatField(null=True, blank=True)
+    hazard_intensity_unit = models.CharField(max_length=64, null=True, blank=True)
+    hazard_source_name = models.CharField(max_length=256, null=True, blank=True)
+    hazard_footprint_url = models.URLField(max_length=2048, null=True, blank=True)
+    hazard_footprint_id = models.CharField(max_length=256, null=True, blank=True)
+    hazard_footprint_geometry_type = models.CharField(max_length=64, null=True, blank=True)
+
     def __str__(self):
         return self.name
 
@@ -746,6 +753,13 @@ class GiddEventDisplacement(models.Model):
         "event.DisasterSubType", null=True, blank=True, related_name="+", on_delete=models.PROTECT
     )
     hazard_sub_type_name = models.CharField(max_length=256, blank=True, null=True)
+
+    hazard_intensity_value = models.FloatField(null=True, blank=True)
+    hazard_intensity_unit = models.CharField(max_length=64, null=True, blank=True)
+    hazard_source_name = models.CharField(max_length=256, null=True, blank=True)
+    hazard_footprint_url = models.URLField(max_length=2048, null=True, blank=True)
+    hazard_footprint_id = models.CharField(max_length=256, null=True, blank=True)
+    hazard_footprint_geometry_type = models.CharField(max_length=64, null=True, blank=True)
 
     new_displacement = models.BigIntegerField(blank=True, null=True)
     new_displacement_rounded = models.BigIntegerField(blank=True, null=True)
