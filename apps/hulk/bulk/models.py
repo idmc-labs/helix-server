@@ -6,21 +6,32 @@ import uuid
 
 import typing_extensions
 from django.db import models
-from pydantic import conlist, model_validator
+from pydantic import Field, model_validator
 from pyhelix import models as pyhelix_models
+from pyhelix.constants import MAX_EVENT_CODES
 from pyhelix.enums import HulkEntryImportTypeEnum
 from pyhelix.parsers import validate_and_parse_enum
 
 from apps.contrib.models import Attachment, SourcePreview
+from apps.country.models import Country
 from apps.crisis.models import Crisis
-from apps.entry.models import Entry
-from apps.event.models import DisasterSubType, Event, OtherSubType, ViolenceSubType
+from apps.entry.models import Entry, FigureTag
+from apps.event.models import (
+    ContextOfViolence,
+    DisasterSubType,
+    Event,
+    OsvSubType,
+    OtherSubType,
+    ViolenceSubType,
+)
 from apps.hulk.models import HulkAttachment, HulkEntityRelationBase, HulkEntry, HulkEvent, HulkSourcePreview
 
 from .parsers import (
     get_date_for_graphql,
     get_name_attributed_model,
+    validate_ids_exist,
 )
+from .url_guard import UnsafeUrlError, validate_fetch_url
 
 
 # TODO: Cache this
@@ -61,6 +72,19 @@ class HulkAttachmentImport(HulkBaseModel, pyhelix_models.HulkAttachmentImport):
 
 
 class HulkSourcePreviewImport(HulkBaseModel, pyhelix_models.HulkSourcePreviewImport):
+    @model_validator(mode="after")
+    def validate_file_url(self):
+        # helix renders this url server-side in a headless browser and publishes
+        # the result, so it needs the same destination check as an attachment
+        # download. See apps.hulk.bulk.url_guard.
+        try:
+            validate_fetch_url(self.file_url)
+        except UnsafeUrlError as e:
+            # Wording matches the attachment path: refused on purpose, not lost
+            # to a flaky network.
+            raise ValueError(f"refused to fetch url: {e}")
+        return self
+
     def generate_for_graphql_mutation(self):
         return {
             # TODO: Is file_url it a local path?
@@ -84,7 +108,6 @@ class HulkEntryImport(HulkBaseModel, pyhelix_models.HulkEntryImport):
     _source_preview_id: typing.Optional[int] = None
 
     @model_validator(mode="after")
-    @typing_extensions.override
     def parse_document(self):
         if self.hulk_import_type != HulkEntryImportTypeEnum.DOCUMENT:
             return self
@@ -98,7 +121,6 @@ class HulkEntryImport(HulkBaseModel, pyhelix_models.HulkEntryImport):
         return self
 
     @model_validator(mode="after")
-    @typing_extensions.override
     def parse_url(self):
         if self.hulk_import_type != HulkEntryImportTypeEnum.URL:
             return self
@@ -141,7 +163,21 @@ class HulkEventImportEventCode(HulkBaseModel, pyhelix_models.HulkEventImportEven
 
 # TODO: Support partial data input for optional fields
 class HulkEventImport(HulkBaseModel, pyhelix_models.HulkEventImport):
-    event_codes: typing.List[HulkEventImportEventCode]  # type: ignore[reportIncompatibleVariableOverride]
+    event_codes: typing_extensions.Annotated[  # type: ignore[reportIncompatibleVariableOverride]
+        typing.List[HulkEventImportEventCode],
+        Field(max_length=MAX_EVENT_CODES),
+    ]
+
+    @model_validator(mode="after")
+    @typing_extensions.override
+    def validate_related_ids(self):
+        validate_ids_exist(Country, self.countries_id, "countries_id")
+        validate_ids_exist(
+            Country,
+            [event_code.country_id for event_code in self.event_codes],
+            "event_codes[].country_id",
+        )
+        return self
 
     @model_validator(mode="before")
     @classmethod
@@ -203,7 +239,7 @@ class HulkFigureImportLocation(HulkBaseModel, pyhelix_models.HulkFigureImportLoc
 class HulkFigureImport(HulkBaseModel, pyhelix_models.HulkFigureImport):
     locations: typing_extensions.Annotated[  # type: ignore[reportIncompatibleVariableOverride]
         typing.List[HulkFigureImportLocation],
-        conlist(item_type=HulkFigureImportLocation, min_length=1),
+        Field(min_length=1),
     ]
 
     _entry_id: int
@@ -233,6 +269,16 @@ class HulkFigureImport(HulkBaseModel, pyhelix_models.HulkFigureImport):
 
     @model_validator(mode="after")
     @typing_extensions.override
+    def validate_related_ids(self):
+        """Existence checks for the FKs the cause branch does not cover."""
+        validate_ids_exist(Country, [self.country_id], "country_id")
+        validate_ids_exist(FigureTag, self.tags_id, "tags_id")
+        validate_ids_exist(OsvSubType, [self.osv_sub_type_id] if self.osv_sub_type_id else [], "osv_sub_type_id")
+        validate_ids_exist(ContextOfViolence, self.context_of_violences_id, "context_of_violences_id")
+        return self
+
+    @model_validator(mode="after")
+    @typing_extensions.override
     def parse_entry(self):
         if self.entry_id is None and self.entry_uuid is None:
             raise ValueError("either entry_id or entry_uuid is required")
@@ -253,6 +299,16 @@ class HulkFigureImport(HulkBaseModel, pyhelix_models.HulkFigureImport):
         self._event_id = event.pk
 
         event_type = typing.cast("Crisis.CRISIS_TYPE", event.event_type)
+
+        # The event's cause selects which sub_type field is required below, so a figure
+        # whose own cause differs from its event's would fail on a sub_type it never
+        # claimed to carry. helix rejects the mismatch as well
+        # (FigureSerializer._validate_figure_cause).
+        if event_type.value != self.figure_cause.value:
+            raise ValueError(
+                f"figure_cause {self.figure_cause.name} does not match the cause {event_type.name} of its event"
+                f" (event_id={event.pk}, event_uuid={self.event_uuid})"
+            )
 
         if event_type == Crisis.CRISIS_TYPE.CONFLICT:
             # TODO: Instead of get_name_attributed_model, use helix_client with custom function for _managers?
