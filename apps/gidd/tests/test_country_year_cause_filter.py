@@ -127,3 +127,54 @@ class TestGiddCountryYearCauseFilter(HelixGraphQLTestCase):
             variables=dict(clientId=self.client_code, cause="NOT_A_CAUSE"),
         )
         self.assertTrue(response.json().get("errors"))
+
+
+COUNTRY_YEAR_COMBINED_TOTALS = """
+    query($clientId: String!, $ordering: String) {
+        giddPublicCountryYearDisplacements(clientId: $clientId, ordering: $ordering) {
+            results {
+                iso3
+                year
+                totalInternalDisplacements
+                totalIdps
+            }
+        }
+    }
+"""
+
+
+class TestGiddCountryYearCombinedTotals(TestGiddCountryYearCauseFilter):
+    """`totalInternalDisplacements` and `totalIdps` add the two causes of one metric together, and
+    are sortable. Reuses the cause-filter fixture: NPL 2023 carries both causes, the rest one each."""
+
+    def combined(self, **variables):
+        response = self.query(
+            COUNTRY_YEAR_COMBINED_TOTALS,
+            variables=dict(clientId=self.client_code, **variables),
+        )
+        self.assertResponseNoErrors(response)
+        return response.json()["data"]["giddPublicCountryYearDisplacements"]["results"]
+
+    def test_both_causes_are_summed_per_metric(self):
+        by_key = {(row["iso3"], row["year"]): row for row in self.combined()}
+        # NPL 2023: conflict (200 / 2000) + disaster (10 / 100).
+        npl_2023 = by_key[("NPL", RELEASE_YEAR)]
+        self.assertEqual(npl_2023["totalInternalDisplacements"], 210)
+        self.assertEqual(npl_2023["totalIdps"], 2100)
+        # IND 2023: conflict only (400 / 4000).
+        self.assertEqual(by_key[("IND", RELEASE_YEAR)]["totalInternalDisplacements"], 400)
+        self.assertEqual(by_key[("IND", RELEASE_YEAR)]["totalIdps"], 4000)
+
+    def test_sortable_by_total_internal_displacements(self):
+        results = self.combined(ordering="-totalInternalDisplacements")
+        self.assertEqual(
+            [row["totalInternalDisplacements"] for row in results],
+            [400, 210, 20],
+        )
+
+    def test_sortable_by_total_idps(self):
+        results = self.combined(ordering="totalIdps")
+        self.assertEqual(
+            [row["totalIdps"] for row in results],
+            [200, 2100, 4000],
+        )

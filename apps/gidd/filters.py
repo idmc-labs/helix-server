@@ -2,6 +2,7 @@ import typing
 
 import django_filters
 from django import forms
+from django.db import models
 from rest_framework import serializers
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -10,6 +11,7 @@ from apps.entry.enums import FigureCategoryTypeEnum
 from apps.entry.models import ExternalApiDump
 from utils.filters import IDListFilter, SimpleInputFilter, StringListFilter
 
+from .enums import DISPLACEMENT_TYPE_PUBLIC, GiddDisplacementTypeEnum
 from .models import (
     GiddDisplacement,
     GiddEventDisplacement,
@@ -197,17 +199,21 @@ class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
     # and `int("CONFLICT")` raises. An enum input also rejects unknown members before the ORM.
     figure_cause = SimpleInputFilter(CrisisTypeGrapheneEnum, field_name="figure_cause")
     figure_category = SimpleInputFilter(FigureCategoryTypeEnum, field_name="figure_category")
+    countries_iso3 = StringListFilter(method="filter_countries_iso3")
 
     class Meta:
         model = PublicFigureAnalysis
         # `iso3` and `year` only. The list forms of both were also declared, which made two ways to
         # ask one question, and the year list arrived typed as `[ID!]` -- a year is not an id.
-        # Unlike the filtersets that carry `countries_iso3` as their only country filter, this one
-        # already had the scalar.
+        # `countries_iso3` is the multi-country filter, matching the other GIDD filtersets; the
+        # scalar `iso3` is retained for callers that still ask for a single country.
         fields = {
             "iso3": ["exact"],
             "year": ["exact"],
         }
+
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(iso3__in=value)
 
 
 class GiddEventDisplacementFilter(ReleaseMetadataFilter):
@@ -225,6 +231,12 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
     violence_sub_types = IDListFilter(method="filter_violence_sub_types")
     event_name = django_filters.CharFilter(method="filter_event_name")
     events = IDListFilter(method="filter_events")
+    # Which displacement metric an event must carry: NEW_DISPLACEMENT keeps rows with a
+    # new-displacement flow, IDPS keeps rows with an IDP stock. An enum input rejects unknown
+    # members before the ORM; a ChoiceFilter would silently ignore one and return every row.
+    displacement_type = SimpleInputFilter(GiddDisplacementTypeEnum, method="filter_displacement_type")
+    # Events can be released with neither figure populated; opt in to drop those zero-figure rows.
+    has_figures = django_filters.BooleanFilter(method="filter_has_figures")
 
     class Meta:
         model = GiddEventDisplacement
@@ -262,6 +274,20 @@ class GiddEventDisplacementFilter(ReleaseMetadataFilter):
 
     def filter_events(self, queryset, name, value):
         return queryset.filter(event_raw_id__in=value)
+
+    def filter_displacement_type(self, queryset, name, value):
+        # `> 0` not `isnull`: a released row can carry a populated 0, which is "no displacement of
+        # this kind" just as much as a null is -- the same bar `has_figures` and the listing Q apply.
+        if value == DISPLACEMENT_TYPE_PUBLIC.NEW_DISPLACEMENT.value:
+            return queryset.filter(new_displacement__gt=0)
+        elif value == DISPLACEMENT_TYPE_PUBLIC.IDPS.value:
+            return queryset.filter(total_displacement__gt=0)
+        return queryset
+
+    def filter_has_figures(self, queryset, name, value):
+        if value:
+            return queryset.filter(models.Q(new_displacement__gt=0) | models.Q(total_displacement__gt=0))
+        return queryset
 
 
 class GiddCountryDisplacementFilter(ReleaseMetadataFilter):
